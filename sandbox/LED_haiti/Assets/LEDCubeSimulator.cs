@@ -2,15 +2,15 @@ using UnityEngine;
 
 public class LEDCubeSimulator : MonoBehaviour
 {
-    [Header("LED数 (X, Y, Z)")]
-    public int countX = 10;
-    public int countY = 10;
-    public int countZ = 10;
+    [Header("パネルの物理サイズ (m)")]
+    public float width = 1.0f;
+    public float height = 2.0f;
+    public float depth = 0.2f;
 
     [Header("LEDピッチ (m)")]
-    public float pitchX = 0.01f;
-    public float pitchY = 0.01f;
-    public float pitchZ = 0.01f;
+    public float pitchX = 0.10f; // 横方向
+    public float pitchY = 0.03f; // 縦方向
+    public float pitchZ = 0.10f; // 奥行き方向
 
     [Header("LED寸法 (m)")]
     public float ledDiameter = 0.005f;
@@ -30,6 +30,11 @@ public class LEDCubeSimulator : MonoBehaviour
         {
             Destroy(child.gameObject);
         }
+
+        // サイズ / ピッチ から個数計算
+        int countX = Mathf.FloorToInt(width / pitchX) + 1;
+        int countY = Mathf.FloorToInt(height / pitchY) + 1;
+        int countZ = Mathf.FloorToInt(depth / pitchZ) + 1;
 
         // 中央基準オフセット
         float offsetX = (countX - 1) * pitchX * 0.5f;
@@ -54,5 +59,7 @@ public class LEDCubeSimulator : MonoBehaviour
                 }
             }
         }
+
+        Debug.Log($"LED個数: {countX} x {countY} x {countZ} = {countX * countY * countZ}");
     }
 }
