@@ -121,7 +121,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb8351d54455cba43a1771beb209f70c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ledPrefab: {fileID: 7652527053012786137, guid: bf5d0da6334044243b0794644c818f7f, type: 3}
+  ledPrefab: {fileID: 8598313933179353892, guid: bf5d0da6334044243b0794644c818f7f, type: 3}
   tapeLength: 1
-  pitch: 0.005
+  pitch: 0.01
   offsetY: 0.002

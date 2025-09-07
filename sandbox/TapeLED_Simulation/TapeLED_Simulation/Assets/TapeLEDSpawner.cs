@@ -1,16 +1,12 @@
 using UnityEngine;
+using static UnityEditor.PlayerSettings;
 
 public class TapeLEDSpawner : MonoBehaviour
 {
-    [Header("参照")]
-    public GameObject ledPrefab;     // LEDプレハブ（光る球）
-
-    [Header("テープ設定")]
-    public float tapeLength = 1.0f;  // テープ長さ (m)
-    public float pitch = 0.005f;     // LED間隔 (m, 5mm)
-
-    [Header("LEDの位置調整")]
-    public float offsetY = 0.002f;   // テープ上に浮かせる高さ
+    public GameObject ledPrefab;
+    public float tapeLength = 1.0f;   // テープの長さ
+    public float pitch = 0.05f;       // LED間隔
+    public float offset = 0.002f;     // テープ表面からの高さ
 
     void Start()
     {
@@ -21,21 +17,25 @@ public class TapeLEDSpawner : MonoBehaviour
     {
         if (ledPrefab == null)
         {
-            Debug.LogError("LED Prefab が設定されていません！");
+            Debug.LogError("LED Prefab が割り当てられていません！", this);
             return;
         }
 
+        // テープの長さ方向を検出（ローカルX/Zの大きい方を採用）
+        Vector3 dir = (transform.localScale.x >= transform.localScale.z) ? transform.right : transform.forward;
+
+        // 個数を計算
         int ledCount = Mathf.FloorToInt(tapeLength / pitch);
+        float start = -(ledCount - 1) * 0.5f * pitch;
 
         for (int i = 0; i < ledCount; i++)
         {
-            // X方向に等間隔で並べる
-            float x = i * pitch - tapeLength / 2f;
-            Vector3 pos = transform.position + new Vector3(x, offsetY, 0);
+            // 長さ方向に並べて、テープのローカルY(=up方向)に少し浮かせる
+            Vector3 worldPos = transform.position + dir * (start + i * pitch) + transform.up * offset;
 
-            // LEDを生成してTapeの子にする
-            GameObject led = Instantiate(ledPrefab, pos, Quaternion.identity, this.transform);
-            led.name = $"LED_{i}";
+            GameObject led = Instantiate(ledPrefab, worldPos, Quaternion.identity);
+            led.transform.rotation = Quaternion.identity; // LEDは回転させない（丸い球体なのでOK）
+            led.transform.SetParent(this.transform); // あとから親にする
         }
     }
 }
