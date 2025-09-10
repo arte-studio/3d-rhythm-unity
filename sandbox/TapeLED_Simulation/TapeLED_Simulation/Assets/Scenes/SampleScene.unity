@@ -421,10 +421,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55919065ffdc3944490037b501e89946, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tapePrefab: {fileID: 8983688545900272567, guid: 5250116612b81d940b6eb8d52407fd4a, type: 3}
-  tapeCountX: 10
-  tapeCountZ: 10
-  tapeSpacing: 0.1
+  ledPrefab: {fileID: 1581939266}
+  count: 10
+  spacing: 0.1
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -474,6 +473,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1581939266 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8983688545900272567, guid: 5250116612b81d940b6eb8d52407fd4a, type: 3}
+  m_PrefabInstance: {fileID: 3362323523294783637}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2554717304009826512
 PrefabInstance:
   m_ObjectHideFlags: 0

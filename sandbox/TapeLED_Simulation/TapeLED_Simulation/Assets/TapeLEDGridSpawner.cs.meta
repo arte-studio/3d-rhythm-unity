@@ -1,2 +1,12 @@
 fileFormatVersion: 2
 guid: 55919065ffdc3944490037b501e89946
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - ledPrefab: {fileID: 8983688545900272567, guid: 5250116612b81d940b6eb8d52407fd4a, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

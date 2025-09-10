@@ -1,48 +1,56 @@
 using UnityEngine;
 
-public class TapeGridSpawner : MonoBehaviour
+public class TapeLEDCubeSpawner : MonoBehaviour
 {
-    public GameObject tapePrefab;   // テープのPrefab
-    public int tapeCountX = 10;     // X方向の本数
-    public int tapeCountZ = 10;     // Z方向の本数
-    public float tapeSpacing = 0.1f; // テープ同士の間隔（m単位）
+    public GameObject ledPrefab;   // LEDのPrefab
+    public int count = 5;          // 1辺のLED数
+    public float spacing = 0.2f;   // LED間隔
 
     void Start()
     {
-        SpawnTapes();
+        SpawnCube();
     }
 
-    void SpawnTapes()
+    void SpawnCube()
     {
-        if (tapePrefab == null)
-        {
-            Debug.LogError("Tape Prefab が割り当てられていません！", this);
-            return;
-        }
+        float offset = -(count - 1) * 0.5f * spacing;
 
-        // 中心に配置されるようにオフセット
-        float offsetX = -(tapeCountX - 1) * 0.5f * tapeSpacing;
-        float offsetZ = -(tapeCountZ - 1) * 0.5f * tapeSpacing;
-
-        for (int x = 0; x < tapeCountX; x++)
+        // === XY 平面のテープ ===
+        for (int z = 0; z < count; z++)
         {
-            for (int z = 0; z < tapeCountZ; z++)
+            for (int y = 0; y < count; y++)
             {
-                Vector3 pos = transform.position + new Vector3(offsetX + x * tapeSpacing, 0, offsetZ + z * tapeSpacing);
-
-                // テープを生成
-                GameObject tape = Instantiate(tapePrefab, pos, Quaternion.identity, this.transform);
-
-                // 向きの設定（X方向とZ方向に分けたい場合）
-                if (x % 2 == 0)
+                for (int x = 0; x < count; x++)
                 {
-                    tape.transform.rotation = Quaternion.Euler(0, 0, 0); // Z方向に伸びる
-                }
-                else
-                {
-                    tape.transform.rotation = Quaternion.Euler(0, 90, 0); // X方向に伸びる
+                    // XYテープ用のLEDを生成
+                    Vector3 pos = transform.position + new Vector3(offset + x * spacing, offset + y * spacing, offset + z * spacing);
+                    CreateUniqueLED(pos);
                 }
             }
+        }
+
+        // === YZ 平面のテープ ===
+        for (int x = 0; x < count; x++)
+        {
+            for (int y = 0; y < count; y++)
+            {
+                for (int z = 0; z < count; z++)
+                {
+                    // YZテープ用のLEDを生成（重複チェック付き）
+                    Vector3 pos = transform.position + new Vector3(offset + x * spacing, offset + y * spacing, offset + z * spacing);
+                    CreateUniqueLED(pos);
+                }
+            }
+        }
+    }
+
+    void CreateUniqueLED(Vector3 pos)
+    {
+        // すでにその座標にLEDがあるかチェック
+        Collider[] hits = Physics.OverlapSphere(pos, spacing * 0.1f);
+        if (hits.Length == 0)
+        {
+            Instantiate(ledPrefab, pos, Quaternion.identity, this.transform);
         }
     }
 }
