@@ -10,20 +10,22 @@ public class Note : MonoBehaviour
     {
         if (!isHit && targetTime > 0)
         {
-            isHit = true;
             double now = GameManager.Instance.GetSongTime();
-            float diff = Mathf.Abs((float)now - targetTime);
+            float diff = (float)(now - targetTime);
 
-            if (diff < GameManager.Instance.perfectRange)
+            // 判定範囲チェック（赤になっていなくてもOK）
+            if (Mathf.Abs(diff) < GameManager.Instance.perfectRange)
                 Debug.Log("PERFECT!");
-            else if (diff < GameManager.Instance.goodRange)
+            else if (Mathf.Abs(diff) < GameManager.Instance.goodRange)
                 Debug.Log("GOOD!");
             else
-                Debug.Log("MISS!"); // ← 遅押しの場合もここで MISS
+                Debug.Log("MISS!");
 
+            isHit = true;
             GetComponent<Renderer>().material.color = Color.green;
         }
     }
+
 
     public void ResetHit()
     {

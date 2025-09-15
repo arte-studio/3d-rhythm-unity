@@ -515,7 +515,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 642620612}
-  - component: {fileID: 642620611}
+  - component: {fileID: 642620613}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -523,35 +523,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &642620611
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642620610}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d97cfbf1ac380e4482179bf0dd0fbd8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  audioSource: {fileID: 311185687}
-  targetRenderer: {fileID: 956499767}
-  normalColor: {r: 1, g: 1, b: 1, a: 1}
-  highlightColor: {r: 1, g: 0, b: 0, a: 1}
-  perfectRange: 0.3
-  goodRange: 0.8
-  notes:
-  - time: 5
-  - time: 10
-  - time: 15
-  - time: 20
-  - time: 25
-  - time: 30
-  - time: 35
-  - time: 40
-  - time: 45
-  - time: 50
 --- !u!4 &642620612
 Transform:
   m_ObjectHideFlags: 0
@@ -567,6 +538,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &642620613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 642620610}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d97cfbf1ac380e4482179bf0dd0fbd8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  audioSource: {fileID: 311185687}
+  targetRenderer: {fileID: 956499767}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  highlightColor: {r: 1, g: 0, b: 0, a: 1}
+  perfectRange: 0.2
+  goodRange: 0.5
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0

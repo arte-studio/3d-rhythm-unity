@@ -1,0 +1,9 @@
+{
+    "notes": [
+      { "time": 1.0, "lane": 0 },
+      { "time": 2.5, "lane": 0 },
+      { "time": 4.0, "lane": 0 },
+      { "time": 6.0, "lane": 0 }
+    ]
+  }
+  

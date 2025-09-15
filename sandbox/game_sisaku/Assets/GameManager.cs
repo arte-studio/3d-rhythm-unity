@@ -4,7 +4,14 @@ using System.Collections;
 [System.Serializable]
 public class NoteData
 {
-    public float time;  // Sphereを叩くべきタイミング（秒）
+    public float time;
+    public int lane;
+}
+
+[System.Serializable]
+public class NotesWrapper
+{
+    public NoteData[] notes;
 }
 
 public class GameManager : MonoBehaviour
@@ -20,7 +27,8 @@ public class GameManager : MonoBehaviour
     public float perfectRange = 0.1f;
     public float goodRange = 0.3f;
 
-    public NoteData[] notes;
+    // Inspectorに出さないように private に変更
+    private NoteData[] notes;
     private int noteIndex = 0;
     private double startTime;
 
@@ -31,8 +39,16 @@ public class GameManager : MonoBehaviour
         Instance = this;
     }
 
+    void LoadNotesFromJson(string fileName)
+    {
+        TextAsset jsonFile = Resources.Load<TextAsset>(fileName);
+        NotesWrapper wrapper = JsonUtility.FromJson<NotesWrapper>(jsonFile.text);
+        notes = wrapper.notes;
+    }
+
     void Start()
     {
+        LoadNotesFromJson("notes"); // Resources/notes.json を読み込む
         targetRenderer.material.color = normalColor;
         noteIndex = 0;
         StartCoroutine(StartGameAfterDelay(3f));
@@ -73,7 +89,7 @@ public class GameManager : MonoBehaviour
         note.targetTime = hitTime;
 
         // 判定受付時間（GOOD の範囲）だけ待機
-        yield return new WaitForSeconds(GameManager.Instance.goodRange);
+        yield return new WaitForSeconds(goodRange);
 
         // 判定範囲が終わった瞬間にMISS判定
         if (!note.IsHit)
@@ -87,6 +103,4 @@ public class GameManager : MonoBehaviour
         // 次のノーツに備えてリセット
         note.ResetHit();
     }
-
-
 }
