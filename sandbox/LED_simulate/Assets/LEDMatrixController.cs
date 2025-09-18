@@ -69,10 +69,16 @@ public class LEDMatrixController : MonoBehaviour
             {
                 LED led = leds[y, x];
                 Color color = new Color(led.r / 255f, led.g / 255f, led.b / 255f);
+
+                // URP Lit Shader では _BaseColor に適用する方が確実
+                renderers[y, x].material.SetColor("_BaseColor", color);
+
+                // Emission も使うなら下も追加
                 renderers[y, x].material.SetColor("_EmissionColor", color);
             }
         }
     }
+
 
     // --- 制御用 API ---
     public void SetLED(int index, byte r, byte g, byte b)
