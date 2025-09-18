@@ -1,0 +1,14 @@
+using UnityEngine;
+
+public class LEDTest : MonoBehaviour
+{
+    public LEDMatrixController matrix;
+    private float timer;
+
+    void Update()
+    {
+        timer += Time.deltaTime;
+        int index = (int)(timer * 10) % 64; // èáî‘Ç…ì_ìî
+        matrix.SetLED(index, 255, 0, 0);    // ê‘
+    }
+}
