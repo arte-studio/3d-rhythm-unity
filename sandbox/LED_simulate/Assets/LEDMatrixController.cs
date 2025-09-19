@@ -92,4 +92,12 @@ public class LEDMatrixController : MonoBehaviour
     {
         leds[row, col] = new LED(r, g, b);
     }
+
+    public Renderer GetRenderer(int row, int col)
+    {
+        if (row >= 0 && row < rows && col >= 0 && col < cols)
+            return renderers[row, col];
+        return null;
+    }
+
 }

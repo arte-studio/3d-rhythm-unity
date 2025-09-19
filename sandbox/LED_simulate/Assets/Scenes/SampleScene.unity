@@ -457,6 +457,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   matrix: {fileID: 720062832}
+  waveDuration: 1.2
+  fadeDuration: 0.6
 --- !u!114 &720062832
 MonoBehaviour:
   m_ObjectHideFlags: 0
