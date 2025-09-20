@@ -5,7 +5,9 @@ using System.Collections;
 public class NoteData
 {
     public float time;
-    public int lane;
+    public int lane;   // Sphereノート用 (0～5)
+    public int from;   // ライン始点 (ラインノート用)
+    public int to;     // ライン終点 (ラインノート用)
 }
 
 [System.Serializable]
@@ -19,7 +21,7 @@ public class GameManager : MonoBehaviour
     public static GameManager Instance;
 
     public AudioSource audioSource;
-    public Renderer targetRenderer;
+    public Renderer[] laneRenderers;  // Sphere用
     public Color normalColor = Color.white;
     public Color highlightColor = Color.red;
 
@@ -27,10 +29,12 @@ public class GameManager : MonoBehaviour
     public float perfectRange = 0.1f;
     public float goodRange = 0.3f;
 
-    // Inspectorに出さないように private に変更
     private NoteData[] notes;
     private int noteIndex = 0;
     private double startTime;
+
+    // --- LEDライン用（2点間のLineRendererを保持する配列） ---
+    private LineRenderer[,] ledLines;
 
     public double GetSongTime() => AudioSettings.dspTime - startTime;
 
@@ -39,19 +43,40 @@ public class GameManager : MonoBehaviour
         Instance = this;
     }
 
+    void Start()
+    {
+        LoadNotesFromJson("notes"); // Resources/notes.json を読み込む
+
+        // --- SpherePlacer から自動取得 ---
+        SpherePlacer placer = FindFirstObjectByType<SpherePlacer>();
+        if (placer != null)
+        {
+            GameObject[] spheres = placer.spheres;
+            laneRenderers = new Renderer[spheres.Length];
+            for (int i = 0; i < spheres.Length; i++)
+            {
+                laneRenderers[i] = spheres[i].GetComponent<Renderer>();
+                laneRenderers[i].material.color = normalColor; // 初期化
+            }
+        }
+
+        // --- LEDラインを探して登録 ---
+        LEDLinesPlacer ledPlacer = FindFirstObjectByType<LEDLinesPlacer>();
+        if (ledPlacer != null)
+        {
+            ledLines = ledPlacer.GetLineArray();
+        }
+
+        noteIndex = 0;
+        StartCoroutine(StartGameAfterDelay(3f));
+    }
+
+
     void LoadNotesFromJson(string fileName)
     {
         TextAsset jsonFile = Resources.Load<TextAsset>(fileName);
         NotesWrapper wrapper = JsonUtility.FromJson<NotesWrapper>(jsonFile.text);
         notes = wrapper.notes;
-    }
-
-    void Start()
-    {
-        LoadNotesFromJson("notes"); // Resources/notes.json を読み込む
-        targetRenderer.material.color = normalColor;
-        noteIndex = 0;
-        StartCoroutine(StartGameAfterDelay(3f));
     }
 
     IEnumerator StartGameAfterDelay(float delay)
@@ -68,39 +93,60 @@ public class GameManager : MonoBehaviour
             double songTime = GetSongTime();
             if (songTime >= notes[noteIndex].time - 0.5f)
             {
-                StartCoroutine(PreFlashAndHit(notes[noteIndex].time));
+                StartCoroutine(HandleNote(notes[noteIndex]));
                 noteIndex++;
             }
         }
     }
 
-    IEnumerator PreFlashAndHit(float hitTime)
+    // --- Sphere と ラインノートの分岐処理 ---
+    IEnumerator HandleNote(NoteData noteData)
     {
-        // 0.5秒前に黄色
-        targetRenderer.material.color = Color.yellow;
-
-        // 判定タイミングまで待機
-        double wait = hitTime - (AudioSettings.dspTime - startTime);
-        if (wait > 0) yield return new WaitForSeconds((float)wait);
-
-        // 判定タイミングで赤
-        targetRenderer.material.color = highlightColor;
-        Note note = targetRenderer.GetComponent<Note>();
-        note.targetTime = hitTime;
-
-        // 判定受付時間（GOOD の範囲）だけ待機
-        yield return new WaitForSeconds(goodRange);
-
-        // 判定範囲が終わった瞬間にMISS判定
-        if (!note.IsHit)
+        if (noteData.lane >= 0)
         {
-            Debug.Log("MISS!");
+            // ----- Sphereノート処理 -----
+            Renderer r = laneRenderers[noteData.lane];
+            r.material.color = Color.yellow;
+
+            double wait = noteData.time - (AudioSettings.dspTime - startTime);
+            if (wait > 0) yield return new WaitForSeconds((float)wait);
+
+            r.material.color = highlightColor;
+            Note note = r.GetComponent<Note>();
+            note.targetTime = noteData.time;
+
+            yield return new WaitForSeconds(goodRange);
+
+            if (!note.IsHit) Debug.Log("MISS!");
+            r.material.color = normalColor;
+            note.ResetHit();
         }
+        else
+        {
+            // ----- ラインノート処理 -----
+            LineRenderer line = ledLines[noteData.from, noteData.to];
+            LineNote lineNote = line.GetComponent<LineNote>();
 
-        // Sphere の色を白に戻す
-        targetRenderer.material.color = normalColor;
+            // 黄色で予告
+            line.startColor = Color.yellow;
+            line.endColor = Color.yellow;
 
-        // 次のノーツに備えてリセット
-        note.ResetHit();
+            double wait = noteData.time - (AudioSettings.dspTime - startTime);
+            if (wait > 0) yield return new WaitForSeconds((float)wait);
+
+            // 赤で判定開始
+            line.startColor = highlightColor;
+            line.endColor = highlightColor;
+            lineNote.targetTime = noteData.time;
+
+            yield return new WaitForSeconds(goodRange);
+
+            if (!lineNote.IsHit) Debug.Log("LINE MISS!");
+
+            // 白に戻す
+            line.startColor = Color.white;
+            line.endColor = Color.white;
+            lineNote.ResetHit();
+        }
     }
 }
