@@ -136,6 +136,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e958e44a2049b04488777f107bb32c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  fromSphere: {fileID: 0}
+  toSphere: {fileID: 0}
   targetTime: 0
 --- !u!120 &136580272
 LineRenderer:
@@ -775,6 +777,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   audioSource: {fileID: 311185687}
+  perfectRangeSphere: 0.1
+  goodRangeSphere: 0.3
+  perfectRangeLine: 0.3
+  goodRangeLine: 1
   laneRenderers:
   - {fileID: 0}
   - {fileID: 0}
@@ -784,8 +790,6 @@ MonoBehaviour:
   - {fileID: 0}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   highlightColor: {r: 1, g: 0, b: 0, a: 1}
-  perfectRange: 0.2
-  goodRange: 0.5
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -960,6 +964,10 @@ PrefabInstance:
     - target: {fileID: 3613780555736921408, guid: efac0cd65d827a445a8f1b9ebc4d757f, type: 3}
       propertyPath: m_Name
       value: LEDLinePrefab
+      objectReference: {fileID: 0}
+    - target: {fileID: 4755409917200851669, guid: efac0cd65d827a445a8f1b9ebc4d757f, type: 3}
+      propertyPath: count
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 4755409917200851669, guid: efac0cd65d827a445a8f1b9ebc4d757f, type: 3}
       propertyPath: ledPrefab

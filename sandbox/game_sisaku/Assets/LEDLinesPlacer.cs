@@ -2,18 +2,22 @@ using UnityEngine;
 
 public class LEDLinesPlacer : MonoBehaviour
 {
-    public GameObject ledLinePrefab; // LEDLineGenerator付きの空Prefab
+    public GameObject ledLinePrefab; // LEDLineGenerator付きのPrefab
     public SpherePlacer spherePlacer;
 
-    // --- 追加: ラインを保持する配列 ---
-    private LineRenderer[,] lineArray;
+    // 生成したLEDラインを保持（LineRendererではなくGameObject）
+    private GameObject[,] lineArray;
 
     void Start()
     {
-        GameObject[] spheres = spherePlacer.spheres;
+        if (spherePlacer == null || spherePlacer.spheres == null || spherePlacer.spheres.Length < 6)
+        {
+            Debug.LogError("SpherePlacer が正しく設定されていません！");
+            return;
+        }
 
-        // 6つのSphereなので最大 [6,6]
-        lineArray = new LineRenderer[6, 6];
+        GameObject[] spheres = spherePlacer.spheres;
+        lineArray = new GameObject[6, 6];
 
         // 六角形の辺（6本）
         for (int i = 0; i < 6; i++)
@@ -21,7 +25,7 @@ public class LEDLinesPlacer : MonoBehaviour
             CreateLine(spheres[i], spheres[(i + 1) % 6], i, (i + 1) % 6);
         }
 
-        // 対角線（3本: 0-3, 1-4, 2-5）
+        // 対角線（3本）
         for (int i = 0; i < 3; i++)
         {
             CreateLine(spheres[i], spheres[i + 3], i, i + 3);
@@ -31,27 +35,33 @@ public class LEDLinesPlacer : MonoBehaviour
     void CreateLine(GameObject start, GameObject end, int from, int to)
     {
         GameObject line = Instantiate(ledLinePrefab, transform);
-        line.name = "Line_" + from + "_" + to;
+        line.name = $"Line_{from}_{to}";
 
+        // LEDLineGenerator 設定
         LEDLineGenerator gen = line.GetComponent<LEDLineGenerator>();
+        if (gen == null)
+        {
+            Debug.LogError("ledLinePrefab に LEDLineGenerator がついていません！");
+            return;
+        }
         gen.startSphere = start;
         gen.endSphere = end;
 
-        // LineRenderer を取得して配列に登録
-        LineRenderer lr = line.GetComponent<LineRenderer>();
-        if (lr == null)
+        // LineNote 設定
+        LineNote note = line.GetComponent<LineNote>();
+        if (note != null)
         {
-            lr = line.AddComponent<LineRenderer>();
-            lr.positionCount = 2;
-        }else if (lr != null)
-        {
-            lineArray[from, to] = lr;
-            lineArray[to, from] = lr; // 双方向でアクセス可能にする
+            note.fromSphere = start;
+            note.toSphere = end;
         }
+
+        // 配列に保存
+        lineArray[from, to] = line;
+        lineArray[to, from] = line;
     }
 
-    // --- 追加: GameManager が呼び出す ---
-    public LineRenderer[,] GetLineArray()
+    // 外部から取得できるように
+    public GameObject[,] GetLineArray()
     {
         return lineArray;
     }

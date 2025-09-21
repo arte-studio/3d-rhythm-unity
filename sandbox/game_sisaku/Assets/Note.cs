@@ -17,9 +17,9 @@ public class Note : MonoBehaviour
             float diff = (float)(now - targetTime);
 
             // 判定範囲チェック
-            if (Mathf.Abs(diff) < GameManager.Instance.perfectRange)
+            if (Mathf.Abs(diff) < GameManager.Instance.perfectRangeSphere)
                 Debug.Log($"PERFECT! lane {laneIndex}");
-            else if (Mathf.Abs(diff) < GameManager.Instance.goodRange)
+            else if (Mathf.Abs(diff) < GameManager.Instance.goodRangeSphere)
                 Debug.Log($"GOOD! lane {laneIndex}");
             else
                 Debug.Log($"MISS! lane {laneIndex}");

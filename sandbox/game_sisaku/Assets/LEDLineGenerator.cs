@@ -2,23 +2,27 @@ using UnityEngine;
 
 public class LEDLineGenerator : MonoBehaviour
 {
-    public GameObject ledPrefab;
+    public GameObject ledPrefab;   // ¬‚³‚È‹…‘Ì (LEDSphere)
     public GameObject startSphere;
     public GameObject endSphere;
-    public int count = 10; // •À‚×‚é”
+    public int count = 30;         // •À‚×‚éŒÂ”
+
+    private GameObject[] leds;     // ¶¬‚µ‚½LED‚ğ•Û
 
     void Start()
     {
-        if (ledPrefab == null || startSphere == null || endSphere == null) return;
+        if (startSphere == null || endSphere == null || ledPrefab == null) return;
 
-        Vector3 startPos = startSphere.transform.position;
-        Vector3 endPos = endSphere.transform.position;
+        leds = new GameObject[count];
+        Vector3 start = startSphere.transform.position;
+        Vector3 end = endSphere.transform.position;
 
         for (int i = 0; i < count; i++)
         {
-            float t = (float)i / (count - 1);
-            Vector3 pos = Vector3.Lerp(startPos, endPos, t);
-            Instantiate(ledPrefab, pos, Quaternion.identity, transform);
+            float t = (float)i / (count - 1); // 0~1 ‚Ì•âŠÔ’l
+            Vector3 pos = Vector3.Lerp(start, end, t);
+            leds[i] = Instantiate(ledPrefab, pos, Quaternion.identity, transform);
+            leds[i].name = $"LED_{i}";
         }
     }
 }

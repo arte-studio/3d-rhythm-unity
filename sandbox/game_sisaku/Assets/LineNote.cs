@@ -2,47 +2,55 @@ using UnityEngine;
 
 public class LineNote : MonoBehaviour
 {
+    public GameObject fromSphere;
+    public GameObject toSphere;
     public float targetTime;
-    private bool isHit = false;
-    public bool IsHit => isHit;
 
-    private LineRenderer lineRenderer;
+    public bool IsHit { get; private set; }
 
-    void Awake()
+    private bool isDragging = false;
+    private Vector3 dragStartPos;
+
+    void Update()
     {
-        lineRenderer = GetComponent<LineRenderer>();
-    }
-
-    void OnMouseOver()
-    {
-        // マウス押下中にラインをなぞっていたら判定
-        if (Input.GetMouseButton(0) && !isHit && targetTime > 0)
+        if (Input.GetMouseButtonDown(0))
         {
-            double now = GameManager.Instance.GetSongTime();
-            float diff = (float)(now - targetTime);
+            // fromSphere を押したか？
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit))
+            {
+                if (hit.collider.gameObject == fromSphere)
+                {
+                    isDragging = true;
+                    dragStartPos = hit.point;
+                    IsHit = false;
+                }
+            }
+        }
 
-            if (Mathf.Abs(diff) < GameManager.Instance.perfectRange)
-                Debug.Log("LINE PERFECT!");
-            else if (Mathf.Abs(diff) < GameManager.Instance.goodRange)
-                Debug.Log("LINE GOOD!");
-            else
-                Debug.Log("LINE MISS!");
-
-            isHit = true;
-
-            // 色を変えてフィードバック
-            lineRenderer.startColor = Color.green;
-            lineRenderer.endColor = Color.green;
+        if (isDragging && Input.GetMouseButtonUp(0))
+        {
+            // toSphere で離したか？
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit))
+            {
+                if (hit.collider.gameObject == toSphere)
+                {
+                    IsHit = true;
+                    Debug.Log("LINE HIT!");
+                }
+                else
+                {
+                    Debug.Log("LINE MISS (wrong end)");
+                }
+            }
+            isDragging = false;
         }
     }
 
     public void ResetHit()
     {
-        isHit = false;
-        targetTime = 0;
-
-        // 色をリセット
-        lineRenderer.startColor = Color.white;
-        lineRenderer.endColor = Color.white;
+        IsHit = false;
+        isDragging = false;
     }
 }

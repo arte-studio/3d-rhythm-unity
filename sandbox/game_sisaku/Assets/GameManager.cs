@@ -21,20 +21,27 @@ public class GameManager : MonoBehaviour
     public static GameManager Instance;
 
     public AudioSource audioSource;
+
+    [Header("Judge Settings - Sphere")]
+    public float perfectRangeSphere = 0.1f;
+    public float goodRangeSphere = 0.3f;
+
+    [Header("Judge Settings - Line")]
+    public float perfectRangeLine = 0.3f;
+    public float goodRangeLine = 1.0f;
+
+
     public Renderer[] laneRenderers;  // Sphere用
     public Color normalColor = Color.white;
     public Color highlightColor = Color.red;
 
-    [Header("Judge Settings")]
-    public float perfectRange = 0.1f;
-    public float goodRange = 0.3f;
 
     private NoteData[] notes;
     private int noteIndex = 0;
     private double startTime;
 
-    // --- LEDライン用（2点間のLineRendererを保持する配列） ---
-    private LineRenderer[,] ledLines;
+    // --- LEDライン用（LineRenderer ではなく GameObject 配列に変更） ---
+    private GameObject[,] ledLines;
 
     public double GetSongTime() => AudioSettings.dspTime - startTime;
 
@@ -70,7 +77,6 @@ public class GameManager : MonoBehaviour
         noteIndex = 0;
         StartCoroutine(StartGameAfterDelay(3f));
     }
-
 
     void LoadNotesFromJson(string fileName)
     {
@@ -115,38 +121,52 @@ public class GameManager : MonoBehaviour
             Note note = r.GetComponent<Note>();
             note.targetTime = noteData.time;
 
-            yield return new WaitForSeconds(goodRange);
+            // ここを修正！
+            yield return new WaitForSeconds(goodRangeSphere);
 
             if (!note.IsHit) Debug.Log("MISS!");
             r.material.color = normalColor;
             note.ResetHit();
+
         }
         else
         {
             // ----- ラインノート処理 -----
-            LineRenderer line = ledLines[noteData.from, noteData.to];
-            LineNote lineNote = line.GetComponent<LineNote>();
+            GameObject lineObj = ledLines[noteData.from, noteData.to].gameObject;
+            LEDLineGenerator gen = lineObj.GetComponent<LEDLineGenerator>();
+            LineNote lineNote = lineObj.GetComponent<LineNote>();
 
-            // 黄色で予告
-            line.startColor = Color.yellow;
-            line.endColor = Color.yellow;
+            // 黄色で予告（全部）
+            foreach (Transform child in gen.transform)
+            {
+                var r = child.GetComponent<Renderer>();
+                if (r != null) r.material.color = Color.yellow;
+            }
 
             double wait = noteData.time - (AudioSettings.dspTime - startTime);
             if (wait > 0) yield return new WaitForSeconds((float)wait);
 
-            // 赤で判定開始
-            line.startColor = highlightColor;
-            line.endColor = highlightColor;
-            lineNote.targetTime = noteData.time;
+            // 赤で進行開始
+            float stepTime = goodRangeLine / gen.transform.childCount;
+            for (int i = 0; i < gen.transform.childCount; i++)
+            {
+                var r = gen.transform.GetChild(i).GetComponent<Renderer>();
+                if (r != null) r.material.color = highlightColor;
+                yield return new WaitForSeconds(stepTime);
+            }
 
-            yield return new WaitForSeconds(goodRange);
-
+            // 判定結果
             if (!lineNote.IsHit) Debug.Log("LINE MISS!");
 
-            // 白に戻す
-            line.startColor = Color.white;
-            line.endColor = Color.white;
+            // リセット
+            foreach (Transform child in gen.transform)
+            {
+                var r = child.GetComponent<Renderer>();
+                if (r != null) r.material.color = normalColor;
+            }
             lineNote.ResetHit();
+
+
         }
     }
 }
