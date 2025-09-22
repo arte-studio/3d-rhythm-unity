@@ -1,0 +1,37 @@
+using UnityEngine;
+
+public class LEDGridGenerator : MonoBehaviour
+{
+    public GameObject ledPrefab; // LEDのプレハブ（Sphereなど）
+    public int countX = 10; // 横方向のLED数
+    public int countY = 10; // 縦方向のLED数
+    public int countZ = 1;  // 奥行き方向のLED数
+    public float spacing = 0.2f; // LED間隔
+
+    private void Start()
+    {
+        GenerateLEDGrid();
+    }
+
+    public void GenerateLEDGrid()
+    {
+        // 既存のLEDを消す
+        foreach (Transform child in transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // LEDを配置
+        for (int x = 0; x < countX; x++)
+        {
+            for (int y = 0; y < countY; y++)
+            {
+                for (int z = 0; z < countZ; z++)
+                {
+                    Vector3 pos = new Vector3(x * spacing, y * spacing, z * spacing);
+                    Instantiate(ledPrefab, transform.position + pos, Quaternion.identity, transform);
+                }
+            }
+        }
+    }
+}
