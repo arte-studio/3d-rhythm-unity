@@ -4,7 +4,7 @@
 PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 28
-  productGUID: e70a49af9f5e41d4688da50535312411
+  productGUID: 6e21b920e6d9e304381b45eafdbb5db4
   AndroidProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
@@ -916,10 +916,10 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 2
   windowsGamepadBackendHint: 0
-  cloudProjectId: be66503e-3917-4f3c-b94c-aa8864b70a75
+  cloudProjectId: 681c2c36-9ed9-4114-bfbb-cfb750b3d38d
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: NoteEditor
+  projectName: NoteEditor 2025-09-22_22-34-58
   organizationId: unity_3d6bea3b059ef30019f2
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

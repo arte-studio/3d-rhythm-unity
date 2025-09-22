@@ -121,7 +121,6 @@ public class GameManager : MonoBehaviour
             Note note = r.GetComponent<Note>();
             note.targetTime = noteData.time;
 
-            // ここを修正！
             yield return new WaitForSeconds(goodRangeSphere);
 
             if (!note.IsHit) Debug.Log("MISS!");
@@ -132,7 +131,7 @@ public class GameManager : MonoBehaviour
         else
         {
             // ----- ラインノート処理 -----
-            GameObject lineObj = ledLines[noteData.from, noteData.to].gameObject;
+            GameObject lineObj = ledLines[noteData.from, noteData.to];
             LEDLineGenerator gen = lineObj.GetComponent<LEDLineGenerator>();
             LineNote lineNote = lineObj.GetComponent<LineNote>();
 
@@ -146,25 +145,29 @@ public class GameManager : MonoBehaviour
             double wait = noteData.time - (AudioSettings.dspTime - startTime);
             if (wait > 0) yield return new WaitForSeconds((float)wait);
 
-            // 赤で進行開始
+            // 赤で進行開始（音楽に合わせて流れる）
             float stepTime = goodRangeLine / gen.transform.childCount;
             for (int i = 0; i < gen.transform.childCount; i++)
             {
                 var r = gen.transform.GetChild(i).GetComponent<Renderer>();
-                if (r != null) r.material.color = highlightColor;
+                if (r != null && !lineNote.IsHit) // まだHITしてなければ赤
+                    r.material.color = highlightColor;
+
                 yield return new WaitForSeconds(stepTime);
             }
 
             // 判定結果
             if (!lineNote.IsHit) Debug.Log("LINE MISS!");
 
-            // リセット
+            // リセット（HIT時はLineNote側で緑になるのでここでは白に戻すだけ）
             foreach (Transform child in gen.transform)
             {
                 var r = child.GetComponent<Renderer>();
-                if (r != null) r.material.color = normalColor;
+                if (r != null && !lineNote.IsHit) // MISSのときだけ戻す
+                    r.material.color = normalColor;
             }
             lineNote.ResetHit();
+
 
 
         }

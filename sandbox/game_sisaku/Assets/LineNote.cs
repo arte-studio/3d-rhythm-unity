@@ -4,33 +4,35 @@ public class LineNote : MonoBehaviour
 {
     public GameObject fromSphere;
     public GameObject toSphere;
-    public float targetTime;
-
     public bool IsHit { get; private set; }
 
     private bool isDragging = false;
-    private Vector3 dragStartPos;
+    private LEDLineGenerator gen;
+
+    void Start()
+    {
+        gen = GetComponent<LEDLineGenerator>();
+    }
 
     void Update()
     {
+        // ドラッグ開始
         if (Input.GetMouseButtonDown(0))
         {
-            // fromSphere を押したか？
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 if (hit.collider.gameObject == fromSphere)
                 {
                     isDragging = true;
-                    dragStartPos = hit.point;
                     IsHit = false;
                 }
             }
         }
 
+        // ドラッグ終了
         if (isDragging && Input.GetMouseButtonUp(0))
         {
-            // toSphere で離したか？
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
@@ -38,6 +40,16 @@ public class LineNote : MonoBehaviour
                 {
                     IsHit = true;
                     Debug.Log("LINE HIT!");
+
+                    // 緑に変化
+                    if (gen != null)
+                    {
+                        foreach (Transform child in gen.transform)
+                        {
+                            var r = child.GetComponent<Renderer>();
+                            if (r != null) r.material.color = Color.green;
+                        }
+                    }
                 }
                 else
                 {
