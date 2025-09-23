@@ -24,6 +24,9 @@ public class LEDMatrixController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 初期化とLED配置
+    /// </summary>
     void Start()
     {
         leds = new LED[rows, cols];
@@ -52,6 +55,12 @@ public class LEDMatrixController : MonoBehaviour
         StartCoroutine(UpdateLEDs());
     }
 
+    /// <summary>
+    /// 定期的にLEDの色を更新
+    /// </summary>
+    /// <returns>
+    /// IEnumerator : コルーチン用
+    /// </returns>
     IEnumerator UpdateLEDs()
     {
         while (true)
@@ -61,6 +70,9 @@ public class LEDMatrixController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// LEDの色をRendererに適用
+    /// </summary>
     void ApplyLEDColors()
     {
         for (int y = 0; y < rows; y++)
@@ -93,6 +105,9 @@ public class LEDMatrixController : MonoBehaviour
         leds[row, col] = new LED(r, g, b);
     }
 
+    /// <summary>
+    /// 指定したLEDのRendererを取得
+    /// </summary>
     public Renderer GetRenderer(int row, int col)
     {
         if (row >= 0 && row < rows && col >= 0 && col < cols)
@@ -100,4 +115,13 @@ public class LEDMatrixController : MonoBehaviour
         return null;
     }
 
+    /// <summary>
+    /// 全LEDを配列で取得
+    /// </summary>
+    /// <returns>LED配列</returns>
+    /// <remarks>直接書き換えないこと</remarks>
+    public LED[,] GetAllLEDs()
+    {
+        return leds;
+    }
 }
