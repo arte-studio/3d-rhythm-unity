@@ -54,21 +54,24 @@ public class GameManager : MonoBehaviour
     {
         LoadNotesFromJson("notes"); // Resources/notes.json を読み込む
 
-        // --- SpherePlacer から自動取得 ---
+        // シーン内にある最初の SpherePlacer オブジェクトを探して、変数 placer に入れる
         SpherePlacer placer = FindFirstObjectByType<SpherePlacer>();
+
+        //SpherePlacer が見つかっている場合のみ処理 する
         if (placer != null)
         {
-            GameObject[] spheres = placer.spheres;
-            laneRenderers = new Renderer[spheres.Length];
+            //複数のオブジェクトの色や表示をまとめて操作する処理
+            GameObject[] spheres = placer.spheres; //placer の持っている spheres 配列 を取得
+            laneRenderers = new Renderer[spheres.Length]; //各球体の Renderer コンポーネント を格納する配列を作る
             for (int i = 0; i < spheres.Length; i++)
             {
-                laneRenderers[i] = spheres[i].GetComponent<Renderer>();
-                laneRenderers[i].material.color = normalColor; // 初期化
+                laneRenderers[i] = spheres[i].GetComponent<Renderer>(); //球体の見た目を操作するために Renderer を取得
+                laneRenderers[i].material.color = normalColor; // 色を 初期化（普通の色に戻す）
             }
         }
 
         // --- LEDラインを探して登録 ---
-        LEDLinesPlacer ledPlacer = FindFirstObjectByType<LEDLinesPlacer>();
+        LEDLinesPlacer ledPlacer = FindFirstObjectByType<LEDLinesPlacer>(); //シーン内の LEDLinesPlacer が付いたゲームオブジェクトを1つ探して、変数 ledPlacer に入れる
         if (ledPlacer != null)
         {
             ledLines = ledPlacer.GetLineArray();
