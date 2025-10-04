@@ -13,7 +13,7 @@ public class UdpController : MonoBehaviour
     // --- ネットワーク設定 ---
     [Header("Network Settings")]
     [Tooltip("UDPパケットを送信するブロードキャストアドレス")]
-    public string broadcastAddress = "192.168.1.255";
+    public string broadcastAddress = "192.168.10.255";
     [Tooltip("ESP32側が待ち受けるポート番号")]
     public int espPort = 8888;
     [Tooltip("Unity側が待ち受けるポート番号")]
@@ -62,7 +62,7 @@ public class UdpController : MonoBehaviour
     }
 
     /// <summary>
-    /// 毎フレーム呼ばれる更新処理
+    /// 毎フレーム呼ばれる更新処理 
     /// </summary>
     void Update()
     {
@@ -159,7 +159,12 @@ public class UdpController : MonoBehaviour
                 notePacket[2 + i * 3 + 2] = noteLeds[deviceId][i].b;
             }
             sendClient.Send(notePacket, notePacket.Length, sendEndPoint);
+
+            // 送信完了のログ（必要に応じてコメントアウトしてください）
+            // Debug.Log($"Sent LED data to Device {deviceId}");
         }
+        // 送信完了のログ
+        // Debug.Log("Sent Data");
     }
 
     /// <summary>
@@ -175,6 +180,10 @@ public class UdpController : MonoBehaviour
                 // データを受信するまでここで待機
                 byte[] data = receiveClient.Receive(ref anyIP);
 
+                // 受信したデータの内容をログに出力
+                // Debug.Log($"Received {data.Length} bytes from {anyIP}");
+                // Debug.Log($"Data: {BitConverter.ToString(data)}");
+
                 // パケットの長さが期待通りかチェック (ID 1バイト + Touch 7バイト)
                 if (data.Length == 8)
                 {
@@ -187,6 +196,12 @@ public class UdpController : MonoBehaviour
                             touchStates[deviceId][i] = (data[i + 1] == 1);
                         }
                     }
+                }
+                else
+                {
+                    // Debug.LogWarning($"Unexpected packet size: {data.Length} bytes from {anyIP}");
+                    // // 受信したデータの内容をログに出力
+                    // Debug.LogWarning($"Data: {BitConverter.ToString(data)}");
                 }
             }
             catch (Exception err)
