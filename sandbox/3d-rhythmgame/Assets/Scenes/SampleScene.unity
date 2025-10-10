@@ -325,7 +325,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalPosition: {x: 0, y: 1.5, z: -1.8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -554,6 +554,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 849797063}
+  - component: {fileID: 849797064}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -576,6 +577,30 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &849797064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 849797062}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a7ee159e7308ea4c951783226283fc4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Tutorial_MusicSource: {fileID: 1327451201}
+  Game_MusicSource: {fileID: 0}
+  Tutorial_NotesData: 
+  Game_NotesData: 
+  TouchFlag: {fileID: 0}
+  targetTime: 0
+  perfectRange: 0.30000001192092896
+  goodRange: 0.5
+  JudgeTimeRange: 0.699999988079071
+  laneIndex: 0
+  Perfect_score: 5
+  Good_score: 3
 --- !u!1 &1051851176
 GameObject:
   m_ObjectHideFlags: 0
@@ -624,6 +649,55 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1062075165
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1062075167}
+  - component: {fileID: 1062075166}
+  m_Layer: 0
+  m_Name: Object_location
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1062075166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1062075165}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3de20130f6840264dbe4c3a2ddb5c525, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  jsonFileName: object_positions
+  prefabMappings:
+  - originalName: ball
+    newPrefab: {fileID: 929646446498496168, guid: 6c7a5516939a1034e9797d8e3799cc8d, type: 3}
+    noteType: touch
+--- !u!4 &1062075167
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1062075165}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -16.012966, y: 3.7434723, z: -4.969116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -754,3 +828,4 @@ SceneRoots:
   - {fileID: 285134681}
   - {fileID: 1327451202}
   - {fileID: 1051851178}
+  - {fileID: 1062075167}
