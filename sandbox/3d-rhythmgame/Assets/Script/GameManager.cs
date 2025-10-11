@@ -1,5 +1,6 @@
 using CriWare;
 using System.Collections;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -63,6 +64,8 @@ public class GameManager : MonoBehaviour
     public int Perfect_score = 5; //“Perfect”のときのスコア
     public int Good_score = 3; //“Good”のときのスコア
 
+    /* むぎゅモジュール演出用 */
+    public LEDPerformance ledPerformance;
 
     //ゲームオブジェクトが生成された直後、Startより前に1回だけ呼ばれる
     void Awake()
@@ -72,6 +75,7 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        //ledPerformance.PlaySquare();
         StartCoroutine(GameFlow());
     }
 
@@ -181,7 +185,7 @@ public class GameManager : MonoBehaviour
 
         float diff = (float)(CurrentTime - targetTime); //現在の曲の再生時間とノーツの目標時刻の差を計算する　Unity では多くの関数が float を使う
 
-        //Debug.Log($"notes is null? {notes == null}"); ※デバッグ用(ノーツデータが正しく読み込まれていない場合true)
+        //Debug.Log($"notes is null? {notes == null}"); ※ノーツデータが正しく読み込まれていない場合true
         Debug.Log($"noteIndex = {noteIndex}, notes.Length = {notes.Length}, lane = {laneIndex}");
         //Debug.Log($"notes[{noteIndex}] is null? {notes[noteIndex] == null}");
 
@@ -208,6 +212,18 @@ public class GameManager : MonoBehaviour
             Debug.Log($"MISS! lane {laneIndex}");
             noteIndex++; 
             touchFlag.ResetFlag();
+        }
+        
+        //判定時間内ならオブジェクトの色を緑にそれ以外ならオブジェクトを白に　※演出ができたら要らない
+        Renderer noteRenderer = currentNote.GetComponent<Renderer>();
+        if (Mathf.Abs(diff) <= JudgeTimeRange)
+        {
+            
+            noteRenderer.material.color = Color.green;
+        }
+        else
+        {
+            noteRenderer.material.color = Color.white;
         }
 
 
