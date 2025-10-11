@@ -8,8 +8,8 @@ public class NoteData
 {
     public float time; //ノーツを押す時間
     public int lane;   // Sphereノート用 (0～10)
-    public int from;   // ライン始点 (ラインノート用)
-    public int to;     // ライン終点 (ラインノート用)
+    //public int from;   // ライン始点 (ラインノート用)
+    //public int to;     // ライン終点 (ラインノート用)
     public string type; // "touch", "line"
 }
 
@@ -39,7 +39,6 @@ public class GameManager : MonoBehaviour
 
     /* ノーツ判定処理系 */
     [HideInInspector]
-    public TouchNotes_Flag TouchFlag; //TouchNotes_Flagクラスのインスタンス
     public float targetTime; //ノーツが押されるべき時間
 
     /* “タッチ”ノーツの判定の厳しさパラメータ */
@@ -92,6 +91,12 @@ public class GameManager : MonoBehaviour
         LoadNotesFromJson(Tutorial_NotesData); //譜面データ読み込み
         yield return StartCoroutine(MusicPlayer(Tutorial_MusicSource)); //音楽を再生する
 
+        // チュートリアル音楽の再生終了を確認する
+        while (Tutorial_MusicSource.status == CriAtomSource.Status.Playing)
+        {
+            yield return null;
+        }
+
     }
 
     //本番実行
@@ -119,6 +124,12 @@ public class GameManager : MonoBehaviour
         // DSPタイムで開始時刻を記録
         StartTime = AudioSettings.dspTime;
 
+        // 再生状態になるまで待機
+        while (MusicSource.status != CriAtomSource.Status.Playing)
+        {
+            yield return null; // 1フレーム待つ
+        }
+
         //ノーツのインデックスを0に初期化
         noteIndex = 0;
 
@@ -126,7 +137,11 @@ public class GameManager : MonoBehaviour
         {
             if (noteIndex < notes.Length) //ノーツがすべて終わっていなければ
             {
-                //if(タッチかつなげるかの判定)
+                /* ※デバッグ用(現在の音楽の再生時間を表示) */
+                //Debug.Log($"再生時間: {CurrentTime:F2} 秒");
+                yield return new WaitForSeconds(0.5f);
+
+                targetTime = notes[noteIndex].time; // 現在のノーツの目標時間を設定
                 TouchNotes_judge();
             }
 
@@ -157,30 +172,45 @@ public class GameManager : MonoBehaviour
     //ノーツを“タッチ”の判定処理をコンソールに表示する関数
     private void TouchNotes_judge()
     {
-        //(次やること)targetTimeをノーツデータの配列にあるtimeにする
+        laneIndex = notes[noteIndex].lane;
+
+        GameObject currentNote = ObjectRelocation.Instance.objectByTypeAndLane["touch"][noteIndex]; //現在のノーツオブジェクトを取得して変数に保存
+        if (currentNote == null) return;
+        TouchNotes_Flag touchFlag = currentNote.GetComponent<TouchNotes_Flag>(); //GetComponent<T>() でcurrentNoteにアタッチされたTouchNotes_Flagを取得
+        if (touchFlag == null) return;
+
         float diff = (float)(CurrentTime - targetTime); //現在の曲の再生時間とノーツの目標時刻の差を計算する　Unity では多くの関数が float を使う
 
-        if (Mathf.Abs(diff) < JudgeTimeRange) //判定時間内なら
+        //Debug.Log($"notes is null? {notes == null}"); ※デバッグ用(ノーツデータが正しく読み込まれていない場合true)
+        Debug.Log($"noteIndex = {noteIndex}, notes.Length = {notes.Length}, lane = {laneIndex}");
+        //Debug.Log($"notes[{noteIndex}] is null? {notes[noteIndex] == null}");
+
+        /* ノーツが押されたときの判定処理 */
+        //"時間差がPerfectの範囲内 かつ ノーツが押された"なら ※Unity上ならTouchFlagからフラグをもらう
+        if (Mathf.Abs(diff) <= perfectRange && touchFlag.TouchFlag)
         {
-            if (!TouchFlag.TouchFlag && Mathf.Abs(diff) < perfectRange)  //ノーツが押されたなら かつ 時間差がPerfectの範囲内なら ※Unity上ならTouchFlagからフラグをもらう
-            { 
-                Touch_score += Perfect_score;                              //タッチスコアに加算
-                //(次やること)ノーツのインデックスを足す
-                Debug.Log($"PERFECT! lane {laneIndex}");
-            }
-            else if (!TouchFlag.TouchFlag && Mathf.Abs(diff) < goodRange) //ノーツが押されたなら かつ 時間差がGoodの範囲内なら
-            {
-                Touch_score += Good_score;                               //タッチスコアに加算
-                Debug.Log($"GOOD! lane {laneIndex}");
-            }                
-            else                                                         //時間差がMissの範囲なら
-                Debug.Log($"MISS! lane {laneIndex}");
-
-            TouchNotes_Flag player = new TouchNotes_Flag(); // TouchNotes_Flagクラスのインスタンスを作成
-            player.ResetFlag();                             // タッチフラグをリセットする(falseにする)
-
-            //GetComponent<Renderer>().material.color = Color.green; //このオブジェクトに付いている Renderer コンポーネントを取得してマテリアルの色を緑色にする
+            Touch_score += Perfect_score;//タッチスコアに加算
+            Debug.Log($"PERFECT! lane {laneIndex}");
+            noteIndex++; //次のノーツの判定に移る
+            touchFlag.ResetFlag(); // タッチフラグをリセットする(falseにする)
         }
+        //"時間差がGoodの範囲内  かつ ノーツが押された"なら
+        else if (Mathf.Abs(diff) <= goodRange && touchFlag.TouchFlag)
+        {
+            Touch_score += Good_score;
+            Debug.Log($"GOOD! lane {laneIndex}");
+            noteIndex++;
+            touchFlag.ResetFlag();
+        }
+        //"時間差がGoodの範囲内  かつ ノーツが押された" または "現在の時間が判定時間を過ぎた"なら
+        else if ((Mathf.Abs(diff) <= JudgeTimeRange && touchFlag.TouchFlag) || (CurrentTime > targetTime + JudgeTimeRange))
+        {
+            Debug.Log($"MISS! lane {laneIndex}");
+            noteIndex++; 
+            touchFlag.ResetFlag();
+        }
+
+
     }
 
     //ノーツを“つなげる”の判定処理をコンソールに表示する関数

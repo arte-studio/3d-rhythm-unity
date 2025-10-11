@@ -1,0 +1,6 @@
+{
+  "notes": [
+    { "time": 5.0, "lane": 1, "type": "touch" },
+    { "time": 7.0, "lane": 2, "type": "touch" }
+  ]
+}

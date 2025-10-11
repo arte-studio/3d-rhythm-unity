@@ -16,6 +16,15 @@ public class ObjectRelocation : MonoBehaviour
     //プレハブの種類ごとに、レーン番号ごとのオブジェクトリスト,キーがプレハブの種類名(文字列)、値がレーン番号とその種類・レーンに属するオブジェクト
     public Dictionary<string, Dictionary<int, GameObject>> objectByTypeAndLane= new Dictionary<string, Dictionary<int, GameObject>>();
 
+    public static ObjectRelocation Instance; // シングルトンインスタンス
+
+    //シングルトン
+    void Awake()
+    {
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
+    }
+
     //実行ボタン押したら
     void Start()
     {

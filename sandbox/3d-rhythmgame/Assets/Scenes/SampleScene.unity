@@ -590,14 +590,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Tutorial_MusicSource: {fileID: 1327451201}
-  Game_MusicSource: {fileID: 0}
-  Tutorial_NotesData: 
-  Game_NotesData: 
-  TouchFlag: {fileID: 0}
+  Game_MusicSource: {fileID: 1327451201}
+  Tutorial_NotesData: Tutorial_NotesData
+  Game_NotesData: Game_NotesData
   targetTime: 0
-  perfectRange: 0.30000001192092896
+  perfectRange: 0.3
   goodRange: 0.5
-  JudgeTimeRange: 0.699999988079071
+  JudgeTimeRange: 0.7
   laneIndex: 0
   Perfect_score: 5
   Good_score: 3
@@ -683,7 +682,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3de20130f6840264dbe4c3a2ddb5c525, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jsonFileName: object_positions
+  jsonFileName: object_positions-test
   prefabMappings:
   - originalName: ball
     newPrefab: {fileID: 929646446498496168, guid: 6c7a5516939a1034e9797d8e3799cc8d, type: 3}
