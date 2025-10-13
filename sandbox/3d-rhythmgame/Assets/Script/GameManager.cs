@@ -1,5 +1,7 @@
 using CriWare;
+using NUnit.Framework;
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -48,7 +50,7 @@ public class GameManager : MonoBehaviour
     public double goodRange = 0.5f; //Goodの範囲内の時間
     public double JudgeTimeRange = 0.7f; //Missを出すための時間
 
-    //ノーツの分類とか
+    /* ノーツの分類とか */
     [HideInInspector]
     public int laneIndex; //このSphereが属するレーン番号
     private NoteData[] notes;
@@ -64,8 +66,12 @@ public class GameManager : MonoBehaviour
     public int Perfect_score = 5; //“Perfect”のときのスコア
     public int Good_score = 3; //“Good”のときのスコア
 
-    /* むぎゅモジュール演出用 */
-    public LEDPerformance ledPerformance;
+    /* むぎゅモジュール演出用のインスタンス */
+    private System.Collections.Generic.List<Mugyu_LEDPerformance> mugyu_LEDPerformance = new System.Collections.Generic.List<Mugyu_LEDPerformance>();
+    UdpController udpController;
+
+    //再生中かどうか
+    bool isplaying = false;
 
     //ゲームオブジェクトが生成された直後、Startより前に1回だけ呼ばれる
     void Awake()
@@ -73,9 +79,28 @@ public class GameManager : MonoBehaviour
         Instance = this; //唯一のインスタンスを生成する
     }
 
-    void Start()
+    IEnumerator Start()
     {
-        ledPerformance.PlaySquare();
+        // ObjectRelocationの生成完了を待つ
+        yield return new WaitForSeconds(0.1f);
+
+        // touch_notesを取得
+        ObjectRelocation relocation = ObjectRelocation.Instance;
+        if (relocation != null && relocation.spawnedNotes.Count > 0)
+        {
+            System.Collections.Generic.List<GameObject> Notes = relocation.spawnedNotes;
+
+            for (int i=0;i<Notes.Count; i++)
+            {
+                Debug.Log(Notes[i].name);
+                mugyu_LEDPerformance.Add(Notes[i].GetComponent<Mugyu_LEDPerformance>());
+
+                if (mugyu_LEDPerformance[i] != null)
+                    mugyu_LEDPerformance[i].SetLEDGenerate();
+            } 
+        }
+
+        // GameFlow開始
         StartCoroutine(GameFlow());
     }
 
@@ -119,6 +144,15 @@ public class GameManager : MonoBehaviour
         notes = wrapper.notes; //JSON から読み込んだ ノーツ配列を GameManagerのプライベート変数のnotes 配列に代入
     }
 
+    private void FixedUpdate()
+    {
+        if(isplaying) //ノーツがすべて終わっていなければ
+        {
+            targetTime = notes[noteIndex].time; // 現在のノーツの目標時間を設定
+            TouchNotes_judge();
+        }
+    }
+
     //MusicSourceを再生して、開始時刻を記録する
     private IEnumerator MusicPlayer(CriAtomSource MusicSource)
     {
@@ -141,16 +175,14 @@ public class GameManager : MonoBehaviour
         {
             if (noteIndex < notes.Length) //ノーツがすべて終わっていなければ
             {
-                /* ※デバッグ用(現在の音楽の再生時間を表示) */
-                //Debug.Log($"再生時間: {CurrentTime:F2} 秒");
-                yield return new WaitForSeconds(0.5f);
-
-                targetTime = notes[noteIndex].time; // 現在のノーツの目標時間を設定
-                TouchNotes_judge();
+                isplaying = true;
             }
+            else isplaying = false;
 
-            yield return null;
+                yield return null;
         }
+        isplaying = false;
+
 
     }
 
@@ -195,6 +227,7 @@ public class GameManager : MonoBehaviour
         {
             Touch_score += Perfect_score;//タッチスコアに加算
             Debug.Log($"PERFECT! lane {laneIndex}");
+            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
             noteIndex++; //次のノーツの判定に移る
             touchFlag.ResetFlag(); // タッチフラグをリセットする(falseにする)
         }
@@ -203,6 +236,12 @@ public class GameManager : MonoBehaviour
         {
             Touch_score += Good_score;
             Debug.Log($"GOOD! lane {laneIndex}");
+            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
+            // --- ここでゲームのロジックに応じてLEDの色を更新してください ---
+
+            //noteLeds[デバイスID][LED番号] = Color.blue;
+            // フレームごとに全デバイスにLEDデータを送信
+            udpController.SendAllLedData();
             noteIndex++;
             touchFlag.ResetFlag();
         }
@@ -210,24 +249,27 @@ public class GameManager : MonoBehaviour
         else if ((Mathf.Abs(diff) <= JudgeTimeRange && touchFlag.TouchFlag) || (CurrentTime > targetTime + JudgeTimeRange))
         {
             Debug.Log($"MISS! lane {laneIndex}");
+            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
             noteIndex++; 
             touchFlag.ResetFlag();
+
         }
-        
+
         //判定時間内ならオブジェクトの色を緑にそれ以外ならオブジェクトを白に　※演出ができたら要らない
-        Renderer noteRenderer = currentNote.GetComponent<Renderer>();
-
-        if (Mathf.Abs(diff) <= JudgeTimeRange)
+        //Renderer noteRenderer = currentNote.GetComponent<Renderer>();
+        if (mugyu_LEDPerformance.Count > noteIndex && mugyu_LEDPerformance[noteIndex] != null)
         {
-            
-            noteRenderer.material.color = Color.green;
+            if (Mathf.Abs(diff) <= JudgeTimeRange)
+            {
+                //Debug.Log($"mugyu_LEDPerformance is changed");
+                mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.green);
+            }
+            else
+            {
+                //Debug.Log($"mugyu_LEDPerformance is default");
+                mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.black);
+            }
         }
-        else
-        {
-            noteRenderer.material.color = Color.white;
-        }
-
-
     }
 
     //ノーツを“つなげる”の判定処理をコンソールに表示する関数

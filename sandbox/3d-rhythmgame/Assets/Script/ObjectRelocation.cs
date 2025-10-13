@@ -18,6 +18,10 @@ public class ObjectRelocation : MonoBehaviour
 
     public static ObjectRelocation Instance; // シングルトンインスタンス
 
+    [HideInInspector]
+    public List<GameObject> spawnedNotes = new List<GameObject>(); //生成した touch_notes を保持するリスト
+
+
     //シングルトン
     void Awake()
     {
@@ -73,6 +77,8 @@ public class ObjectRelocation : MonoBehaviour
             objectByTypeAndLane[mapping.noteType][index] = instance;
 
             prefabCounters[mapping.originalName]++;
+            spawnedNotes.Add(instance);
+
 
         }
     }

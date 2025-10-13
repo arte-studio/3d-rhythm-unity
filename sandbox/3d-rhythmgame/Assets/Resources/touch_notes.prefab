@@ -13,8 +13,9 @@ GameObject:
   - component: {fileID: 1586305709927453709}
   - component: {fileID: 7893552217691899776}
   - component: {fileID: 3322552148425337535}
+  - component: {fileID: -5437724618921880255}
   m_Layer: 0
-  m_Name: ball_sampleprefab
+  m_Name: touch_notes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -123,6 +124,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   TouchFlag: 0
+--- !u!114 &-5437724618921880255
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 929646446498496168}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35a3afcc1f7e2194c8b6653880c324b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  matrixGenerator: {fileID: -6383310106520716038, guid: ac15467b7b4fc1a43be2058008f8abf9, type: 3}
 --- !u!1001 &8018761628799803360
 PrefabInstance:
   m_ObjectHideFlags: 0
