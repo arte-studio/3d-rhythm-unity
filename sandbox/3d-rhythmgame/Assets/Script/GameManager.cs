@@ -75,7 +75,7 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        //ledPerformance.PlaySquare();
+        ledPerformance.PlaySquare();
         StartCoroutine(GameFlow());
     }
 
@@ -216,6 +216,7 @@ public class GameManager : MonoBehaviour
         
         //判定時間内ならオブジェクトの色を緑にそれ以外ならオブジェクトを白に　※演出ができたら要らない
         Renderer noteRenderer = currentNote.GetComponent<Renderer>();
+
         if (Mathf.Abs(diff) <= JudgeTimeRange)
         {
             

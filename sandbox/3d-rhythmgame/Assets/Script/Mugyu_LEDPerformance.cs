@@ -91,8 +91,10 @@ public class LEDPerformance : MonoBehaviour
         // 最初全灯
         SetAll(baseColor);
         yield return new WaitForSeconds(1.0f);
+        Debug.Log("全点灯");
         // 消灯
         SetAll(Color.black);
+        Debug.Log("全消灯");
 
         // 外側から内側に向かって四角形に点灯
         float elapsed = 0f;
