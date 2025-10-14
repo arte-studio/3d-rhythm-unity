@@ -7,7 +7,7 @@ public class LEDMatrixGenerator : MonoBehaviour
     private int cols = 8;
     //private float spacing = 0.65f / 8f; // LEDMatrixサイズ6.5cmを8分割
 
-    private GameObject[,] frontLEDs;
+    private GameObject[,] LEDs;
 
     void Start()
     {
@@ -16,9 +16,9 @@ public class LEDMatrixGenerator : MonoBehaviour
 
     public void GenerateLEDMatrix()
     {
-        frontLEDs = new GameObject[rows, cols];
+        LEDs = new GameObject[rows, cols]; // ゲームオブジェクト型の二次元配列を作って何行目の何列目のLEDかを格納する
 
-        float matrixSize = /*0.065f*/1; // 6.5cm
+        float matrixSize = 1; // 6.5cm　一倍という意味(？)
         float ledSize = 0.1f; // LED直径
         float spacingX = (matrixSize - ledSize) / (cols - 1);
         float spacingY = (matrixSize - ledSize) / (rows - 1);
@@ -42,12 +42,12 @@ public class LEDMatrixGenerator : MonoBehaviour
                 if (r != null && ledSpherePrefab.GetComponent<Renderer>() != null)
                     r.material = new Material(ledSpherePrefab.GetComponent<Renderer>().sharedMaterial);
 
-                frontLEDs[i, j] = led;
+                LEDs[i, j] = led;
             }
         }
     }
 
 
 
-    public GameObject[,] GetFrontLEDs() => frontLEDs;
+    public GameObject[,] GetFrontLEDs() => LEDs; //生成したLEDの配列を渡すための関数
 }
