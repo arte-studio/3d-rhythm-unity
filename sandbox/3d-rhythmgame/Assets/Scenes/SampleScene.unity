@@ -597,6 +597,7 @@ MonoBehaviour:
   perfectRange: 0.3
   goodRange: 0.5
   JudgeTimeRange: 0.9
+  laneIndex: 0
   Perfect_score: 5
   Good_score: 3
 --- !u!1 &1051851176

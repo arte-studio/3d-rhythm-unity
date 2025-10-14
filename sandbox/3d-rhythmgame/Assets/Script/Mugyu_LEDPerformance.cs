@@ -35,7 +35,7 @@ public class Mugyu_LEDPerformance : MonoBehaviour
             // 例: noteLeds[デバイスID][LED番号] = Color.blue;
 
             // フレームごとに全デバイスにLEDデータを送信
-            //udpController.SendAllLedData();
+            udpController.SendAllLedData();
         }
 
     }

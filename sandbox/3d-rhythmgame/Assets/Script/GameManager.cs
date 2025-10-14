@@ -11,6 +11,8 @@ public class NoteData
 {
     public float time; //ノーツを押す時間
     public int lane;   // Sphereノート用 (0～10)
+    //public int from;   // ライン始点 (ラインノート用)
+    //public int to;     // ライン終点 (ラインノート用)
     public string type; // "touch", "line"
 }
 
@@ -50,7 +52,9 @@ public class GameManager : MonoBehaviour
 
     /* ノーツの分類とか */
     [HideInInspector]
+    public int laneIndex; //このSphereが属するレーン番号
     private NoteData[] notes;
+    private int noteIndex; //ノーツが来る番号
 
     /* 本番ゲームのスコア */
     private int Touch_score = 0; //“タッチ”によるスコア
@@ -69,13 +73,6 @@ public class GameManager : MonoBehaviour
     //再生中かどうか
     bool isplaying = false;
 
-    // レーンごとのノーツリスト
-    private System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<NoteData>> notesByLane = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<NoteData>>();
-
-    // 各レーンの現在のノーツインデックスを管理 レーン番号 → 現在処理中のノーツインデックス
-    private System.Collections.Generic.Dictionary<int, int> noteIndexByLane = new System.Collections.Generic.Dictionary<int, int>();
-
-
     //ゲームオブジェクトが生成された直後、Startより前に1回だけ呼ばれる
     void Awake()
     {
@@ -91,17 +88,14 @@ public class GameManager : MonoBehaviour
         ObjectRelocation relocation = ObjectRelocation.Instance;
         if (relocation != null && relocation.spawnedNotes.Count > 0)
         {
-            // ゲームオブジェクト型の配列Notesを作って、ObjectRelocation.csの生成したtouch_notesを保持するリスト
             System.Collections.Generic.List<GameObject> Notes = relocation.spawnedNotes;
 
             for (int i=0;i<Notes.Count; i++)
             {
                 Debug.Log(Notes[i].name);
-                //Notes の i 番目のオブジェクトから Mugyu_LEDPerformance コンポーネントを取得し、mugyu_LEDPerformance リストに追加する
                 mugyu_LEDPerformance.Add(Notes[i].GetComponent<Mugyu_LEDPerformance>());
 
                 if (mugyu_LEDPerformance[i] != null)
-                    // Mugyu_LEDPerformance.cs内のLEDMatrixGenerator.cs内のGetFrontLEDs()を実行する
                     mugyu_LEDPerformance[i].SetLEDGenerate();
             } 
         }
@@ -142,67 +136,20 @@ public class GameManager : MonoBehaviour
         ScoreCalculate();
     }
 
-    private void FixedUpdate()
-    {
-        if(isplaying) //再生中かどうか
-        {
-            ///lane[]の中にnoteIndex[]を置くような形にする
-            ///jsonを読み込んでlaneごとに分類してそれを二次元配列([laneIndex][notesIndex])にいれればいいかな
-            ///全部のむぎゅに対して判定を行う
-            ///Unity上でテストしやすいように入力をマウスではなくキーボードにする
-            ///つなげるも同様
-            ///つなげるは判定用のオブジェクトを作ってそこに触れたら判定するようにする
-
-            // 全てのレーン番号に対して順番に処理を行う
-            foreach (int lane in notesByLane.Keys) //notesByLane.Keysはレーン番号を返す
-            {
-                if (ObjectRelocation.Instance.objectByTypeAndLane["touch"].ContainsKey(lane))
-                {
-                    TouchNotes_judge(lane);
-                }
-            }
-        }
-    }
-
+    //JSON ファイルからノーツデータを読み込む
     void LoadNotesFromJson(string fileName)
     {
-        TextAsset jsonFile = Resources.Load<TextAsset>(fileName);
-        NotesWrapper wrapper = JsonUtility.FromJson<NotesWrapper>(jsonFile.text);
-        notes = wrapper.notes;
+        TextAsset jsonFile = Resources.Load<TextAsset>(fileName); // Asset/Resources/内にある譜面データを読み込む
+        NotesWrapper wrapper = JsonUtility.FromJson<NotesWrapper>(jsonFile.text); //JsonUtility.FromJson で文字列をCのクラスに変換し、NotesWrapperクラスのインスタンスに代入
+        notes = wrapper.notes; //JSON から読み込んだ ノーツ配列を GameManagerのプライベート変数のnotes 配列に代入
+    }
 
-        // レーンの状態を削除する
-        notesByLane.Clear();
-        noteIndexByLane.Clear();
-
-        //ノーツデータをレーンごとに整理して、判定用のインデックスも初期化する
-        foreach (NoteData note in notes)
+    private void FixedUpdate()
+    {
+        if(isplaying) //ノーツがすべて終わっていなければ
         {
-            if (!notesByLane.ContainsKey(note.lane)) // 新しいレーンが出てきたときにリストとインデックスを用意する
-            {
-                notesByLane[note.lane] = new System.Collections.Generic.List<NoteData>(); // notesByLane[lane] でそのレーンのノーツをまとめて扱える
-                noteIndexByLane[note.lane] = 0; // 現在処理中のノーツインデックスの初期化
-            }
-            notesByLane[note.lane].Add(note); //すでにレーンが登録されていたらそこにノーツインデックスを追加する
-        }
-
-        // 各レーン内で時間順にソート
-        foreach (var laneNotes in notesByLane.Values)
-        {
-            laneNotes.Sort((a, b) => a.time.CompareTo(b.time));
-
-        }
-
-        // コンソールにレーンごとのノーツデータを表示
-        foreach (var kvp in notesByLane)
-        {
-            int lane = kvp.Key;
-            var laneNotes = kvp.Value;
-            string noteTimes = "";
-            foreach (var n in laneNotes)
-            {
-                noteTimes += $"({n.time}, {n.type}) ";
-            }
-            Debug.Log($"Lane {lane}: {noteTimes}");
+            targetTime = notes[noteIndex].time; // 現在のノーツの目標時間を設定
+            TouchNotes_judge();
         }
     }
 
@@ -221,10 +168,17 @@ public class GameManager : MonoBehaviour
             yield return null; // 1フレーム待つ
         }
 
-        //音楽が再生していれば
-        while (MusicSource.status == CriAtomSource.Status.Playing)
+        //ノーツのインデックスを0に初期化
+        noteIndex = 0;
+
+        while (MusicSource.status == CriAtomSource.Status.Playing) //音楽が再生していれば
         {
+            if (noteIndex < notes.Length) //ノーツがすべて終わっていなければ
+            {
                 isplaying = true;
+            }
+            else isplaying = false;
+
                 yield return null;
         }
         isplaying = false;
@@ -232,120 +186,91 @@ public class GameManager : MonoBehaviour
 
     }
 
-    /*private void TouchNotes_judge(int lane)
+    //音楽の再生時間を0.5秒ごとにコンソールに表示するコルーチン ※使わない
+    /*private IEnumerator LogSongTime(double startTime,CriAtom MusicSource)
     {
-        // そのレーンにノーツが存在しない場合はスキップ
-        if (!notesByLane.ContainsKey(lane)) return;
-        var laneNotes = notesByLane[lane];
-        int noteIndex = noteIndexByLane[lane];
-        if (noteIndex >= laneNotes.Count) return;
-
-        NoteData currentNoteData = laneNotes[noteIndex];
-        float targetTime = currentNoteData.time;
-        float diff = (float)(CurrentTime - targetTime);
-
-        // notesByLaneのレーン番号を使ってObjectRelocationから取得
-        if (!ObjectRelocation.Instance.objectByTypeAndLane.ContainsKey("touch")) return;
-        var touchDict = ObjectRelocation.Instance.objectByTypeAndLane["touch"]; // Dictionary<int, List<GameObject>>
-
-        if (!touchDict.ContainsKey(lane)) return; // レーンが存在するか確認
-        var notesList = touchDict[lane]; // List<GameObject> 型
-
-        if (noteIndex >= notesList.Count) return;
-
-        GameObject currentNote = notesList[noteIndex]; // これで GameObject 型になる
-        if (currentNote == null) return;
-
-        TouchNotes_Flag touchFlag = currentNote.GetComponent<TouchNotes_Flag>();
-        if (touchFlag == null) return;
-
-
-        // 判定処理
-        if (Mathf.Abs(diff) <= perfectRange && touchFlag.TouchFlag)
+        // Playing になるまで待つ
+        while (MusicSource.status != CriAtomSource.Status.Playing) //音楽が再生中でなければ
         {
-            Touch_score += Perfect_score;
-            Debug.Log($"PERFECT! lane {lane}");
-            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
-            noteIndexByLane[lane]++;
-            touchFlag.ResetFlag();
-        }
-        else if (Mathf.Abs(diff) <= goodRange && touchFlag.TouchFlag)
-        {
-            Touch_score += Good_score;
-            Debug.Log($"GOOD! lane {lane}");
-            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
-            noteIndexByLane[lane]++;
-            touchFlag.ResetFlag();
-        }
-        else if ((Mathf.Abs(diff) <= JudgeTimeRange && touchFlag.TouchFlag) || (CurrentTime > targetTime + JudgeTimeRange))
-        {
-            Debug.Log($"MISS! lane {lane}");
-            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
-            noteIndexByLane[lane]++;
-            touchFlag.ResetFlag();
+            yield return null; // 1フレーム待機
         }
 
-        // 演出用
-        if (noteIndexByLane[lane] < laneNotes.Count && mugyu_LEDPerformance.Count > noteIndex)
+        Debug.Log("音楽が再生状態になりました");
+
+        while (MusicSource.status == CriAtomSource.Status.Playing) //音楽が再生されていれば
         {
-            if (Mathf.Abs(diff) <= JudgeTimeRange)
-                mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.green);
-            else
-                mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.black);
+            CurrentTime = AudioSettings.dspTime - startTime; //現在の音楽の再生時間を取得
+            Debug.Log($"再生時間: {CurrentTime:F2} 秒"); //現在の音楽の再生時間を小数点以下2桁 までログに表示させる
+            yield return new WaitForSeconds(0.5f);
         }
     }*/
 
-    private void TouchNotes_judge(int lane)
+    //ノーツを“タッチ”の判定処理をコンソールに表示する関数
+    private void TouchNotes_judge()
     {
-        if (!notesByLane.ContainsKey(lane)) return;
-        var laneNotes = notesByLane[lane];
-        int noteIndex = noteIndexByLane[lane];
+        laneIndex = notes[noteIndex].lane;
 
-        //var notesList = ObjectRelocation.Instance.objectByTypeAndLane["touch"][lane];
+        GameObject currentNote = ObjectRelocation.Instance.objectByTypeAndLane["touch"][noteIndex]; //現在のノーツオブジェクトを取得して変数に保存
+        if (currentNote == null) return;
+        TouchNotes_Flag touchFlag = currentNote.GetComponent<TouchNotes_Flag>(); //GetComponent<T>() でcurrentNoteにアタッチされたTouchNotes_Flagを取得
+        if (touchFlag == null) return;
 
-        var touchDict = ObjectRelocation.Instance.objectByTypeAndLane["touch"];
-        if (!touchDict.ContainsKey(lane)) return; // レーンが存在しない場合はスキップ
+        float diff = (float)(CurrentTime - targetTime); //現在の曲の再生時間とノーツの目標時刻の差を計算する　Unity では多くの関数が float を使う
 
-        var notesList = touchDict[lane]; // 安全にアクセス
+        //Debug.Log($"notes is null? {notes == null}"); ※ノーツデータが正しく読み込まれていない場合true
+        Debug.Log($"noteIndex = {noteIndex}, notes.Length = {notes.Length}, lane = {laneIndex}");
+        //Debug.Log($"notes[{noteIndex}] is null? {notes[noteIndex] == null}");
 
-
-        while (noteIndex < laneNotes.Count)
+        /* ノーツが押されたときの判定処理 */
+        //"時間差がPerfectの範囲内 かつ ノーツが押された"なら ※Unity上ならTouchFlagからフラグをもらう
+        if (Mathf.Abs(diff) <= perfectRange && touchFlag.TouchFlag)
         {
-            NoteData currentNoteData = laneNotes[noteIndex];
-            float diff = (float)(CurrentTime - currentNoteData.time);
-            GameObject currentNote = notesList[noteIndex];
-            TouchNotes_Flag touchFlag = currentNote.GetComponent<TouchNotes_Flag>();
-            if (touchFlag == null) break;
+            Touch_score += Perfect_score;//タッチスコアに加算
+            Debug.Log($"PERFECT! lane {laneIndex}");
+            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
+            noteIndex++; //次のノーツの判定に移る
+            touchFlag.ResetFlag(); // タッチフラグをリセットする(falseにする)
+        }
+        //"時間差がGoodの範囲内  かつ ノーツが押された"なら
+        else if (Mathf.Abs(diff) <= goodRange && touchFlag.TouchFlag)
+        {
+            Touch_score += Good_score;
+            Debug.Log($"GOOD! lane {laneIndex}");
+            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
+            // --- ここでゲームのロジックに応じてLEDの色を更新してください ---
 
-            // 判定
-            if (Mathf.Abs(diff) <= perfectRange && touchFlag.TouchFlag)
+            //noteLeds[デバイスID][LED番号] = Color.blue;
+            // フレームごとに全デバイスにLEDデータを送信
+            udpController.SendAllLedData();
+            noteIndex++;
+            touchFlag.ResetFlag();
+        }
+        //"時間差がGoodの範囲内  かつ ノーツが押された" または "現在の時間が判定時間を過ぎた"なら
+        else if ((Mathf.Abs(diff) <= JudgeTimeRange && touchFlag.TouchFlag) || (CurrentTime > targetTime + JudgeTimeRange))
+        {
+            Debug.Log($"MISS! lane {laneIndex}");
+            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
+            noteIndex++; 
+            touchFlag.ResetFlag();
+
+        }
+
+        //判定時間内ならオブジェクトの色を緑にそれ以外ならオブジェクトを白に　※演出ができたら要らない
+        //Renderer noteRenderer = currentNote.GetComponent<Renderer>();
+        if (mugyu_LEDPerformance.Count > noteIndex && mugyu_LEDPerformance[noteIndex] != null)
+        {
+            if (Mathf.Abs(diff) <= JudgeTimeRange)
             {
-                Touch_score += Perfect_score;
-                touchFlag.ResetFlag();
-                noteIndexByLane[lane]++;
-            }
-            else if (Mathf.Abs(diff) <= goodRange && touchFlag.TouchFlag)
-            {
-                Touch_score += Good_score;
-                touchFlag.ResetFlag();
-                noteIndexByLane[lane]++;
-            }
-            else if ((Mathf.Abs(diff) <= JudgeTimeRange && touchFlag.TouchFlag) || (CurrentTime > currentNoteData.time + JudgeTimeRange))
-            {
-                touchFlag.ResetFlag();
-                noteIndexByLane[lane]++;
+                //Debug.Log($"mugyu_LEDPerformance is changed");
+                mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.green);
             }
             else
             {
-                // 判定範囲外なら次のノーツはまだ来ないのでループ終了
-                break;
+                //Debug.Log($"mugyu_LEDPerformance is default");
+                mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.black);
             }
-
-            noteIndex = noteIndexByLane[lane]; // 次のノーツに進む
         }
     }
-
-
 
     //ノーツを“つなげる”の判定処理をコンソールに表示する関数
     private void ConnectNotes_judge()

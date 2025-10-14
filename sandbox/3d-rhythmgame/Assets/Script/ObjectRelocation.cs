@@ -14,16 +14,12 @@ public class ObjectRelocation : MonoBehaviour
     [HideInInspector]
     public Dictionary<string, int> prefabCounters = new Dictionary<string, int>(); //プレハブ名ごとにオブジェクトの個数を管理するための辞書を用意している
     //プレハブの種類ごとに、レーン番号ごとのオブジェクトリスト,キーがプレハブの種類名(文字列)、値がレーン番号とその種類・レーンに属するオブジェクト
-    //public Dictionary<string, Dictionary<int, GameObject>> objectByTypeAndLane= new Dictionary<string, Dictionary<int, GameObject>>();
+    public Dictionary<string, Dictionary<int, GameObject>> objectByTypeAndLane= new Dictionary<string, Dictionary<int, GameObject>>();
 
     public static ObjectRelocation Instance; // シングルトンインスタンス
 
     [HideInInspector]
     public List<GameObject> spawnedNotes = new List<GameObject>(); //生成した touch_notes を保持するリスト
-
-    // タイプごとのレーン別オブジェクトリスト
-    // objectByTypeAndLane["touch"][3] → レーン3のタッチノーツリスト
-    public Dictionary<string, Dictionary<int, List<GameObject>>> objectByTypeAndLane =new Dictionary<string, Dictionary<int, List<GameObject>>>();
 
 
     //シングルトン
@@ -72,17 +68,13 @@ public class ObjectRelocation : MonoBehaviour
             //プレハブを複製、配置する
             GameObject instance = Instantiate(mapping.newPrefab, new Vector3(obj.x, obj.y, obj.z), Quaternion.Euler(obj.rx, obj.ry, obj.rz));
             instance.name = newName;
+            
 
-            // type が存在しなければ作成
+            // type + lane(=index)で登録
             if (!objectByTypeAndLane.ContainsKey(mapping.noteType))
-                objectByTypeAndLane[mapping.noteType] = new Dictionary<int, List<GameObject>>();
+                objectByTypeAndLane[mapping.noteType] = new Dictionary<int, GameObject>();
 
-            // lane(index) が存在しなければ空のリストを作成
-            if (!objectByTypeAndLane[mapping.noteType].ContainsKey(index))
-                objectByTypeAndLane[mapping.noteType][index] = new List<GameObject>();
-
-            // instance をリストに追加
-            objectByTypeAndLane[mapping.noteType][index].Add(instance);
+            objectByTypeAndLane[mapping.noteType][index] = instance;
 
             prefabCounters[mapping.originalName]++;
             spawnedNotes.Add(instance);
