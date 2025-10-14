@@ -547,6 +547,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   notesPosition: {fileID: 684135989}
   ConnectNotes_prefab: {fileID: 6916030253482983421, guid: 38db21e72004c1449b7e6d590ba88e0b, type: 3}
+  ConnectNotes_JudgeResion_prefab: {fileID: 4834458667238987017, guid: b9c3c657b87b58449a059cd2341c4e9d, type: 3}
   targetTime_start: 5
   targetTime_goal: 8
   notesignalTime: 3
