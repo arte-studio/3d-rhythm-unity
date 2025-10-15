@@ -21,7 +21,8 @@ public class UdpController : MonoBehaviour
 
     // --- LED設定 ---
     [Header("LED Settings")]
-    private const int NUM_DEVICES = 10;
+    // private const int NUM_DEVICES = 8;
+    private const int NUM_DEVICES = 1;
     private const int NUM_PERF_LEDS = 480; // 演出用LED
     private const int NUM_NOTE_LEDS = 470; // ノーツ用LED
 
@@ -54,6 +55,8 @@ public class UdpController : MonoBehaviour
     /// </summary>
     void Start()
     {
+        Application.targetFrameRate = 60; // 60fpsに設定
+
         InitializeArrays();
         InitializeUdp();
 
@@ -69,6 +72,25 @@ public class UdpController : MonoBehaviour
         // --- ここでゲームのロジックに応じてLEDの色を更新してください ---
         // 例: performanceLeds[デバイスID][LED番号] = new Color32(255, 0, 0, 255);
         // 例: noteLeds[デバイスID][LED番号] = Color.blue;
+        // レインボーを表示，白の点を毎フレーム1つずつ移動
+        int time = (int)(Time.time * 10) % NUM_PERF_LEDS;
+        for (int i = 0; i < NUM_DEVICES; i++)
+        {
+            for (int j = 0; j < NUM_PERF_LEDS; j++)
+            {
+                float hue = (float)(j + Time.time * 20) / NUM_PERF_LEDS;
+                performanceLeds[i][j] = Color.HSVToRGB(hue, 1.0f, 1.0f);
+            }
+            performanceLeds[i][time] = Color.white;
+
+            for (int j = 0; j < NUM_NOTE_LEDS; j++)
+            {
+                float hue = (float)(j + Time.time * 10) / NUM_NOTE_LEDS;
+                noteLeds[i][j] = Color.HSVToRGB(hue, 1.0f, 1.0f);
+            }
+            noteLeds[i][time % NUM_NOTE_LEDS] = Color.white;
+        }
+        // ------------------------------------------------------------
 
         // フレームごとに全デバイスにLEDデータを送信
         SendAllLedData();
