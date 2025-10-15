@@ -54,6 +54,7 @@ public class GameManager : MonoBehaviour
     [HideInInspector]
     public int laneIndex; //このSphereが属するレーン番号
     private NoteData[] notes;
+    bool[] notes_isused;
     private int noteIndex; //ノーツが来る番号
 
     /* 本番ゲームのスコア */
@@ -142,13 +143,14 @@ public class GameManager : MonoBehaviour
         TextAsset jsonFile = Resources.Load<TextAsset>(fileName); // Asset/Resources/内にある譜面データを読み込む
         NotesWrapper wrapper = JsonUtility.FromJson<NotesWrapper>(jsonFile.text); //JsonUtility.FromJson で文字列をCのクラスに変換し、NotesWrapperクラスのインスタンスに代入
         notes = wrapper.notes; //JSON から読み込んだ ノーツ配列を GameManagerのプライベート変数のnotes 配列に代入
+        notes_isused = new bool[notes.Length];
+        for(int i = 0; i < notes_isused.Length; i++) notes_isused[i] = false;
     }
 
     private void FixedUpdate()
     {
         if(isplaying) //ノーツがすべて終わっていなければ
         {
-            targetTime = notes[noteIndex].time; // 現在のノーツの目標時間を設定
             TouchNotes_judge();
         }
     }
@@ -208,66 +210,82 @@ public class GameManager : MonoBehaviour
     //ノーツを“タッチ”の判定処理をコンソールに表示する関数
     private void TouchNotes_judge()
     {
-        laneIndex = notes[noteIndex].lane;
-
-        GameObject currentNote = ObjectRelocation.Instance.objectByTypeAndLane["touch"][noteIndex]; //現在のノーツオブジェクトを取得して変数に保存
-        if (currentNote == null) return;
-        TouchNotes_Flag touchFlag = currentNote.GetComponent<TouchNotes_Flag>(); //GetComponent<T>() でcurrentNoteにアタッチされたTouchNotes_Flagを取得
-        if (touchFlag == null) return;
-
-        float diff = (float)(CurrentTime - targetTime); //現在の曲の再生時間とノーツの目標時刻の差を計算する　Unity では多くの関数が float を使う
-
-        //Debug.Log($"notes is null? {notes == null}"); ※ノーツデータが正しく読み込まれていない場合true
-        Debug.Log($"noteIndex = {noteIndex}, notes.Length = {notes.Length}, lane = {laneIndex}");
-        //Debug.Log($"notes[{noteIndex}] is null? {notes[noteIndex] == null}");
-
-        /* ノーツが押されたときの判定処理 */
-        //"時間差がPerfectの範囲内 かつ ノーツが押された"なら ※Unity上ならTouchFlagからフラグをもらう
-        if (Mathf.Abs(diff) <= perfectRange && touchFlag.TouchFlag)
+        for(int notenum = 0; notenum < notes.Length; notenum++)
         {
-            Touch_score += Perfect_score;//タッチスコアに加算
-            Debug.Log($"PERFECT! lane {laneIndex}");
-            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
-            noteIndex++; //次のノーツの判定に移る
-            touchFlag.ResetFlag(); // タッチフラグをリセットする(falseにする)
-        }
-        //"時間差がGoodの範囲内  かつ ノーツが押された"なら
-        else if (Mathf.Abs(diff) <= goodRange && touchFlag.TouchFlag)
-        {
-            Touch_score += Good_score;
-            Debug.Log($"GOOD! lane {laneIndex}");
-            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
-            // --- ここでゲームのロジックに応じてLEDの色を更新してください ---
+            targetTime = notes[notenum].time; // 現在のノーツの目標時間を設定
 
-            //noteLeds[デバイスID][LED番号] = Color.blue;
-            // フレームごとに全デバイスにLEDデータを送信
-            udpController.SendAllLedData();
-            noteIndex++;
-            touchFlag.ResetFlag();
-        }
-        //"時間差がGoodの範囲内  かつ ノーツが押された" または "現在の時間が判定時間を過ぎた"なら
-        else if ((Mathf.Abs(diff) <= JudgeTimeRange && touchFlag.TouchFlag) || (CurrentTime > targetTime + JudgeTimeRange))
-        {
-            Debug.Log($"MISS! lane {laneIndex}");
-            mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.white);
-            noteIndex++; 
-            touchFlag.ResetFlag();
-
-        }
-
-        //判定時間内ならオブジェクトの色を緑にそれ以外ならオブジェクトを白に　※演出ができたら要らない
-        //Renderer noteRenderer = currentNote.GetComponent<Renderer>();
-        if (mugyu_LEDPerformance.Count > noteIndex && mugyu_LEDPerformance[noteIndex] != null)
-        {
-            if (Mathf.Abs(diff) <= JudgeTimeRange)
+            if (!notes_isused[notenum])
             {
-                //Debug.Log($"mugyu_LEDPerformance is changed");
-                mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.green);
-            }
-            else
-            {
-                //Debug.Log($"mugyu_LEDPerformance is default");
-                mugyu_LEDPerformance[noteIndex].SetAllLEDColor(Color.black);
+                laneIndex = notes[notenum].lane;
+
+                float diff = (float)(CurrentTime - targetTime);//現在の曲の再生時間とノーツの目標時刻の差を計算する　Unity では多くの関数が float を使う
+
+
+
+                if (CurrentTime >= targetTime)
+                {
+                    GameObject currentNote = ObjectRelocation.Instance.objectByTypeAndLane["touch"][notenum]; //現在のノーツオブジェクトを取得して変数に保存
+                    if (currentNote == null) return;
+                    TouchNotes_Flag touchFlag = currentNote.GetComponent<TouchNotes_Flag>(); //GetComponent<T>() でcurrentNoteにアタッチされたTouchNotes_Flagを取得
+                    if (touchFlag == null) return;
+
+                    //Debug.Log($"notes is null? {notes == null}"); ※ノーツデータが正しく読み込まれていない場合true
+                    Debug.Log($"noteIndex = {notenum}, notes.Length = {notes.Length}, lane = {laneIndex}");
+                    //Debug.Log($"notes[{noteIndex}] is null? {notes[noteIndex] == null}");
+
+                    /* ノーツが押されたときの判定処理 */
+                    //"時間差がPerfectの範囲内 かつ ノーツが押された"なら ※Unity上ならTouchFlagからフラグをもらう
+                    if (Mathf.Abs(diff) <= perfectRange && touchFlag.TouchFlag)
+                    {
+                        Touch_score += Perfect_score;//タッチスコアに加算
+                        Debug.Log($"PERFECT! lane {laneIndex}");
+                        mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
+                        //noteIndex++; //次のノーツの判定に移る
+                        notes_isused[notenum] = true; //にくぬき追加：ノーツを判定済みとしてマーク
+                        touchFlag.ResetFlag(); // タッチフラグをリセットする(falseにする)
+                    }
+                    //"時間差がGoodの範囲内  かつ ノーツが押された"なら
+                    else if (Mathf.Abs(diff) <= goodRange && touchFlag.TouchFlag)
+                    {
+                        Touch_score += Good_score;
+                        Debug.Log($"GOOD! lane {laneIndex}");
+                        mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
+                        // --- ここでゲームのロジックに応じてLEDの色を更新してください ---
+
+                        //noteLeds[デバイスID][LED番号] = Color.blue;
+                        // フレームごとに全デバイスにLEDデータを送信
+                        udpController.SendAllLedData();
+                        notes_isused[notenum] = true;
+                        //noteIndex++;
+                        touchFlag.ResetFlag();
+                    }
+                    //"時間差がGoodの範囲内  かつ ノーツが押された" または "現在の時間が判定時間を過ぎた"なら
+                    else if ((Mathf.Abs(diff) <= JudgeTimeRange && touchFlag.TouchFlag) || (CurrentTime > targetTime + JudgeTimeRange))
+                    {
+                        Debug.Log($"MISS! lane {laneIndex}");
+                        mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
+                        notes_isused[notenum] = true;
+                        //noteIndex++;
+                        touchFlag.ResetFlag();
+
+                    }
+
+                    //判定時間内ならオブジェクトの色を緑にそれ以外ならオブジェクトを白に　※演出ができたら要らない
+                    //Renderer noteRenderer = currentNote.GetComponent<Renderer>();
+                    if (mugyu_LEDPerformance.Count > notenum && mugyu_LEDPerformance[notenum] != null && !notes_isused[notenum])
+                    {
+                        if (Mathf.Abs(diff) <= JudgeTimeRange)
+                        {
+                            //Debug.Log($"mugyu_LEDPerformance is changed");
+                            mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.green);
+                        }
+                        else
+                        {
+                            //Debug.Log($"mugyu_LEDPerformance is default");
+                            mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.black);
+                        }
+                    }
+                }
             }
         }
     }

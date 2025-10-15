@@ -596,7 +596,7 @@ MonoBehaviour:
   targetTime: 0
   perfectRange: 0.3
   goodRange: 0.5
-  JudgeTimeRange: 0.9
+  JudgeTimeRange: 0.7
   laneIndex: 0
   Perfect_score: 5
   Good_score: 3
