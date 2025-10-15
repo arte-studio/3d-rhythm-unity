@@ -2,25 +2,57 @@ using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 using System.IO;
+using UnityEngine.SceneManagement; // SceneManagerを使用するために必要
 
-    public static class ExportObjectTransforms
+public static class ExportObjectTransforms
+{
+    [MenuItem("Tools/Export Object Transforms (Hierarchy Order)")]
+    // 座標を保存 (Hierarchyの順序で)
+    public static void SaveSceneObjects()
     {
-        [MenuItem("Tools/Export Object Transforms")] //メニューの親項目のToolsのサブ項目としてExport Object Transformsを追加
+        SavedObjectList sceneObjects = new SavedObjectList();
 
-        //座標を保存
-        public static void SaveSceneObjects()
+        // 現在アクティブなシーンを取得
+        Scene activeScene = SceneManager.GetActiveScene();
+
+        // シーン内のすべてのルートゲームオブジェクトを取得
+        GameObject[] rootObjects = activeScene.GetRootGameObjects();
+
+        // ルートオブジェクトのTransformをHierarchyの順序（GetSiblingIndexの順）にソート
+        // GetRootGameObjects() の戻り値は通常Hierarchyの順序ですが、念のためソートします
+        System.Array.Sort(rootObjects, (a, b) => a.transform.GetSiblingIndex().CompareTo(b.transform.GetSiblingIndex()));
+
+        // ルートオブジェクトから再帰的にすべての子オブジェクトをたどり、保存リストに追加する
+        foreach (GameObject rootObj in rootObjects)
         {
-            SavedObjectList sceneObjects = new SavedObjectList(); //SavedObjectList型の配列を生成して名前をsceneObjectsとする
+            TraverseAndSave(rootObj.transform, sceneObjects.objects);
+        }
 
-            GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None); //シーン内のすべてのゲームオブジェクトを探して配列に格納
+        // 保存処理
+        string json = JsonUtility.ToJson(sceneObjects, true);
+        string pathSave = Path.Combine(Application.dataPath, "Resources", "object_positions_ochasai.json"); //ここの名前を変更してノーツの配置を保存
+        File.WriteAllText(pathSave, json);
 
-            foreach (GameObject obj in allObjects)
+        // データベースをリフレッシュして、Unityエディタが新しいファイル（または更新）を認識するようにする
+        AssetDatabase.Refresh();
+
+        Debug.Log($"{sceneObjects.objects.Count} 件のPrefabを {pathSave} に保存しました (Hierarchy順)");
+    }
+
+    // 再帰的にTransformとその子をたどり、プレハブ情報を保存するヘルパー関数
+    private static void TraverseAndSave(Transform parentTransform, List<SavedObjectData> savedObjectsList)
+    {
+        // 親オブジェクト（現在処理中のTransform）自体の情報を保存
+        GameObject obj = parentTransform.gameObject;
+        if (obj != null)
+        {
+            GameObject prefab = PrefabUtility.GetCorrespondingObjectFromSource(obj);
+            string prefabName = prefab != null ? prefab.name : "";
+
+            // プレハブ由来のオブジェクト、またはルートオブジェクト（プレハブ名が無い場合、JSONの読み込み側で無視される前提）のみを保存
+            if (prefab != null || prefabName != "")
             {
-                GameObject prefab = PrefabUtility.GetCorrespondingObjectFromSource(obj); //obj がプレハブから作られたなら、元のプレハブを返す。返り値が null ならプレハブ由来ではない
-                string prefabName = prefab != null ? prefab.name : ""; //prefab が存在する場合、その名前を返す
-
-            //C# のオブジェクト初期化構文を使って、SavedObjectDataクラスのインスタンスを作成し、各フィールドに値を代入している
-            SavedObjectData data = new SavedObjectData
+                SavedObjectData data = new SavedObjectData
                 {
                     prefabName = prefabName,
                     x = obj.transform.position.x,
@@ -30,14 +62,15 @@ using System.IO;
                     ry = obj.transform.rotation.eulerAngles.y,
                     rz = obj.transform.rotation.eulerAngles.z
                 };
-
-                sceneObjects.objects.Add(data); //上で作ったdataというインスタンスをSavedObjectListクラスのインスタンス sceneObjectsに追加
+                savedObjectsList.Add(data);
             }
+        }
 
-            string json = JsonUtility.ToJson(sceneObjects, true); //SavedObjectListクラスのインスタンス sceneObjectsをjson形式の文字列に変換
-            string pathSave = Path.Combine(Application.dataPath, "Resources", "object_positions.json"); //ファイルの保存パスを作る
-            File.WriteAllText(pathSave, json); //指定したパス（pathSave）に文字列（json）を書き込む
-
-            Debug.Log($"{sceneObjects.objects.Count} 件のPrefabを {pathSave} に保存しました");
+        // 子オブジェクトを Hierarchyの順序 (GetSiblingIndex順) で処理
+        for (int i = 0; i < parentTransform.childCount; i++)
+        {
+            Transform child = parentTransform.GetChild(i);
+            TraverseAndSave(child, savedObjectsList); // 子に対して再帰呼び出し
         }
     }
+}

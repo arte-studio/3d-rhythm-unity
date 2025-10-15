@@ -1,14 +1,14 @@
 using UnityEngine;
 using System.IO;
 
-public class ObjectSpawner : MonoBehaviour 
+public class ObjectRelocation : MonoBehaviour 
 { 
     [ContextMenu("Load Objects From JSON")] //コンテキストメニューにLoad Objects From JSONを追加
     //jsonファイルを読み込んでオブジェクトを配置する
     
     public void LoadObjects() 
     {
-        string path = Path.Combine(Application.dataPath, "Resources", "object_positions.json"); //パスを生成
+        string path = Path.Combine(Application.dataPath, "Resources", "object_positions_ochasai.json"); //パスを生成,ここも名前変える
         if (!File.Exists(path)) //もし、指定した path にファイルが存在しないなら
         { 
             Debug.LogWarning($"JSONファイルが見つかりません: {path}"); 

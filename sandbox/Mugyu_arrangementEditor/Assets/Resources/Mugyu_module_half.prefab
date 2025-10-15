@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2493300804866336673}
   - component: {fileID: 7879963807768078494}
   m_Layer: 0
-  m_Name: module
+  m_Name: Mugyu_module_half
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
