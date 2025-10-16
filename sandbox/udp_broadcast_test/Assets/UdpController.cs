@@ -21,8 +21,7 @@ public class UdpController : MonoBehaviour
 
     // --- LED設定 ---
     [Header("LED Settings")]
-    // private const int NUM_DEVICES = 8;
-    private const int NUM_DEVICES = 1;
+    private const int NUM_DEVICES = 8;
     private const int NUM_PERF_LEDS = 480; // 演出用LED
     private const int NUM_NOTE_LEDS = 470; // ノーツ用LED
 
@@ -36,6 +35,8 @@ public class UdpController : MonoBehaviour
     [Tooltip("各デバイスのタッチセンサーの状態をリアルタイムで格納する (読み取り専用)")]
     // [デバイスID][センサーインデックス]
     public bool[][] touchStates = new bool[NUM_DEVICES][];
+
+    private bool arraysInitialized;
 
     // --- UDP関連 ---
     private UdpClient sendClient;    // 送信用のUDPクライアント
@@ -59,11 +60,15 @@ public class UdpController : MonoBehaviour
     /// <summary>
     /// スクリプトが有効になった最初のフレームで呼ばれる初期化処理
     /// </summary>
+    void Awake()
+    {
+        InitializeArrays();
+    }
+
     void Start()
     {
         Application.targetFrameRate = 60; // 60fpsに設定
 
-        InitializeArrays();
         InitializeUdp();
 
         // テスト用にLEDデータを初期化（不要な場合はコメントアウトしてください）
@@ -75,6 +80,10 @@ public class UdpController : MonoBehaviour
     /// </summary>
     void Update()
     {
+        if (!arraysInitialized)
+        {
+            return;
+        }
         // --- ここでゲームのロジックに応じてLEDの色を更新してください ---
         // 例: performanceLeds[デバイスID][LED番号] = new Color32(255, 0, 0, 255);
         // 例: noteLeds[デバイスID][LED番号] = Color.blue;
@@ -128,13 +137,36 @@ public class UdpController : MonoBehaviour
     /// </summary>
     private void InitializeArrays()
     {
+        if (arraysInitialized)
+        {
+            return;
+        }
+
+        if (performanceLeds == null || performanceLeds.Length != NUM_DEVICES) performanceLeds = new Color32[NUM_DEVICES][];
+        if (noteLeds == null || noteLeds.Length != NUM_DEVICES) noteLeds = new Color32[NUM_DEVICES][];
+        if (touchStates == null || touchStates.Length != NUM_DEVICES) touchStates = new bool[NUM_DEVICES][];
+        if (deviceRegistered == null || deviceRegistered.Length != NUM_DEVICES) deviceRegistered = new bool[NUM_DEVICES];
+        if (deviceEndPoints == null || deviceEndPoints.Length != NUM_DEVICES) deviceEndPoints = new IPEndPoint[NUM_DEVICES];
+
         for (int i = 0; i < NUM_DEVICES; i++)
         {
-            performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
-            noteLeds[i] = new Color32[NUM_NOTE_LEDS];
-            touchStates[i] = new bool[7];
-            deviceRegistered[i] = false; // 初期状態では未登録
+            if (performanceLeds[i] == null || performanceLeds[i].Length != NUM_PERF_LEDS * 3)
+            {
+                performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
+            }
+            if (noteLeds[i] == null || noteLeds[i].Length != NUM_NOTE_LEDS)
+            {
+                noteLeds[i] = new Color32[NUM_NOTE_LEDS];
+            }
+            if (touchStates[i] == null || touchStates[i].Length != 7)
+            {
+                touchStates[i] = new bool[7];
+            }
+            deviceRegistered[i] = false;
+            deviceEndPoints[i] = null;
         }
+
+        arraysInitialized = true;
     }
 
     /// <summary>
@@ -160,6 +192,10 @@ public class UdpController : MonoBehaviour
     /// </summary>
     public void SendAllLedData()
     {
+        if (!arraysInitialized || sendClient == null)
+        {
+            return;
+        }
         // 0番から9番まで、すべてのデバイスIDに対してループ
         for (int deviceId = 0; deviceId < NUM_DEVICES; deviceId++)
         {
