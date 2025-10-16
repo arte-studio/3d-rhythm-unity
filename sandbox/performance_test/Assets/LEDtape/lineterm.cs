@@ -1,67 +1,67 @@
-using System;
+ï»¿using System;
 using System.Collections;
 //using System.Diagnostics;
 using UnityEngine;
 
 /// <summary>
-/// •¡”‚ÌnewlineƒXƒNƒŠƒvƒg‚©‚çƒoƒCƒgƒf[ƒ^‚ğW–ñ‚µAŠÇ—‚·‚éƒNƒ‰ƒX
+/// è¤‡æ•°ã®newlineã‚¹ã‚¯ãƒªãƒ—ãƒˆã‹ã‚‰ãƒã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿ã‚’é›†ç´„ã—ã€ç®¡ç†ã™ã‚‹ã‚¯ãƒ©ã‚¹
 /// </summary>
 public class lineterm : MonoBehaviour
 {
-    // ŠenewlineƒXƒNƒŠƒvƒg‚©‚ç‚ÌƒoƒCƒg”z—ñ‚ğŠi”[‚·‚é‚½‚ß‚ÌƒWƒƒƒO”z—ñ (byte[]‚Ì”z—ñ)
+    // å„newlineã‚¹ã‚¯ãƒªãƒ—ãƒˆã‹ã‚‰ã®ãƒã‚¤ãƒˆé…åˆ—ã‚’æ ¼ç´ã™ã‚‹ãŸã‚ã®ã‚¸ãƒ£ã‚°é…åˆ— (byte[]ã®é…åˆ—)
     public byte[][] bytes;
 
-    // ‰Šú‰»‚ªŠ®—¹‚µAƒf[ƒ^‚Ìó‚¯“ü‚ê€”õ‚ª‚Å‚«‚½‚±‚Æ‚ğ¦‚·ƒtƒ‰ƒO
+    // åˆæœŸåŒ–ãŒå®Œäº†ã—ã€ãƒ‡ãƒ¼ã‚¿ã®å—ã‘å…¥ã‚Œæº–å‚™ãŒã§ããŸã“ã¨ã‚’ç¤ºã™ãƒ•ãƒ©ã‚°
     public bool ready = false;
 
     /// <summary>
-    /// ‰Šú‰»ˆ—
+    /// åˆæœŸåŒ–å‡¦ç†
     /// </summary>
     void Start()
     {
-        // 90ŒÂ‚ÌƒoƒCƒg”z—ñ‚ğŠi”[‚Å‚«‚é—Ìˆæ‚ğŠm•Û
+        // 90å€‹ã®ãƒã‚¤ãƒˆé…åˆ—ã‚’æ ¼ç´ã§ãã‚‹é ˜åŸŸã‚’ç¢ºä¿
         bytes = new byte[90][];
 
-        // ‰Šú‰»Š®—¹ƒtƒ‰ƒO‚ğ—§‚Ä‚é
+        // åˆæœŸåŒ–å®Œäº†ãƒ•ãƒ©ã‚°ã‚’ç«‹ã¦ã‚‹
         ready = true;
 
-        // ƒeƒXƒg—p‚ÌŠÖ”ŒÄ‚Ño‚µ (Œ»İ‚ÍƒRƒƒ“ƒgƒAƒEƒg‚³‚ê‚Ä‚¢‚é)
+        // ãƒ†ã‚¹ãƒˆç”¨ã®é–¢æ•°å‘¼ã³å‡ºã— (ç¾åœ¨ã¯ã‚³ãƒ¡ãƒ³ãƒˆã‚¢ã‚¦ãƒˆã•ã‚Œã¦ã„ã‚‹)
         // Invoke("get1to4", 1f);
     }
 
     /// <summary>
-    /// ƒeƒXƒg—p‚ÌŠÖ”
+    /// ãƒ†ã‚¹ãƒˆç”¨ã®é–¢æ•°
     /// </summary>
     void get1to4()
     {
-        // ID‚ª0‚©‚ç3‚Ü‚Å‚ÌƒoƒCƒgƒf[ƒ^‚ğŒ‹‡‚·‚éƒeƒXƒg‚ğÀs
+        // IDãŒ0ã‹ã‚‰3ã¾ã§ã®ãƒã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿ã‚’çµåˆã™ã‚‹ãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œ
         GetBytes(0, 3);
     }
 
     /// <summary>
-    /// w’è‚³‚ê‚½”ÍˆÍ(begin‚©‚çend‚Ü‚Å)‚ÌID‚ÌƒoƒCƒgƒf[ƒ^‚ğŒ‹‡‚µ‚Ä1‚Â‚ÌƒoƒCƒg”z—ñ‚Æ‚µ‚Ä•Ô‚·
+    /// æŒ‡å®šã•ã‚ŒãŸç¯„å›²(beginã‹ã‚‰endã¾ã§)ã®IDã®ãƒã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿ã‚’çµåˆã—ã¦1ã¤ã®ãƒã‚¤ãƒˆé…åˆ—ã¨ã—ã¦è¿”ã™
     /// </summary>
-    /// <param name="begin">Œ‹‡‚ğŠJn‚·‚éID</param>
-    /// <param name="end">Œ‹‡‚ğI—¹‚·‚éID</param>
-    /// <returns>Œ‹‡‚³‚ê‚½ƒoƒCƒg”z—ñ</returns>
+    /// <param name="begin">çµåˆã‚’é–‹å§‹ã™ã‚‹ID</param>
+    /// <param name="end">çµåˆã‚’çµ‚äº†ã™ã‚‹ID</param>
+    /// <returns>çµåˆã•ã‚ŒãŸãƒã‚¤ãƒˆé…åˆ—</returns>
     public byte[] GetBytes(int begin, int end)
     {
-        // Œ‹‡Œã‚Ìƒf[ƒ^‚ğŠi”[‚·‚é‚½‚ß‚ÌArrayList‚ğAÅ‰‚Ìƒf[ƒ^(bytes[begin])‚Å‰Šú‰»
+        // çµåˆå¾Œã®ãƒ‡ãƒ¼ã‚¿ã‚’æ ¼ç´ã™ã‚‹ãŸã‚ã®ArrayListã‚’ã€æœ€åˆã®ãƒ‡ãƒ¼ã‚¿(bytes[begin])ã§åˆæœŸåŒ–
         ArrayList list = new ArrayList(bytes[begin]);
 
-        // 2”Ô–ÚˆÈ~‚Ìƒf[ƒ^‚ğ‡”Ô‚ÉArrayList‚É’Ç‰Á‚µ‚Ä‚¢‚­
+        // 2ç•ªç›®ä»¥é™ã®ãƒ‡ãƒ¼ã‚¿ã‚’é †ç•ªã«ArrayListã«è¿½åŠ ã—ã¦ã„ã
         for (int i = begin + 1; i <= end; i++)
         {
             list.AddRange(bytes[i]);
         }
 
-        // ArrayList‚ğbyte”z—ñ‚É•ÏŠ·
+        // ArrayListã‚’byteé…åˆ—ã«å¤‰æ›
         byte[] bt = (byte[])list.ToArray(typeof(byte));
 
-        // ƒfƒoƒbƒO—p: Œ‹‡Œã‚ÌƒoƒCƒg”z—ñ‚Ì’·‚³‚ğƒƒO‚Éo—Í
-        Debug.Log("Œ‹‡Œã‚ÌƒoƒCƒg”z—ñ‚Ì’·‚³: " + bt.Length);
+        // ãƒ‡ãƒãƒƒã‚°ç”¨: çµåˆå¾Œã®ãƒã‚¤ãƒˆé…åˆ—ã®é•·ã•ã‚’ãƒ­ã‚°ã«å‡ºåŠ›
+        Debug.Log("çµåˆå¾Œã®ãƒã‚¤ãƒˆé…åˆ—ã®é•·ã•: " + bt.Length);
 
-        // Œ‹‡‚µ‚½ƒoƒCƒg”z—ñ‚ğ•Ô‚·
+        // çµåˆã—ãŸãƒã‚¤ãƒˆé…åˆ—ã‚’è¿”ã™
         return bt;
     }
 
@@ -75,26 +75,26 @@ public class lineterm : MonoBehaviour
     }
 
     /// <summary>
-    /// w’è‚³‚ê‚½”ÍˆÍ(begin‚©‚çend‚Ü‚Å)‚ÌID‚ÌƒoƒCƒgƒf[ƒ^‚ğŒ‹‡‚µ‚Ä1‚Â‚ÌƒoƒCƒg”z—ñ‚Æ‚µ‚Ä•Ô‚·
+    /// æŒ‡å®šã•ã‚ŒãŸç¯„å›²(beginã‹ã‚‰endã¾ã§)ã®IDã®ãƒã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿ã‚’çµåˆã—ã¦1ã¤ã®ãƒã‚¤ãƒˆé…åˆ—ã¨ã—ã¦è¿”ã™
     /// </summary>
-    /// <param name="begin">Œ‹‡‚ğŠJn‚·‚éID</param>
-    /// <param name="end">Œ‹‡‚ğI—¹‚·‚éID</param>
-    /// <returns>Œ‹‡‚³‚ê‚½ƒoƒCƒg”z—ñ</returns>
+    /// <param name="begin">çµåˆã‚’é–‹å§‹ã™ã‚‹ID</param>
+    /// <param name="end">çµåˆã‚’çµ‚äº†ã™ã‚‹ID</param>
+    /// <returns>çµåˆã•ã‚ŒãŸãƒã‚¤ãƒˆé…åˆ—</returns>
     public byte[] GetBytes2(int begin, int end)
     {
         return GetBytes(ConvertID(begin), ConvertID(end));
     }
 
     //*
-    // ƒfƒoƒbƒO—p‚ÌUpdateˆ— (Œ»İ‚ÍƒRƒƒ“ƒgƒAƒEƒg‚³‚ê‚Ä‚¢‚é)
+    // ãƒ‡ãƒãƒƒã‚°ç”¨ã®Updateå‡¦ç† (ç¾åœ¨ã¯ã‚³ãƒ¡ãƒ³ãƒˆã‚¢ã‚¦ãƒˆã•ã‚Œã¦ã„ã‚‹)
     private void Update()
     {
         //Debug.Log(bytes[0][0]);
-        // ‚·‚×‚Ä‚ÌID‚ÌÅ‰‚ÌR’l‚ğƒƒO1s‚Åo—Í
+        // ã™ã¹ã¦ã®IDã®æœ€åˆã®Rå€¤ã‚’ãƒ­ã‚°1è¡Œã§å‡ºåŠ›
         string log = "";
         for (int i = 0; i < 90; i++)
         {
-            // ID‚ğŒvZ
+            // IDã‚’è¨ˆç®—
             // int n = 0;
             // if (i % 3 == 0) n = 0;
             // else if (i % 3 == 1) n = 2;
@@ -106,7 +106,7 @@ public class lineterm : MonoBehaviour
             else if ((int)i/30 == 2) n += 1;
             // int n = i;
 
-            // •\¦—p‚Ì•¶š—ñ‚ğ‘g‚İ—§‚Ä‚é
+            // è¡¨ç¤ºç”¨ã®æ–‡å­—åˆ—ã‚’çµ„ã¿ç«‹ã¦ã‚‹
             if (bytes[n] != null)
             {
                 log += bytes[n][0] + " ";
