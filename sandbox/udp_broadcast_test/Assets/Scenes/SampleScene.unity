@@ -355,6 +355,7 @@ MonoBehaviour:
   broadcastAddress: 192.168.0.255
   espPort: 8888
   unityPort: 9999
+  deviceRegistered: 00
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
