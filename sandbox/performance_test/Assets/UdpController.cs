@@ -21,14 +21,13 @@ public class UdpController : MonoBehaviour
 
     // --- LED設定 ---
     [Header("LED Settings")]
-    // private const int NUM_DEVICES = 8;
     private const int NUM_DEVICES = 1;
     private const int NUM_PERF_LEDS = 480; // 演出用LED
     private const int NUM_NOTE_LEDS = 470; // ノーツ用LED
 
     // 各ESPデバイスのLED色データを保持する配列
     // [デバイスID][LEDインデックス]
-    private Color32[][] performanceLeds = new Color32[NUM_DEVICES][];
+    // private Color32[][] performanceLeds = new Color32[NUM_DEVICES][];
     private Color32[][] noteLeds = new Color32[NUM_DEVICES][];
 
     // --- タッチセンサー ---
@@ -56,12 +55,22 @@ public class UdpController : MonoBehaviour
     // ノーツ用LEDパケット (ID, Type, 470 * 3 bytes)
     private byte[] notePacket = new byte[2 + NUM_NOTE_LEDS * 3];
 
+    private lineterm term;
+
     /// <summary>
     /// スクリプトが有効になった最初のフレームで呼ばれる初期化処理
     /// </summary>
     void Start()
     {
         Application.targetFrameRate = 60; // 60fpsに設定
+
+        term = FindFirstObjectByType<lineterm>();
+        if (term == null)
+        {
+            Debug.LogError("lineterm コンポーネントが見つかりません。UdpController を無効化します。");
+            enabled = false;
+            return;
+        }
 
         InitializeArrays();
         InitializeUdp();
@@ -75,29 +84,6 @@ public class UdpController : MonoBehaviour
     /// </summary>
     void Update()
     {
-        // --- ここでゲームのロジックに応じてLEDの色を更新してください ---
-        // 例: performanceLeds[デバイスID][LED番号] = new Color32(255, 0, 0, 255);
-        // 例: noteLeds[デバイスID][LED番号] = Color.blue;
-        // レインボーを表示，白の点を毎フレーム1つずつ移動
-        int time = (int)(Time.time * 10) % NUM_PERF_LEDS;
-        for (int i = 0; i < NUM_DEVICES; i++)
-        {
-            for (int j = 0; j < NUM_PERF_LEDS; j++)
-            {
-                float hue = (float)(j + Time.time * 20) / NUM_PERF_LEDS;
-                performanceLeds[i][j] = Color.HSVToRGB(hue, 1.0f, 1.0f);
-            }
-            performanceLeds[i][time] = Color.white;
-
-            for (int j = 0; j < NUM_NOTE_LEDS; j++)
-            {
-                float hue = (float)(j + Time.time * 10) / NUM_NOTE_LEDS;
-                noteLeds[i][j] = Color.HSVToRGB(hue, 1.0f, 1.0f);
-            }
-            noteLeds[i][time % NUM_NOTE_LEDS] = Color.white;
-        }
-        // ------------------------------------------------------------
-
         // フレームごとに全デバイスにLEDデータを送信
         SendAllLedData();
 
@@ -130,7 +116,7 @@ public class UdpController : MonoBehaviour
     {
         for (int i = 0; i < NUM_DEVICES; i++)
         {
-            performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
+            // performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
             noteLeds[i] = new Color32[NUM_NOTE_LEDS];
             touchStates[i] = new bool[7];
             deviceRegistered[i] = false; // 初期状態では未登録
@@ -176,12 +162,15 @@ public class UdpController : MonoBehaviour
             {
                 perfPacket[0] = (byte)deviceId;
                 perfPacket[1] = (byte)i;
+                // linetermからGetBytes2で配列を取得
+                int begin = deviceId * 4 + 30 * i;
+                int end = begin + 3;
+                byte[] ledData = term.GetBytes2(begin, end);
                 for (int j = 0; j < NUM_PERF_LEDS; j++)
                 {
-                    int ledIndex = i * NUM_PERF_LEDS + j;
-                    perfPacket[2 + j * 3 + 0] = performanceLeds[deviceId][ledIndex].r;
-                    perfPacket[2 + j * 3 + 1] = performanceLeds[deviceId][ledIndex].g;
-                    perfPacket[2 + j * 3 + 2] = performanceLeds[deviceId][ledIndex].b;
+                    perfPacket[2 + j * 3 + 0] = ledData[j * 3 + 0];
+                    perfPacket[2 + j * 3 + 1] = ledData[j * 3 + 1];
+                    perfPacket[2 + j * 3 + 2] = ledData[j * 3 + 2];
                 }
                 // --- 送信先を変更 ---
                 sendClient.Send(perfPacket, perfPacket.Length, targetEndPoint);
@@ -281,10 +270,10 @@ public class UdpController : MonoBehaviour
             Color32 perfColor = Color.HSVToRGB((float)i / NUM_DEVICES, 0.8f, 1.0f);
             Color32 noteColor = Color.HSVToRGB(((float)i / NUM_DEVICES + 0.5f) % 1.0f, 1.0f, 1.0f);
 
-            for (int j = 0; j < NUM_PERF_LEDS * 3; j++)
-            {
-                performanceLeds[i][j] = perfColor;
-            }
+            // for (int j = 0; j < NUM_PERF_LEDS * 3; j++)
+            // {
+            //     performanceLeds[i][j] = perfColor;
+            // }
             for (int j = 0; j < NUM_NOTE_LEDS; j++)
             {
                 noteLeds[i][j] = noteColor;
