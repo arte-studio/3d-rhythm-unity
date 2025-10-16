@@ -85,7 +85,7 @@ public class lineterm : MonoBehaviour
         return GetBytes(ConvertID(begin), ConvertID(end));
     }
 
-    //*
+    /*
     // デバッグ用のUpdate処理 (現在はコメントアウトされている)
     private void Update()
     {
