@@ -43,6 +43,12 @@ public class UdpController : MonoBehaviour
     private Thread receiveThread;    // 受信処理をバックグラウンドで行うためのスレッド
     private IPEndPoint sendEndPoint; // 送信先のエンドポイント
 
+    // --- デバイス管理 ---
+    [Header("Device Management")]
+    [Tooltip("各デバイスが登録済みかを表示")]
+    public bool[] deviceRegistered = new bool[NUM_DEVICES];
+    private IPEndPoint[] deviceEndPoints = new IPEndPoint[NUM_DEVICES];
+
     // --- データ送信用バッファ ---
     // パケットを毎回生成すると負荷が高いため、使いまわすためのバッファ
     // 演出用LEDパケット (ID, Type, 480 * 3 bytes)
@@ -127,6 +133,7 @@ public class UdpController : MonoBehaviour
             performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
             noteLeds[i] = new Color32[NUM_NOTE_LEDS];
             touchStates[i] = new bool[7];
+            deviceRegistered[i] = false; // 初期状態では未登録
         }
     }
 
@@ -156,6 +163,14 @@ public class UdpController : MonoBehaviour
         // 0番から9番まで、すべてのデバイスIDに対してループ
         for (int deviceId = 0; deviceId < NUM_DEVICES; deviceId++)
         {
+            // 未登録のデバイスはスキップ
+            if (!deviceRegistered[deviceId])
+            {
+                continue;
+            }
+            // 宛先をブロードキャストから、登録済みのIPアドレスに変更
+            IPEndPoint targetEndPoint = deviceEndPoints[deviceId];
+
             // 演出用LEDデータを3パケットに分けて送信
             for (int i = 0; i < 3; i++)
             {
@@ -168,7 +183,8 @@ public class UdpController : MonoBehaviour
                     perfPacket[2 + j * 3 + 1] = performanceLeds[deviceId][ledIndex].g;
                     perfPacket[2 + j * 3 + 2] = performanceLeds[deviceId][ledIndex].b;
                 }
-                sendClient.Send(perfPacket, perfPacket.Length, sendEndPoint);
+                // --- 送信先を変更 ---
+                sendClient.Send(perfPacket, perfPacket.Length, targetEndPoint);
             }
 
             // ノーツ用LEDデータを1パケットで送信
@@ -180,7 +196,8 @@ public class UdpController : MonoBehaviour
                 notePacket[2 + i * 3 + 1] = noteLeds[deviceId][i].g;
                 notePacket[2 + i * 3 + 2] = noteLeds[deviceId][i].b;
             }
-            sendClient.Send(notePacket, notePacket.Length, sendEndPoint);
+            // --- 送信先を変更 ---
+            sendClient.Send(notePacket, notePacket.Length, targetEndPoint);
 
             // 送信完了のログ（必要に応じてコメントアウトしてください）
             // Debug.Log($"Sent LED data to Device {deviceId}");
@@ -206,8 +223,27 @@ public class UdpController : MonoBehaviour
                 // Debug.Log($"Received {data.Length} bytes from {anyIP}");
                 // Debug.Log($"Data: {BitConverter.ToString(data)}");
 
+                // 発見パケット [255][ID] の処理を追加
+                if (data.Length == 2 && data[0] == 255)
+                {
+                    int deviceId = data[1];
+                    if (deviceId >= 0 && deviceId < NUM_DEVICES)
+                    {
+                        // 新しいデバイス、またはIPアドレスが変わったデバイスを発見
+                        if (!deviceRegistered[deviceId] || !deviceEndPoints[deviceId].Address.Equals(anyIP.Address))
+                        {
+                            deviceEndPoints[deviceId] = new IPEndPoint(anyIP.Address, espPort);
+                            deviceRegistered[deviceId] = true;
+                            Debug.Log($"Device {deviceId} 発見/更新！ IP: {anyIP.Address}. ACKを送信します。");
+
+                            // 確認応答(ACK) [254] をユニキャストで返信
+                            byte[] ackPacket = { 254 };
+                            sendClient.Send(ackPacket, ackPacket.Length, deviceEndPoints[deviceId]);
+                        }
+                    }
+                }
                 // パケットの長さが期待通りかチェック (ID 1バイト + Touch 7バイト)
-                if (data.Length == 8)
+                else if (data.Length == 8)
                 {
                     int deviceId = data[0];
                     if (deviceId >= 0 && deviceId < NUM_DEVICES)
