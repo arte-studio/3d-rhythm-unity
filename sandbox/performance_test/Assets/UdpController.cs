@@ -212,7 +212,15 @@ public class UdpController : MonoBehaviour
                     perfPacket[2 + j * 3 + 2] = ledData[j * 3 + 2];
                 }
                 // --- 送信先を変更 ---
-                sendClient.Send(perfPacket, perfPacket.Length, targetEndPoint);
+                try
+                {
+                    sendClient.Send(perfPacket, perfPacket.Length, targetEndPoint);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Error sending to Device {deviceId} at {targetEndPoint}: {e.Message}");
+                    deviceRegistered[deviceId] = false; // エラーが出たら登録を解除して再発見を促す
+                }
             }
 
             // ノーツ用LEDデータを1パケットで送信
@@ -258,16 +266,23 @@ public class UdpController : MonoBehaviour
                     if (deviceId >= 0 && deviceId < NUM_DEVICES)
                     {
                         // 新しいデバイス、またはIPアドレスが変わったデバイスを発見
-                        if (!deviceRegistered[deviceId] || !deviceEndPoints[deviceId].Address.Equals(anyIP.Address))
+                        if (!deviceRegistered[deviceId])
                         {
-                            deviceEndPoints[deviceId] = new IPEndPoint(anyIP.Address, espPort);
-                            deviceRegistered[deviceId] = true;
-                            Debug.Log($"Device {deviceId} 発見/更新！ IP: {anyIP.Address}. ACKを送信します。");
-
-                            // 確認応答(ACK) [254] をユニキャストで返信
-                            byte[] ackPacket = { 254 };
-                            sendClient.Send(ackPacket, ackPacket.Length, deviceEndPoints[deviceId]);
+                            Debug.Log($"Device {deviceId} 発見！ IP: {anyIP.Address}. ACKを送信します。");
                         }
+                        else if (!deviceEndPoints[deviceId].Address.Equals(anyIP.Address))
+                        {
+                            Debug.Log($"Device {deviceId} IP更新！ IP: {anyIP.Address}. ACKを送信します。");
+                        }
+                        else
+                        {
+                            Debug.Log($"Device {deviceId} 再発見！ IP: {anyIP.Address}. ACKを送信します。");
+                        }
+                        deviceEndPoints[deviceId] = new IPEndPoint(anyIP.Address, espPort);
+                        deviceRegistered[deviceId] = true;
+                        // 確認応答(ACK) [254] をユニキャストで返信
+                        byte[] ackPacket = { 254 };
+                        sendClient.Send(ackPacket, ackPacket.Length, deviceEndPoints[deviceId]);
                     }
                 }
                 // パケットの長さが期待通りかチェック (ID 1バイト + Touch NUM_TOUCHバイト)
