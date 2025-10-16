@@ -22,6 +22,7 @@ public class UdpController : MonoBehaviour
     // --- LED設定 ---
     [Header("LED Settings")]
     private const int NUM_DEVICES = 8;
+    private const int NUM_TOUCH = 5;
     private const int NUM_PERF_LEDS = 480; // 演出用LED
     private const int NUM_NOTE_LEDS = 470; // ノーツ用LED
 
@@ -146,9 +147,9 @@ public class UdpController : MonoBehaviour
             {
                 noteLeds[i] = new Color32[NUM_NOTE_LEDS];
             }
-            if (touchStates[i] == null || touchStates[i].Length != 7)
+            if (touchStates[i] == null || touchStates[i].Length != NUM_TOUCH)
             {
-                touchStates[i] = new bool[7];
+                touchStates[i] = new bool[NUM_TOUCH];
             }
             deviceRegistered[i] = false;
             deviceEndPoints[i] = null;
@@ -269,13 +270,13 @@ public class UdpController : MonoBehaviour
                         }
                     }
                 }
-                // パケットの長さが期待通りかチェック (ID 1バイト + Touch 7バイト)
-                else if (data.Length == 8)
+                // パケットの長さが期待通りかチェック (ID 1バイト + Touch NUM_TOUCHバイト)
+                else if (data.Length == NUM_TOUCH+1)
                 {
                     int deviceId = data[0];
                     if (deviceId >= 0 && deviceId < NUM_DEVICES)
                     {
-                        for (int i = 0; i < 7; i++)
+                        for (int i = 0; i < NUM_TOUCH; i++)
                         {
                             // 受信した 1 or 0 を bool (true/false) に変換して配列に格納
                             touchStates[deviceId][i] = (data[i + 1] == 1);
