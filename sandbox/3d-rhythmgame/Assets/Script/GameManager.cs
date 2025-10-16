@@ -52,7 +52,10 @@ public class ActiveNote
         if (data.type == "connect")
         {
             Connect_JudgeEndTime = Connect_RequiredTime + Connect_JudgeEndOffset;
-            // ※ ノーツ出現時間 (time) は、connectノーツの「開始時間」として利用します。
+            Connect_DragStarted = false;
+            Connect_DragEnded = false;
+            Connect_CubeTouched = false;
+            Connect_ElapsedTime = 0f;
         }
 
         //touchノーツの場合
@@ -148,16 +151,14 @@ public class GameManager : MonoBehaviour
         {
             System.Collections.Generic.List<GameObject> Notes = relocation.spawnedNotes;
 
-            for (int i=0;i<Notes.Count; i++)
+            for (int i = 0; i < Notes.Count; i++)
+
             {
                 Debug.Log(Notes[i].name);
                 mugyu_LEDPerformance.Add(Notes[i].GetComponent<Mugyu_LEDPerformance>());
-
-                if (mugyu_LEDPerformance[i] != null)
-                    mugyu_LEDPerformance[i].SetLEDGenerate();
-            } 
+                if (mugyu_LEDPerformance[i] != null)mugyu_LEDPerformance[i].SetLEDGenerate();
+            }
         }
-
         udpController = GameObject.Find("UdpController").GetComponent<UdpController>();
 
         // GameFlow開始
@@ -369,6 +370,13 @@ public class GameManager : MonoBehaviour
         {
             ActiveNote currentNote = activeNotes[notenum];
 
+
+            // 必須ログ: なぜスキップされているかを確認
+            if (currentNote != null && currentNote.Data.type == "connect")
+            {
+                Debug.Log($"Checking Connect Note {notenum}. IsUsed: {currentNote.IsUsed}, Time: {currentNote.Data.time}, CurrentTime: {CurrentTime:F3}");
+            }
+
             // 判定処理が必要なノーツかチェック
             if (currentNote == null || currentNote.IsUsed || currentNote.Data.type != "connect")
                 continue;
@@ -377,16 +385,19 @@ public class GameManager : MonoBehaviour
             ConnectNotes_Position notesPosition = currentNote.NoteObject.GetComponent<ConnectNotes_Position>();
             if (notesPosition == null) continue;
 
-            // 判定全体の経過時間を更新 (ノーツ出現時からの相対時間ではないことに注意)
-            // 経過時間は、ノーツの出現時間（Data.time）からの相対時間を計算します。
-            // currentNote.Connect_TotalJudgeTime += Time.deltaTime; // JudgeMouseDragのロジックは時間差基準ではないため、この行は削除
-
             // 判定開始時間からの経過時間
             float timeElapsedSinceNoteStart = (float)(CurrentTime - currentNote.Data.time);
 
-            // ノーツの判定開始時間になるまで待機
-            if (timeElapsedSinceNoteStart < 0) continue;
+            // 修正: 判定開始時間よりも JudgeTimeRange分早く判定を開始する
+            // Connectノーツでは、判定開始＝ドラッグ受付開始とします。
+            float connectJudgeStartTime = (float)currentNote.Data.time - (float)JudgeTimeRange;
 
+            // 判定ウィンドウに入っていない場合はスキップ
+            if (CurrentTime < connectJudgeStartTime)
+                continue;
+
+            // 判定ウィンドウに入った後の経過時間
+            float timeElapsedSinceJudgeStart = (float)(CurrentTime - connectJudgeStartTime);
 
             // 判定開始（JudgeMouseDrag のロジックを移植）
 
@@ -394,21 +405,16 @@ public class GameManager : MonoBehaviour
             notesPosition.GetMouseXOnCubeMM(currentNote.NoteObject);
             float x_m = notesPosition.localPos.x;
 
-            // Cubeに一度でも触れたか
-            // 判定エリア（ConnectNotes_JudgeResion_prefab）の処理はここでは省略し、ノーツオブジェクトの当たり判定（ConnectNotes_Position）に依存
-            // IsMouseOnJudgeArea() の代わりに、ConnectNotes_Positionがタッチを検出したかで代用します。
-            // if (notesPosition.IsTouching) currentNote.Connect_CubeTouched = true; // IsTouchingはConnectNotes_Positionに必要
-
             // 暫定的なタッチ判定: マウスが押されていて、かつ ConnectNotes_Position がログを出していることで代用
             if (Input.GetMouseButton(0) && notesPosition.localPos != Vector3.zero)
                 currentNote.Connect_CubeTouched = true;
 
             // ドラッグ開始（左端）
-            if (!currentNote.Connect_DragStarted && x_m <= -0.25f && currentNote.Connect_CubeTouched) // 💡 CubeTouchedもチェック
+            if (!currentNote.Connect_DragStarted && x_m <= -0.25f && currentNote.Connect_CubeTouched) // CubeTouchedもチェック
             {
                 currentNote.Connect_DragStarted = true;
                 currentNote.Connect_ElapsedTime = 0f;
-                Debug.Log($"Connectドラッグ開始: {timeElapsedSinceNoteStart:F2} 秒 (local x = {x_m:F2})");
+                Debug.Log($"Connectドラッグ開始: {timeElapsedSinceJudgeStart:F2} 秒 (local x = {x_m:F2})");
             }
 
             // ドラッグ中：経過時間を積算
@@ -421,7 +427,7 @@ public class GameManager : MonoBehaviour
             if (currentNote.Connect_DragStarted && x_m >= 0.25f)
             {
                 currentNote.Connect_DragEnded = true;
-                Debug.Log($"Connectドラッグ終了: {timeElapsedSinceNoteStart:F2} 秒");
+                Debug.Log($"Connectドラッグ終了: {timeElapsedSinceJudgeStart:F2} 秒");
                 Debug.Log($"Connectドラッグ時間: {currentNote.Connect_ElapsedTime:F2} 秒");
 
                 string result;
@@ -441,7 +447,7 @@ public class GameManager : MonoBehaviour
 
             // 時間切れ判定
             float judgeEndTime = currentNote.Connect_RequiredTime + currentNote.Connect_JudgeEndOffset;
-            if (timeElapsedSinceNoteStart >= judgeEndTime && !currentNote.Connect_DragEnded)
+            if (timeElapsedSinceJudgeStart >= judgeEndTime && !currentNote.Connect_DragEnded)
             {
                 if (!currentNote.Connect_CubeTouched)
                     Debug.Log($"Connect Miss: Cubeに一度も触れなかった");

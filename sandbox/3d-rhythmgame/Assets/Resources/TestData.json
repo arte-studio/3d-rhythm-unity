@@ -1,0 +1,7 @@
+{
+  "notes": [
+    { "time": 2.0, "lane": 1, "type": "touch" },
+    { "time": 4.0, "lane": 1, "type": "connect" },
+    { "time": 10.0, "lane": 1, "type": "connect" }
+  ]
+}
