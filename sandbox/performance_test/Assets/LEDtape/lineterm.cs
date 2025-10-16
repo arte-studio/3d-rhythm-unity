@@ -59,7 +59,7 @@ public class lineterm : MonoBehaviour
         byte[] bt = (byte[])list.ToArray(typeof(byte));
 
         // デバッグ用: 結合後のバイト配列の長さをログに出力
-        Debug.Log("結合後のバイト配列の長さ: " + bt.Length);
+        // Debug.Log("結合後のバイト配列の長さ: " + bt.Length);
 
         // 結合したバイト配列を返す
         return bt;
