@@ -1,4 +1,4 @@
-using CriWare;
+ï»¿using CriWare;
 using NUnit.Framework;
 using System.Collections;
 using Unity.VisualScripting;
@@ -6,123 +6,143 @@ using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Audio;
 
-[System.Serializable] //ƒNƒ‰ƒXE\‘¢‘Ì‚ğƒVƒŠƒAƒ‰ƒCƒY‰Â”\‚É‚·‚éAƒf[ƒ^‚Ì•Û‘¶E“]‘—AUnity‚ÌƒCƒ“ƒXƒyƒNƒ^•\¦
+[System.Serializable] //ã‚¯ãƒ©ã‚¹ãƒ»æ§‹é€ ä½“ã‚’ã‚·ãƒªã‚¢ãƒ©ã‚¤ã‚ºå¯èƒ½ã«ã™ã‚‹ã€ãƒ‡ãƒ¼ã‚¿ã®ä¿å­˜ãƒ»è»¢é€ã€Unityã®ã‚¤ãƒ³ã‚¹ãƒšã‚¯ã‚¿è¡¨ç¤º
 public class NoteData
 {
-    public float time; //ƒm[ƒc‚ğ‰Ÿ‚·ŠÔ
-    public int lane;   // Sphereƒm[ƒg—p (0`10)
-    //public int from;   // ƒ‰ƒCƒ“n“_ (ƒ‰ƒCƒ“ƒm[ƒg—p)
-    //public int to;     // ƒ‰ƒCƒ“I“_ (ƒ‰ƒCƒ“ƒm[ƒg—p)
-    public string type; // "touch", "line"
+    public float time; //ãƒãƒ¼ãƒ„ã‚’æŠ¼ã™æ™‚é–“
+    public int lane;   // Sphereãƒãƒ¼ãƒˆç”¨ (0ï½10)
+    //public int from;   // ãƒ©ã‚¤ãƒ³å§‹ç‚¹ (ãƒ©ã‚¤ãƒ³ãƒãƒ¼ãƒˆç”¨)
+    //public int to;     // ãƒ©ã‚¤ãƒ³çµ‚ç‚¹ (ãƒ©ã‚¤ãƒ³ãƒãƒ¼ãƒˆç”¨)
+    public string type; // "touch", "connect"
 }
 
 [System.Serializable]
-public class NotesWrapper //JSON ‚©‚çƒf[ƒ^‚ğ“Ç‚İ‚Ş‚½‚ß‚Ìƒ‰ƒbƒp[ƒNƒ‰ƒXAJsonUtility.FromJson<T>() ‚Í ƒgƒbƒvƒŒƒxƒ‹‚ª”z—ñ‚Ìê‡‚Í’¼Ú“Ç‚İ‚ß‚È‚¢‚Ì‚ÅƒIƒuƒWƒFƒNƒg‚©‚·‚é•K—v‚ª‚ ‚é
+public class NotesWrapper //JSON ã‹ã‚‰ãƒ‡ãƒ¼ã‚¿ã‚’èª­ã¿è¾¼ã‚€ãŸã‚ã®ãƒ©ãƒƒãƒ‘ãƒ¼ã‚¯ãƒ©ã‚¹ã€JsonUtility.FromJson<T>() ã¯ ãƒˆãƒƒãƒ—ãƒ¬ãƒ™ãƒ«ãŒé…åˆ—ã®å ´åˆã¯ç›´æ¥èª­ã¿è¾¼ã‚ãªã„ã®ã§ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‹ã™ã‚‹å¿…è¦ãŒã‚ã‚‹
 {
     public NoteData[] notes;
 }
 
-// GameManager.cs ‚ÌƒNƒ‰ƒXŠOi‚Ü‚½‚Í“à•”j‚É’Ç‰Á
+// GameManager.cs ã®ã‚¯ãƒ©ã‚¹å¤–ï¼ˆã¾ãŸã¯å†…éƒ¨ï¼‰ã«è¿½åŠ 
 
 public class ActiveNote
 {
-    public GameObject NoteObject;  // ‰æ–Ê‚É•\¦’†‚Ìƒm[ƒcƒIƒuƒWƒFƒNƒg
-    public NoteData Data;          // ‘Î‰‚·‚é•ˆ–Êƒf[ƒ^
-    public bool IsUsed;            // ”»’èÏ‚İƒtƒ‰ƒOinotes_isused[index] ‚Ì‘ã‚í‚èj
-    public TouchNotes_Flag FlagComponent; // ƒtƒ‰ƒOƒRƒ“ƒ|[ƒlƒ“ƒX‚Ö‚ÌQÆ‚ğ•Û
+    //touchãƒãƒ¼ãƒ„ç”¨ã®çŠ¶æ…‹ç®¡ç†
+    public GameObject NoteObject;  // ç”»é¢ã«è¡¨ç¤ºä¸­ã®ãƒãƒ¼ãƒ„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ
+    public NoteData Data;          // å¯¾å¿œã™ã‚‹è­œé¢ãƒ‡ãƒ¼ã‚¿
+    public bool IsUsed;            // åˆ¤å®šæ¸ˆã¿ãƒ•ãƒ©ã‚°ï¼ˆnotes_isused[index] ã®ä»£ã‚ã‚Šï¼‰
+    public TouchNotes_Flag FlagComponent; // ãƒ•ãƒ©ã‚°ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ã‚¹ã¸ã®å‚ç…§ã‚’ä¿æŒ
+
+    // Connect ãƒãƒ¼ãƒ„ç”¨ã®çŠ¶æ…‹ç®¡ç† (ConnectNotes_Judge.csã‹ã‚‰ç§»æ¤)
+    public bool Connect_DragStarted = false;
+    public bool Connect_DragEnded = false;
+    public bool Connect_CubeTouched = false;
+    public float Connect_ElapsedTime = 0f;
+    public float Connect_TotalJudgeTime = 0f;
+    public float Connect_RequiredTime = 3f; // å¿…è¦ãƒ‰ãƒ©ãƒƒã‚°æ™‚é–“
+    public float Connect_JudgeEndOffset = 1f; // æ™‚é–“åˆ‡ã‚Œã¾ã§ã®è¨±å®¹æ™‚é–“
+    public float Connect_JudgeEndTime;
 
     public ActiveNote(GameObject obj, NoteData data, int index)
     {
         NoteObject = obj;
         Data = data;
         IsUsed = false;
+
+        // Connectãƒãƒ¼ãƒ„ã®å ´åˆã€Timeã¨JudgeTimeRangeã‹ã‚‰çµ‚äº†æ™‚é–“ã‚’è¨­å®š
+        if (data.type == "connect")
+        {
+            Connect_JudgeEndTime = Connect_RequiredTime + Connect_JudgeEndOffset;
+            // â€» ãƒãƒ¼ãƒ„å‡ºç¾æ™‚é–“ (time) ã¯ã€connectãƒãƒ¼ãƒ„ã®ã€Œé–‹å§‹æ™‚é–“ã€ã¨ã—ã¦åˆ©ç”¨ã—ã¾ã™ã€‚
+        }
+
+        //touchãƒãƒ¼ãƒ„ã®å ´åˆ
         FlagComponent = obj.GetComponent<TouchNotes_Flag>();
         FlagComponent?.ResetFlag();
 
-        // ‰Šúó‘Ô‚Æ‚µ‚ÄA‘Ò‹@Fi•‚È‚Çj‚Éİ’è
+        // åˆæœŸçŠ¶æ…‹ã¨ã—ã¦ã€å¾…æ©Ÿè‰²ï¼ˆé»’ãªã©ï¼‰ã«è¨­å®š
         obj.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.black);
     }
 }
 
 public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance; //ƒNƒ‰ƒX‘S‘Ì‚Å‹¤—L‚³‚ê‚é—Bˆê‚ÌƒCƒ“ƒXƒ^ƒ“ƒX
+    public static GameManager Instance; //ã‚¯ãƒ©ã‚¹å…¨ä½“ã§å…±æœ‰ã•ã‚Œã‚‹å”¯ä¸€ã®ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹
 
-    /* ‰¹Œ¹ƒ\[ƒX */
+    /* éŸ³æºã‚½ãƒ¼ã‚¹ */
     [Header("MusicSource")]
-    public CriAtomSource Tutorial_MusicSource;  // Inspector‚Åƒ`ƒ…[ƒgƒŠƒAƒ‹‚Ì‰¹Œ¹ƒIƒuƒWƒFƒNƒg‚ÌCriAtomSource‚ğƒZƒbƒg
-    public CriAtomSource Game_MusicSource;  // Inspector‚Å–{”Ô‚ÌƒQ[ƒ€‚Ì‰¹Œ¹ƒIƒuƒWƒFƒNƒg‚ÌCriAtomSource‚ğƒZƒbƒg
+    public CriAtomSource Tutorial_MusicSource;  // Inspectorã§ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«ã®éŸ³æºã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®CriAtomSourceã‚’ã‚»ãƒƒãƒˆ
+    public CriAtomSource Game_MusicSource;  // Inspectorã§æœ¬ç•ªã®ã‚²ãƒ¼ãƒ ã®éŸ³æºã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®CriAtomSourceã‚’ã‚»ãƒƒãƒˆ
 
-    /* ‰¹Šy‚ÌŠÔŒn */
-    private double StartTime = 0; // ‰¹ŠyÄ¶ŠJn
-    public double CurrentTime => AudioSettings.dspTime - StartTime; //Œ»İ‚Ì‰¹Šy‚ÌÄ¶ŠÔA‘¼ƒNƒ‰ƒX‚©‚ç“Ç‚İæ‚è‰Â”\
+    /* éŸ³æ¥½ã®æ™‚é–“ç³» */
+    private double StartTime = 0; // éŸ³æ¥½å†ç”Ÿé–‹å§‹æ™‚åˆ»
+    public double CurrentTime => AudioSettings.dspTime - StartTime; //ç¾åœ¨ã®éŸ³æ¥½ã®å†ç”Ÿæ™‚é–“ã€ä»–ã‚¯ãƒ©ã‚¹ã‹ã‚‰èª­ã¿å–ã‚Šå¯èƒ½
 
-    /* •ˆ–Êƒf[ƒ^ */
+    /* è­œé¢ãƒ‡ãƒ¼ã‚¿ */
     [Header("NotesData_filename")]
-    public string Tutorial_NotesData; //ƒ`ƒ…[ƒgƒŠƒAƒ‹—p•ˆ–Êƒf[ƒ^‚Ìƒtƒ@ƒCƒ‹–¼
-    public string Game_NotesData;@//–{”Ô—p•ˆ–Êƒf[ƒ^‚Ìƒtƒ@ƒCƒ‹–¼
+    public string Tutorial_NotesData; //ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«ç”¨è­œé¢ãƒ‡ãƒ¼ã‚¿ã®ãƒ•ã‚¡ã‚¤ãƒ«å
+    public string Game_NotesData;ã€€//æœ¬ç•ªç”¨è­œé¢ãƒ‡ãƒ¼ã‚¿ã®ãƒ•ã‚¡ã‚¤ãƒ«å
 
-    /* ƒm[ƒc”»’èˆ—Œn */
+    /* ãƒãƒ¼ãƒ„åˆ¤å®šå‡¦ç†ç³» */
     [HideInInspector]
-    public float targetTime; //ƒm[ƒc‚ª‰Ÿ‚³‚ê‚é‚×‚«ŠÔ
+    public float targetTime; //ãƒãƒ¼ãƒ„ãŒæŠ¼ã•ã‚Œã‚‹ã¹ãæ™‚é–“
 
-    /* gƒ^ƒbƒ`hƒm[ƒc‚Ì”»’è‚ÌŒµ‚µ‚³ƒpƒ‰ƒ[ƒ^ */
+    /* â€œã‚¿ãƒƒãƒâ€ãƒãƒ¼ãƒ„ã®åˆ¤å®šã®å³ã—ã•ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ */
     [Header("Judge Settings - Sphere")]
-    public double perfectRange = 0.3f; //Perfect‚Ì”ÍˆÍ“à‚ÌŠÔ
-    public double goodRange = 0.5f; //Good‚Ì”ÍˆÍ“à‚ÌŠÔ
-    public double JudgeTimeRange = 0.7f; //Miss‚ğo‚·‚½‚ß‚ÌŠÔ
+    public double perfectRange = 0.3f; //Perfectã®ç¯„å›²å†…ã®æ™‚é–“
+    public double goodRange = 0.5f; //Goodã®ç¯„å›²å†…ã®æ™‚é–“
+    public double JudgeTimeRange = 0.7f; //Missã‚’å‡ºã™ãŸã‚ã®æ™‚é–“
 
-    //public ConnectNotes_Position notesPosition; // Inspector‚ÅConnectNotes_Position‚ğw’è
-    //public GameObject ConnectNotes_prefab;         // Inspector‚ÅCubeƒvƒŒƒnƒu‚ğw’è
-    //public GameObject ConnectNotes_JudgeResion_prefab;         // Inspector‚Å”»’è‚Ì”ÍˆÍ‚ğw’è
+    //public ConnectNotes_Position notesPosition; // Inspectorã§ConnectNotes_Positionã‚’æŒ‡å®š
+    //public GameObject ConnectNotes_prefab;         // Inspectorã§Cubeãƒ—ãƒ¬ãƒãƒ–ã‚’æŒ‡å®š
+    //public GameObject ConnectNotes_JudgeResion_prefab;         // Inspectorã§åˆ¤å®šã®ç¯„å›²ã‚’æŒ‡å®š
     //private GameObject ConnectNote;
     //private GameObject ConnectNotes_JudgeResion;
 
-    public float targetTime_start;  // ƒXƒ^[ƒg‚·‚éŠÔ
-    public float targetTime_goal;   // ƒS[ƒ‹‚·‚éŠÔ
-    //private float targetTime_connect;       // g‚Â‚È‚°‚éh‚ğ‰½•b‚Å‚â‚é‚©‚ğw’è‚·‚é
-    public float notesignalTime = 3f;    // ƒXƒ^[ƒg‚·‚éŠÔ‚Ì‰½•b‘O‚©‚ç‡}‚ğ‡}‚ğo‚·‚©
+    public float targetTime_start;  // ã‚¹ã‚¿ãƒ¼ãƒˆã™ã‚‹æ™‚é–“
+    public float targetTime_goal;   // ã‚´ãƒ¼ãƒ«ã™ã‚‹æ™‚é–“
+    //private float targetTime_connect;       // â€œã¤ãªã’ã‚‹â€ã‚’ä½•ç§’ã§ã‚„ã‚‹ã‹ã‚’æŒ‡å®šã™ã‚‹
+    public float notesignalTime = 3f;    // ã‚¹ã‚¿ãƒ¼ãƒˆã™ã‚‹æ™‚é–“ã®ä½•ç§’å‰ã‹ã‚‰åˆå›³ã‚’åˆå›³ã‚’å‡ºã™ã‹
 
-    /* ƒm[ƒc‚Ì•ª—Ş‚Æ‚© */
+    /* ãƒãƒ¼ãƒ„ã®åˆ†é¡ã¨ã‹ */
     [HideInInspector]
-    public int laneIndex; //‚±‚ÌSphere‚ª‘®‚·‚éƒŒ[ƒ“”Ô†
+    public int laneIndex; //ã“ã®SphereãŒå±ã™ã‚‹ãƒ¬ãƒ¼ãƒ³ç•ªå·
     //private NoteData[] notes;
     bool[] notes_isused;
-    //private int noteIndex; //ƒm[ƒc‚ª—ˆ‚é”Ô†
+    //private int noteIndex; //ãƒãƒ¼ãƒ„ãŒæ¥ã‚‹ç•ªå·
 
-    /* –{”ÔƒQ[ƒ€‚ÌƒXƒRƒA */
-    private int Touch_score = 0; //gƒ^ƒbƒ`h‚É‚æ‚éƒXƒRƒA
-    //private int Connect_score = 0; //g‚Â‚È‚°‚éh‚É‚æ‚éƒXƒRƒA
-    //private int Total_score = 0; //gƒ^ƒbƒ`h‚É‚æ‚éƒXƒRƒA
+    /* æœ¬ç•ªã‚²ãƒ¼ãƒ ã®ã‚¹ã‚³ã‚¢ */
+    private int Touch_score = 0; //â€œã‚¿ãƒƒãƒâ€ã«ã‚ˆã‚‹ã‚¹ã‚³ã‚¢
+    //private int Connect_score = 0; //â€œã¤ãªã’ã‚‹â€ã«ã‚ˆã‚‹ã‚¹ã‚³ã‚¢
+    //private int Total_score = 0; //â€œã‚¿ãƒƒãƒâ€ã«ã‚ˆã‚‹ã‚¹ã‚³ã‚¢
 
-    /* ”»’è‚²‚Æ‚ÌƒXƒRƒA */
+    /* åˆ¤å®šã”ã¨ã®ã‚¹ã‚³ã‚¢ */
     [Header("Judge Settings - Score")]
-    public int Perfect_score = 5; //gPerfecth‚Ì‚Æ‚«‚ÌƒXƒRƒA
-    public int Good_score = 3; //gGoodh‚Ì‚Æ‚«‚ÌƒXƒRƒA
+    public int Perfect_score = 5; //â€œPerfectâ€ã®ã¨ãã®ã‚¹ã‚³ã‚¢
+    public int Good_score = 3; //â€œGoodâ€ã®ã¨ãã®ã‚¹ã‚³ã‚¢
 
-    /* ‚Ş‚¬‚ãƒ‚ƒWƒ…[ƒ‹‰‰o—p‚ÌƒCƒ“ƒXƒ^ƒ“ƒX */
+    /* ã‚€ãã‚…ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«æ¼”å‡ºç”¨ã®ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ */
     private System.Collections.Generic.List<Mugyu_LEDPerformance> mugyu_LEDPerformance = new System.Collections.Generic.List<Mugyu_LEDPerformance>();
     UdpController udpController;
 
-    //Ä¶’†‚©‚Ç‚¤‚©
+    //å†ç”Ÿä¸­ã‹ã©ã†ã‹
     bool isplaying = false;
 
     private NoteData[] notes;
-    private ActiveNote[] activeNotes; //  •ˆ–Êƒf[ƒ^‘S‚Ä‚ÌActiveNote‚ğŠÇ—
-    private int lastSpawnedNoteIndex = 0; // ÅŒã‚Éƒv[ƒ‹‚©‚çƒIƒuƒWƒFƒNƒg‚ğŠ„‚è“–‚Ä‚½ƒm[ƒc‚ÌJSONƒCƒ“ƒfƒbƒNƒX
+    private ActiveNote[] activeNotes; //  è­œé¢ãƒ‡ãƒ¼ã‚¿å…¨ã¦ã®ActiveNoteã‚’ç®¡ç†
+    private int lastSpawnedNoteIndex = 0; // æœ€å¾Œã«ãƒ—ãƒ¼ãƒ«ã‹ã‚‰ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’å‰²ã‚Šå½“ã¦ãŸãƒãƒ¼ãƒ„ã®JSONã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹
 
-    //ƒQ[ƒ€ƒIƒuƒWƒFƒNƒg‚ª¶¬‚³‚ê‚½’¼ŒãAStart‚æ‚è‘O‚É1‰ñ‚¾‚¯ŒÄ‚Î‚ê‚é
+    //ã‚²ãƒ¼ãƒ ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãŒç”Ÿæˆã•ã‚ŒãŸç›´å¾Œã€Startã‚ˆã‚Šå‰ã«1å›ã ã‘å‘¼ã°ã‚Œã‚‹
     void Awake()
     {
-        Instance = this; //—Bˆê‚ÌƒCƒ“ƒXƒ^ƒ“ƒX‚ğ¶¬‚·‚é
+        Instance = this; //å”¯ä¸€ã®ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚’ç”Ÿæˆã™ã‚‹
     }
 
     IEnumerator Start()
     {
-        // ObjectRelocation‚Ì¶¬Š®—¹‚ğ‘Ò‚Â
+        // ObjectRelocationã®ç”Ÿæˆå®Œäº†ã‚’å¾…ã¤
         yield return new WaitForSeconds(0.1f);
 
-        // touch_notes‚ğæ“¾
+        // touch_notesã‚’å–å¾—
         ObjectRelocation relocation = ObjectRelocation.Instance;
         if (relocation != null && relocation.spawnedNotes.Count > 0)
         {
@@ -140,27 +160,27 @@ public class GameManager : MonoBehaviour
 
         udpController = GameObject.Find("UdpController").GetComponent<UdpController>();
 
-        // GameFlowŠJn
+        // GameFlowé–‹å§‹
         StartCoroutine(GameFlow());
     }
 
-    //ƒ`ƒ…[ƒgƒŠƒAƒ‹‚©‚ç–{”Ô‚Ü‚Å‚â‚é—¬‚ê‚Ì‘S‘Ì‚Ìˆ—
+    //ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«ã‹ã‚‰æœ¬ç•ªã¾ã§ã‚„ã‚‹æµã‚Œã®å…¨ä½“ã®å‡¦ç†
     private IEnumerator GameFlow()
     {
-        // ƒ`ƒ…[ƒgƒŠƒAƒ‹ŠJn ¨ I—¹‚Ü‚Å‘Ò‹@
+        // ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«é–‹å§‹ â†’ çµ‚äº†ã¾ã§å¾…æ©Ÿ
         yield return StartCoroutine(Tutorial());
 
-        // ƒ`ƒ…[ƒgƒŠƒAƒ‹I—¹ŒãA–{•ÒŠJn
+        // ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«çµ‚äº†å¾Œã€æœ¬ç·¨é–‹å§‹
         yield return StartCoroutine(Game());
     }
 
-    //ƒ`ƒ…[ƒgƒŠƒAƒ‹Às
+    //ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«å®Ÿè¡Œ
     private IEnumerator Tutorial()
     {
-        LoadNotesFromJson(Tutorial_NotesData); //•ˆ–Êƒf[ƒ^“Ç‚İ‚İ
-        yield return StartCoroutine(MusicPlayer(Tutorial_MusicSource)); //‰¹Šy‚ğÄ¶‚·‚é
+        LoadNotesFromJson(Tutorial_NotesData); //è­œé¢ãƒ‡ãƒ¼ã‚¿èª­ã¿è¾¼ã¿
+        yield return StartCoroutine(MusicPlayer(Tutorial_MusicSource)); //éŸ³æ¥½ã‚’å†ç”Ÿã™ã‚‹
 
-        // ƒ`ƒ…[ƒgƒŠƒAƒ‹‰¹Šy‚ÌÄ¶I—¹‚ğŠm”F‚·‚é
+        // ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«éŸ³æ¥½ã®å†ç”Ÿçµ‚äº†ã‚’ç¢ºèªã™ã‚‹
         while (Tutorial_MusicSource.status == CriAtomSource.Status.Playing)
         {
             yield return null;
@@ -168,21 +188,21 @@ public class GameManager : MonoBehaviour
 
     }
 
-    //–{”ÔÀs
+    //æœ¬ç•ªå®Ÿè¡Œ
     private IEnumerator Game()
     {
-        LoadNotesFromJson(Game_NotesData); //•ˆ–Êƒf[ƒ^“Ç‚İ‚İ
-        yield return StartCoroutine(MusicPlayer(Game_MusicSource)); //‰¹Šy‚ğÄ¶‚·‚é
+        LoadNotesFromJson(Game_NotesData); //è­œé¢ãƒ‡ãƒ¼ã‚¿èª­ã¿è¾¼ã¿
+        yield return StartCoroutine(MusicPlayer(Game_MusicSource)); //éŸ³æ¥½ã‚’å†ç”Ÿã™ã‚‹
         ScoreCalculate();
     }
 
-    //JSON ƒtƒ@ƒCƒ‹‚©‚çƒm[ƒcƒf[ƒ^‚ğ“Ç‚İ‚Ş
+    //JSON ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ãƒãƒ¼ãƒ„ãƒ‡ãƒ¼ã‚¿ã‚’èª­ã¿è¾¼ã‚€
     void LoadNotesFromJson(string fileName)
     {
-        TextAsset jsonFile = Resources.Load<TextAsset>(fileName); // Asset/Resources/“à‚É‚ ‚é•ˆ–Êƒf[ƒ^‚ğ“Ç‚İ‚Ş
-        NotesWrapper wrapper = JsonUtility.FromJson<NotesWrapper>(jsonFile.text); //JsonUtility.FromJson ‚Å•¶š—ñ‚ğC‚ÌƒNƒ‰ƒX‚É•ÏŠ·‚µANotesWrapperƒNƒ‰ƒX‚ÌƒCƒ“ƒXƒ^ƒ“ƒX‚É‘ã“ü
-        notes = wrapper.notes; //JSON ‚©‚ç“Ç‚İ‚ñ‚¾ ƒm[ƒc”z—ñ‚ğ GameManager‚Ìƒvƒ‰ƒCƒx[ƒg•Ï”‚Ìnotes ”z—ñ‚É‘ã“ü
-        //  C³“_: ActiveNote”z—ñ‚ğ‰Šú‰»
+        TextAsset jsonFile = Resources.Load<TextAsset>(fileName); // Asset/Resources/å†…ã«ã‚ã‚‹è­œé¢ãƒ‡ãƒ¼ã‚¿ã‚’èª­ã¿è¾¼ã‚€
+        NotesWrapper wrapper = JsonUtility.FromJson<NotesWrapper>(jsonFile.text); //JsonUtility.FromJson ã§æ–‡å­—åˆ—ã‚’Cã®ã‚¯ãƒ©ã‚¹ã«å¤‰æ›ã—ã€NotesWrapperã‚¯ãƒ©ã‚¹ã®ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã«ä»£å…¥
+        notes = wrapper.notes; //JSON ã‹ã‚‰èª­ã¿è¾¼ã‚“ã  ãƒãƒ¼ãƒ„é…åˆ—ã‚’ GameManagerã®ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆå¤‰æ•°ã®notes é…åˆ—ã«ä»£å…¥
+        //  ä¿®æ­£ç‚¹: ActiveNoteé…åˆ—ã‚’åˆæœŸåŒ–
         activeNotes = new ActiveNote[notes.Length];
         notes_isused = new bool[notes.Length];
         for(int i = 0; i < notes_isused.Length; i++) notes_isused[i] = false;
@@ -190,49 +210,50 @@ public class GameManager : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if(isplaying) //ƒm[ƒc‚ª‚·‚×‚ÄI‚í‚Á‚Ä‚¢‚È‚¯‚ê‚Î
+        if(isplaying) //ãƒãƒ¼ãƒ„ãŒã™ã¹ã¦çµ‚ã‚ã£ã¦ã„ãªã‘ã‚Œã°
         {
             TouchNotes_judge();
+            ConnectNotes_judge();
         }
     }
 
-    //MusicSource‚ğÄ¶‚µ‚ÄAŠJn‚ğ‹L˜^‚·‚é
+    //MusicSourceã‚’å†ç”Ÿã—ã¦ã€é–‹å§‹æ™‚åˆ»ã‚’è¨˜éŒ²ã™ã‚‹
     private IEnumerator MusicPlayer(CriAtomSource MusicSource)
     {
-        //‰¹ŠyÄ¶
+        //éŸ³æ¥½å†ç”Ÿ
         MusicSource.Play();
 
-        // DSPƒ^ƒCƒ€‚ÅŠJn‚ğ‹L˜^
+        // DSPã‚¿ã‚¤ãƒ ã§é–‹å§‹æ™‚åˆ»ã‚’è¨˜éŒ²
         StartTime = AudioSettings.dspTime;
 
-        // Ä¶ó‘Ô‚É‚È‚é‚Ü‚Å‘Ò‹@
+        // å†ç”ŸçŠ¶æ…‹ã«ãªã‚‹ã¾ã§å¾…æ©Ÿ
         while (MusicSource.status != CriAtomSource.Status.Playing)
         {
-            yield return null; // 1ƒtƒŒ[ƒ€‘Ò‚Â
+            yield return null; // 1ãƒ•ãƒ¬ãƒ¼ãƒ å¾…ã¤
         }
         isplaying = true;
-        //ƒm[ƒc‚ÌƒCƒ“ƒfƒbƒNƒX‚ğ0‚É‰Šú‰»
+        //ãƒãƒ¼ãƒ„ã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’0ã«åˆæœŸåŒ–
         //noteIndex = 0;
 
-        lastSpawnedNoteIndex = 0; // ƒv[ƒ‹‚©‚çŠ„‚è“–‚Ä‚½ƒm[ƒcƒCƒ“ƒfƒbƒNƒX‚ğ‰Šú‰»
+        lastSpawnedNoteIndex = 0; // ãƒ—ãƒ¼ãƒ«ã‹ã‚‰å‰²ã‚Šå½“ã¦ãŸãƒãƒ¼ãƒ„ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’åˆæœŸåŒ–
 
         while (MusicSource.status == CriAtomSource.Status.Playing)
         {
-            // ƒm[ƒcoŒ»ƒƒWƒbƒN
+            // ãƒãƒ¼ãƒ„å‡ºç¾ãƒ­ã‚¸ãƒƒã‚¯
             while (lastSpawnedNoteIndex < notes.Length && notes[lastSpawnedNoteIndex].time <= CurrentTime + notesignalTime)
             {
                 NoteData noteData = notes[lastSpawnedNoteIndex];
 
-                // ƒm[ƒcƒIƒuƒWƒFƒNƒg‚ğƒv[ƒ‹‚©‚çæ“¾EÄ—˜—p
+                // ãƒãƒ¼ãƒ„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ãƒ—ãƒ¼ãƒ«ã‹ã‚‰å–å¾—ãƒ»å†åˆ©ç”¨
                 GameObject noteObject = ObjectRelocation.Instance.GetNextAvailableNote(noteData.type);
 
 
                 if (noteObject != null)
                 {
-                    // •ˆ–Êƒf[ƒ^‚Ææ“¾‚µ‚½ƒIƒuƒWƒFƒNƒg‚ğ•R•t‚¯‚Ä ActiveNote ‚ğì¬
+                    // è­œé¢ãƒ‡ãƒ¼ã‚¿ã¨å–å¾—ã—ãŸã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ç´ä»˜ã‘ã¦ ActiveNote ã‚’ä½œæˆ
                     ActiveNote activeNote = new ActiveNote(noteObject, noteData, lastSpawnedNoteIndex);
                     activeNotes[lastSpawnedNoteIndex] = activeNote;
-                    Debug.Log($"Note assigned: Index {lastSpawnedNoteIndex}, Lane {noteData.lane}");
+                    Debug.Log($"Note assigned: Index {lastSpawnedNoteIndex}, Lane {noteData.lane}, Type: {noteData.type}");
                 }
                 else
                 {
@@ -251,43 +272,43 @@ public class GameManager : MonoBehaviour
 
     private void TouchNotes_judge()
     {
-        //  C³“_: activeNotes ”z—ñ‚ğƒ‹[ƒv‚µAƒm[ƒc‚Ì”»’è‚ğs‚¤
+        //  ä¿®æ­£ç‚¹: activeNotes é…åˆ—ã‚’ãƒ«ãƒ¼ãƒ—ã—ã€ãƒãƒ¼ãƒ„ã®åˆ¤å®šã‚’è¡Œã†
         for (int notenum = 0; notenum < activeNotes.Length; notenum++)
         {
             ActiveNote currentActiveNote = activeNotes[notenum];
 
-            // ”»’èˆ—‚ª•K—v‚Èƒm[ƒc‚©ƒ`ƒFƒbƒN
-            // 1. ƒm[ƒc‚ª•ˆ–Êƒf[ƒ^‚É‘¶İ‚µA
-            // 2. ‚Ü‚¾”»’è‚³‚ê‚Ä‚¨‚ç‚¸ (IsUsed=false)A
-            // 3. ‚©‚ÂAƒm[ƒc‚ªoŒ»Ï‚İiƒIƒuƒWƒFƒNƒg‚ªŠ„‚è“–‚ÄÏ‚İj‚Ìê‡
+            // åˆ¤å®šå‡¦ç†ãŒå¿…è¦ãªãƒãƒ¼ãƒ„ã‹ãƒã‚§ãƒƒã‚¯
+            // 1. ãƒãƒ¼ãƒ„ãŒè­œé¢ãƒ‡ãƒ¼ã‚¿ã«å­˜åœ¨ã—ã€
+            // 2. ã¾ã åˆ¤å®šã•ã‚Œã¦ãŠã‚‰ãš (IsUsed=false)ã€
+            // 3. ã‹ã¤ã€ãƒãƒ¼ãƒ„ãŒå‡ºç¾æ¸ˆã¿ï¼ˆã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãŒå‰²ã‚Šå½“ã¦æ¸ˆã¿ï¼‰ã®å ´åˆ
             if (currentActiveNote == null || currentActiveNote.IsUsed || currentActiveNote.Data.type != "touch")
                 continue;
 
             float targetTime = currentActiveNote.Data.time;
             float diff = (float)(CurrentTime - targetTime);
 
-            // TouchNotes_judge() ‚Ì for ƒ‹[ƒv‚Ìæ“ª•t‹ß
+            // TouchNotes_judge() ã® for ãƒ«ãƒ¼ãƒ—ã®å…ˆé ­ä»˜è¿‘
             if (notenum < activeNotes.Length && activeNotes[notenum] != null)
             {
                 //Debug.Log($"Checking Note Index: {notenum}, IsUsed: {activeNotes[notenum].IsUsed}");
             }
 
-            // ƒm[ƒc‚Ì”»’è‚ªŠJn‚·‚éŠÔ (JudgeTimeRange ‘O‚©‚ç)
+            // ãƒãƒ¼ãƒ„ã®åˆ¤å®šãŒé–‹å§‹ã™ã‚‹æ™‚é–“ (JudgeTimeRange å‰ã‹ã‚‰)
             if (CurrentTime >= targetTime - JudgeTimeRange)
             {
-                //  Perfect/Good/Miss‚Ì”»’èƒƒWƒbƒN (currentActiveNote.FlagComponent.TouchFlag ‚ğ—˜—p)
+                //  Perfect/Good/Missã®åˆ¤å®šãƒ­ã‚¸ãƒƒã‚¯ (currentActiveNote.FlagComponent.TouchFlag ã‚’åˆ©ç”¨)
                 bool judged = false;
 
-                // Perfect”»’è
+                // Perfectåˆ¤å®š
                 if (Mathf.Abs(diff) <= perfectRange && currentActiveNote.FlagComponent.TouchFlag)
                 {
                     //Debug.Log($"PERFECT! lane {currentActiveNote.Data.lane}");
                     Touch_score += Perfect_score;
                     judged = true;
-                    // LED‚ğ”»’èŒ‹‰Ê‚ÌF‚Éİ’è (—á: ”’)
+                    // LEDã‚’åˆ¤å®šçµæœã®è‰²ã«è¨­å®š (ä¾‹: ç™½)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
                 }
-                // Good”»’è
+                // Goodåˆ¤å®š
                 else if (Mathf.Abs(diff) <= goodRange && currentActiveNote.FlagComponent.TouchFlag)
                 {
                     //Debug.Log($"GOOD! lane {currentActiveNote.Data.lane}");
@@ -295,26 +316,27 @@ public class GameManager : MonoBehaviour
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
                 }
-                // Miss”»’è (ŠÔØ‚ê)
+                // Missåˆ¤å®š (æ™‚é–“åˆ‡ã‚Œ)
                 else if (CurrentTime > targetTime + JudgeTimeRange)
                 {
                     //Debug.Log($"MISS! (Time Over) lane {currentActiveNote.Data.lane}");
                     judged = true;
-                    // LED‚ğMiss‚ÌF‚Éİ’è (—á: Ô)
+                    // LEDã‚’Missã®è‰²ã«è¨­å®š (ä¾‹: èµ¤)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.red);
                 }
-                // Miss”»’è (‘‚·‚¬/’x‚·‚¬ƒ^ƒbƒ`)
+                // Missåˆ¤å®š (æ—©ã™ã/é…ã™ãã‚¿ãƒƒãƒ)
                 else if (currentActiveNote.FlagComponent.TouchFlag)
                 {
                     //Debug.Log($"MISS! (Tapped out of range) lane {currentActiveNote.Data.lane}");
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.red);
+                    //mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
                 }
 
 
                 if (judged)
                 {
-                    //  C³ 1: ”»’èŠm’èƒƒO‚ÍAƒtƒ‰ƒOİ’è‘O‚És‚¢A•\¦—‚¿‚ğ–h‚®
+                    //  ä¿®æ­£ 1: åˆ¤å®šç¢ºå®šãƒ­ã‚°ã¯ã€ãƒ•ãƒ©ã‚°è¨­å®šå‰ã«è¡Œã„ã€è¡¨ç¤ºè½ã¡ã‚’é˜²ã
                     if (Mathf.Abs(diff) <= perfectRange)
                         Debug.Log($"PERFECT! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
                     else if (Mathf.Abs(diff) <= goodRange)
@@ -324,13 +346,13 @@ public class GameManager : MonoBehaviour
 
                     currentActiveNote.IsUsed = true;
                     currentActiveNote.FlagComponent.ResetFlag();
-                    // ƒm[ƒcƒIƒuƒWƒFƒNƒg‚ÍŒÅ’èˆÊ’u‚É‚ ‚é‚½‚ßA”ñƒAƒNƒeƒBƒu‰»‚¹‚¸AF‚ğ‘Ò‹@ó‘Ôi•j‚É–ß‚·A‚Ü‚½‚Í”»’èƒGƒtƒFƒNƒg‚ğÀs‚µ‚Ü‚·B
+                    // ãƒãƒ¼ãƒ„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã¯å›ºå®šä½ç½®ã«ã‚ã‚‹ãŸã‚ã€éã‚¢ã‚¯ãƒ†ã‚£ãƒ–åŒ–ã›ãšã€è‰²ã‚’å¾…æ©ŸçŠ¶æ…‹ï¼ˆé»’ï¼‰ã«æˆ»ã™ã€ã¾ãŸã¯åˆ¤å®šã‚¨ãƒ•ã‚§ã‚¯ãƒˆã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
 
-                    // ”»’èŒãAˆê’èŠÔŒã‚ÉF‚ğ•‚É–ß‚·ƒRƒ‹[ƒ`ƒ“‚ğŒÄ‚Ño‚·‚È‚Ç‚µ‚ÄAÄ—˜—p‚É”õ‚¦‚Ü‚·B
+                    // åˆ¤å®šå¾Œã€ä¸€å®šæ™‚é–“å¾Œã«è‰²ã‚’é»’ã«æˆ»ã™ã‚³ãƒ«ãƒ¼ãƒãƒ³ã‚’å‘¼ã³å‡ºã™ãªã©ã—ã¦ã€å†åˆ©ç”¨ã«å‚™ãˆã¾ã™ã€‚
                     // StartCoroutine(ResetNoteColorAfterDelay(currentActiveNote.NoteObject, 0.5f));
                 }
 
-                //  ”»’è‰Â”\”ÍˆÍ“à‚Å‚ÌF•Ï‰»
+                //  åˆ¤å®šå¯èƒ½ç¯„å›²å†…ã§ã®è‰²å¤‰åŒ–
                 else if (Mathf.Abs(diff) <= JudgeTimeRange)
                 {
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.green);
@@ -339,98 +361,101 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /*ƒm[ƒc‚ğgƒ^ƒbƒ`h‚Ì”»’èˆ—‚ğƒRƒ“ƒ\[ƒ‹‚É•\¦‚·‚éŠÖ”
-    private void TouchNotes_judge()
-    {
-        for(int notenum = 0; notenum < notes.Length; notenum++)
-        {
-            targetTime = notes[notenum].time; // Œ»İ‚Ìƒm[ƒc‚Ì–Ú•WŠÔ‚ğİ’è
 
-            if (!notes_isused[notenum])
-            {
-                laneIndex = notes[notenum].lane;
-
-                float diff = (float)(CurrentTime - targetTime);//Œ»İ‚Ì‹È‚ÌÄ¶ŠÔ‚Æƒm[ƒc‚Ì–Ú•W‚Ì·‚ğŒvZ‚·‚é@Unity ‚Å‚Í‘½‚­‚ÌŠÖ”‚ª float ‚ğg‚¤
-
-
-
-                if (CurrentTime >= targetTime)
-                {
-                    GameObject currentNote = ObjectRelocation.Instance.objectByTypeAndLane["touch"][notenum]; //Œ»İ‚Ìƒm[ƒcƒIƒuƒWƒFƒNƒg‚ğæ“¾‚µ‚Ä•Ï”‚É•Û‘¶
-                    if (currentNote == null) return;
-                    TouchNotes_Flag touchFlag = currentNote.GetComponent<TouchNotes_Flag>(); //GetComponent<T>() ‚ÅcurrentNote‚ÉƒAƒ^ƒbƒ`‚³‚ê‚½TouchNotes_Flag‚ğæ“¾
-                    if (touchFlag == null) return;
-
-                    //Debug.Log($"notes is null? {notes == null}"); ¦ƒm[ƒcƒf[ƒ^‚ª³‚µ‚­“Ç‚İ‚Ü‚ê‚Ä‚¢‚È‚¢ê‡true
-                    Debug.Log($"noteIndex = {notenum}, notes.Length = {notes.Length}, lane = {laneIndex}");
-                    //Debug.Log($"notes[{noteIndex}] is null? {notes[noteIndex] == null}");
-
-                    /* ƒm[ƒc‚ª‰Ÿ‚³‚ê‚½‚Æ‚«‚Ì”»’èˆ— 
-                    //"ŠÔ·‚ªPerfect‚Ì”ÍˆÍ“à ‚©‚Â ƒm[ƒc‚ª‰Ÿ‚³‚ê‚½"‚È‚ç ¦Unityã‚È‚çTouchFlag‚©‚çƒtƒ‰ƒO‚ğ‚à‚ç‚¤
-                    if (Mathf.Abs(diff) <= perfectRange && touchFlag.TouchFlag)
-                    {
-                        Touch_score += Perfect_score;//ƒ^ƒbƒ`ƒXƒRƒA‚É‰ÁZ
-                        Debug.Log($"PERFECT! lane {laneIndex}");
-                        mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
-                        //noteIndex++; //Ÿ‚Ìƒm[ƒc‚Ì”»’è‚ÉˆÚ‚é
-                        notes_isused[notenum] = true; //‚É‚­‚Ê‚«’Ç‰ÁFƒm[ƒc‚ğ”»’èÏ‚İ‚Æ‚µ‚Äƒ}[ƒN
-                        touchFlag.ResetFlag(); // ƒ^ƒbƒ`ƒtƒ‰ƒO‚ğƒŠƒZƒbƒg‚·‚é(false‚É‚·‚é)
-                    }
-                    //"ŠÔ·‚ªGood‚Ì”ÍˆÍ“à  ‚©‚Â ƒm[ƒc‚ª‰Ÿ‚³‚ê‚½"‚È‚ç
-                    else if (Mathf.Abs(diff) <= goodRange && touchFlag.TouchFlag)
-                    {
-                        Touch_score += Good_score;
-                        Debug.Log($"GOOD! lane {laneIndex}");
-                        mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
-                        // --- ‚±‚±‚ÅƒQ[ƒ€‚ÌƒƒWƒbƒN‚É‰‚¶‚ÄLED‚ÌF‚ğXV‚µ‚Ä‚­‚¾‚³‚¢ ---
-
-                        //noteLeds[ƒfƒoƒCƒXID][LED”Ô†] = Color.blue;
-                        // ƒtƒŒ[ƒ€‚²‚Æ‚É‘SƒfƒoƒCƒX‚ÉLEDƒf[ƒ^‚ğ‘—M
-                        if (udpController != null) udpController.SendAllLedData();
-                        notes_isused[notenum] = true;
-                        //noteIndex++;
-                        touchFlag.ResetFlag();
-                    }
-                    //"ŠÔ·‚ªGood‚Ì”ÍˆÍ“à  ‚©‚Â ƒm[ƒc‚ª‰Ÿ‚³‚ê‚½" ‚Ü‚½‚Í "Œ»İ‚ÌŠÔ‚ª”»’èŠÔ‚ğ‰ß‚¬‚½"‚È‚ç
-                    else if ((Mathf.Abs(diff) <= JudgeTimeRange && touchFlag.TouchFlag) || (CurrentTime > targetTime + JudgeTimeRange))
-                    {
-                        Debug.Log($"MISS! lane {laneIndex}");
-                        mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
-                        notes_isused[notenum] = true;
-                        //noteIndex++;
-                        touchFlag.ResetFlag();
-
-                    }
-
-                    //”»’èŠÔ“à‚È‚çƒIƒuƒWƒFƒNƒg‚ÌF‚ğ—Î‚É‚»‚êˆÈŠO‚È‚çƒIƒuƒWƒFƒNƒg‚ğ”’‚É@¦‰‰o‚ª‚Å‚«‚½‚ç—v‚ç‚È‚¢
-                    //Renderer noteRenderer = currentNote.GetComponent<Renderer>();
-                    if (mugyu_LEDPerformance.Count > notenum && mugyu_LEDPerformance[notenum] != null && !notes_isused[notenum])
-                    {
-                        if (Mathf.Abs(diff) <= JudgeTimeRange)
-                        {
-                            //Debug.Log($"mugyu_LEDPerformance is changed");
-                            mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.green);
-                        }
-                        else
-                        {
-                            //Debug.Log($"mugyu_LEDPerformance is default");
-                            mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.black);
-                        }
-                    }
-                }
-            }
-        }
-    }*/
-
-
-
-    //ƒm[ƒc‚ğg‚Â‚È‚°‚éh‚Ì”»’èˆ—‚ğƒRƒ“ƒ\[ƒ‹‚É•\¦‚·‚éŠÖ”
+    //ãƒãƒ¼ãƒ„ã‚’â€œã¤ãªã’ã‚‹â€ã®åˆ¤å®šå‡¦ç†ã‚’ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã«è¡¨ç¤ºã™ã‚‹é–¢æ•°
     private void ConnectNotes_judge()
     {
-        
+        for (int notenum = 0; notenum < activeNotes.Length; notenum++)
+        {
+            ActiveNote currentNote = activeNotes[notenum];
+
+            // åˆ¤å®šå‡¦ç†ãŒå¿…è¦ãªãƒãƒ¼ãƒ„ã‹ãƒã‚§ãƒƒã‚¯
+            if (currentNote == null || currentNote.IsUsed || currentNote.Data.type != "connect")
+                continue;
+
+            // ConnectNotes_Position ã®æ©Ÿèƒ½ã‚’æŒã¤ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã‚’å–å¾—
+            ConnectNotes_Position notesPosition = currentNote.NoteObject.GetComponent<ConnectNotes_Position>();
+            if (notesPosition == null) continue;
+
+            // åˆ¤å®šå…¨ä½“ã®çµŒéæ™‚é–“ã‚’æ›´æ–° (ãƒãƒ¼ãƒ„å‡ºç¾æ™‚ã‹ã‚‰ã®ç›¸å¯¾æ™‚é–“ã§ã¯ãªã„ã“ã¨ã«æ³¨æ„)
+            // çµŒéæ™‚é–“ã¯ã€ãƒãƒ¼ãƒ„ã®å‡ºç¾æ™‚é–“ï¼ˆData.timeï¼‰ã‹ã‚‰ã®ç›¸å¯¾æ™‚é–“ã‚’è¨ˆç®—ã—ã¾ã™ã€‚
+            // currentNote.Connect_TotalJudgeTime += Time.deltaTime; // JudgeMouseDragã®ãƒ­ã‚¸ãƒƒã‚¯ã¯æ™‚é–“å·®åŸºæº–ã§ã¯ãªã„ãŸã‚ã€ã“ã®è¡Œã¯å‰Šé™¤
+
+            // åˆ¤å®šé–‹å§‹æ™‚é–“ã‹ã‚‰ã®çµŒéæ™‚é–“
+            float timeElapsedSinceNoteStart = (float)(CurrentTime - currentNote.Data.time);
+
+            // ãƒãƒ¼ãƒ„ã®åˆ¤å®šé–‹å§‹æ™‚é–“ã«ãªã‚‹ã¾ã§å¾…æ©Ÿ
+            if (timeElapsedSinceNoteStart < 0) continue;
+
+
+            // åˆ¤å®šé–‹å§‹ï¼ˆJudgeMouseDrag ã®ãƒ­ã‚¸ãƒƒã‚¯ã‚’ç§»æ¤ï¼‰
+
+            // ãƒã‚¦ã‚¹ä½ç½®å–å¾—ï¼ˆãƒ­ãƒ¼ã‚«ãƒ«åº§æ¨™ï¼‰
+            notesPosition.GetMouseXOnCubeMM(currentNote.NoteObject);
+            float x_m = notesPosition.localPos.x;
+
+            // Cubeã«ä¸€åº¦ã§ã‚‚è§¦ã‚ŒãŸã‹
+            // åˆ¤å®šã‚¨ãƒªã‚¢ï¼ˆConnectNotes_JudgeResion_prefabï¼‰ã®å‡¦ç†ã¯ã“ã“ã§ã¯çœç•¥ã—ã€ãƒãƒ¼ãƒ„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®å½“ãŸã‚Šåˆ¤å®šï¼ˆConnectNotes_Positionï¼‰ã«ä¾å­˜
+            // IsMouseOnJudgeArea() ã®ä»£ã‚ã‚Šã«ã€ConnectNotes_PositionãŒã‚¿ãƒƒãƒã‚’æ¤œå‡ºã—ãŸã‹ã§ä»£ç”¨ã—ã¾ã™ã€‚
+            // if (notesPosition.IsTouching) currentNote.Connect_CubeTouched = true; // IsTouchingã¯ConnectNotes_Positionã«å¿…è¦
+
+            // æš«å®šçš„ãªã‚¿ãƒƒãƒåˆ¤å®š: ãƒã‚¦ã‚¹ãŒæŠ¼ã•ã‚Œã¦ã„ã¦ã€ã‹ã¤ ConnectNotes_Position ãŒãƒ­ã‚°ã‚’å‡ºã—ã¦ã„ã‚‹ã“ã¨ã§ä»£ç”¨
+            if (Input.GetMouseButton(0) && notesPosition.localPos != Vector3.zero)
+                currentNote.Connect_CubeTouched = true;
+
+            // ãƒ‰ãƒ©ãƒƒã‚°é–‹å§‹ï¼ˆå·¦ç«¯ï¼‰
+            if (!currentNote.Connect_DragStarted && x_m <= -0.25f && currentNote.Connect_CubeTouched) // ğŸ’¡ CubeTouchedã‚‚ãƒã‚§ãƒƒã‚¯
+            {
+                currentNote.Connect_DragStarted = true;
+                currentNote.Connect_ElapsedTime = 0f;
+                Debug.Log($"Connectãƒ‰ãƒ©ãƒƒã‚°é–‹å§‹: {timeElapsedSinceNoteStart:F2} ç§’ (local x = {x_m:F2})");
+            }
+
+            // ãƒ‰ãƒ©ãƒƒã‚°ä¸­ï¼šçµŒéæ™‚é–“ã‚’ç©ç®—
+            if (currentNote.Connect_DragStarted && !currentNote.Connect_DragEnded)
+            {
+                currentNote.Connect_ElapsedTime += Time.deltaTime;
+            }
+
+            // ãƒ‰ãƒ©ãƒƒã‚°çµ‚äº†ï¼ˆå³ç«¯ï¼‰
+            if (currentNote.Connect_DragStarted && x_m >= 0.25f)
+            {
+                currentNote.Connect_DragEnded = true;
+                Debug.Log($"Connectãƒ‰ãƒ©ãƒƒã‚°çµ‚äº†: {timeElapsedSinceNoteStart:F2} ç§’");
+                Debug.Log($"Connectãƒ‰ãƒ©ãƒƒã‚°æ™‚é–“: {currentNote.Connect_ElapsedTime:F2} ç§’");
+
+                string result;
+                float elapsed = currentNote.Connect_ElapsedTime;
+                if (elapsed < 2.5f) result = "Miss";
+                else if (elapsed < 2.9f) result = "Good";
+                else if (elapsed < 3.1f) result = "Perfect";
+                else if (elapsed < 3.6f) result = "Good";
+                else result = "Miss";
+
+                Debug.Log($"Connectåˆ¤å®š: {result}ï¼ˆç›®æ¨™ {currentNote.Connect_RequiredTime:F2} ç§’ï¼‰");
+                currentNote.IsUsed = true; // åˆ¤å®šçµ‚äº†
+                // åˆ¤å®šçµæœã«å¿œã˜ã¦ã‚¹ã‚³ã‚¢åŠ ç®—ãƒ­ã‚¸ãƒƒã‚¯ã‚’è¿½åŠ ã™ã‚‹å¿…è¦ãŒã‚ã‚Šã¾ã™ã€‚
+
+                // æ¼”å‡ºã®çµ‚äº†ãƒ»ãƒªã‚»ãƒƒãƒˆãƒ­ã‚¸ãƒƒã‚¯ã‚’ã“ã“ã«è¿½åŠ ï¼ˆè‰²ã‚’é»’ã«æˆ»ã™ãªã©ï¼‰
+            }
+
+            // æ™‚é–“åˆ‡ã‚Œåˆ¤å®š
+            float judgeEndTime = currentNote.Connect_RequiredTime + currentNote.Connect_JudgeEndOffset;
+            if (timeElapsedSinceNoteStart >= judgeEndTime && !currentNote.Connect_DragEnded)
+            {
+                if (!currentNote.Connect_CubeTouched)
+                    Debug.Log($"Connect Miss: Cubeã«ä¸€åº¦ã‚‚è§¦ã‚Œãªã‹ã£ãŸ");
+                else
+                    Debug.Log("Connect Miss: æ™‚é–“å†…ã«å³ç«¯ã¸åˆ°é”ã§ããš");
+
+                Debug.Log("Connectåˆ¤å®š: Miss");
+                currentNote.IsUsed = true; // åˆ¤å®šçµ‚äº†
+                                           // æ¼”å‡ºã®çµ‚äº†ãƒ»ãƒªã‚»ãƒƒãƒˆãƒ­ã‚¸ãƒƒã‚¯ã‚’ã“ã“ã«è¿½åŠ 
+            }
+        }
     }
 
-    //‡ŒvƒXƒRƒA‚ğŒvZ‚·‚éŠÖ”
+    //åˆè¨ˆã‚¹ã‚³ã‚¢ã‚’è¨ˆç®—ã™ã‚‹é–¢æ•°
     private void ScoreCalculate()
     {
 
