@@ -10,6 +10,10 @@ public class Mugyu_LEDPerformance : MonoBehaviour
     {
         matrixGenerator = GetComponentInChildren<LEDMatrixGenerator>();
     }
+    private void Start()
+    {
+        udpController = GameObject.Find("UdpController").GetComponent<UdpController>();
+    }
 
     public void SetLEDGenerate()
     {

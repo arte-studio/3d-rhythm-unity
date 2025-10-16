@@ -14,7 +14,16 @@ public class ObjectRelocation : MonoBehaviour
     [HideInInspector]
     public Dictionary<string, int> prefabCounters = new Dictionary<string, int>(); //プレハブ名ごとにオブジェクトの個数を管理するための辞書を用意している
     //プレハブの種類ごとに、レーン番号ごとのオブジェクトリスト,キーがプレハブの種類名(文字列)、値がレーン番号とその種類・レーンに属するオブジェクト
-    public Dictionary<string, Dictionary<int, GameObject>> objectByTypeAndLane= new Dictionary<string, Dictionary<int, GameObject>>();
+    //public Dictionary<string, Dictionary<int, GameObject>> objectByTypeAndLane= new Dictionary<string, Dictionary<int, GameObject>>();
+
+    // キー: noteType ("touch", "line")
+    // 値: そのタイプのプレハブから生成された全ての GameObject のリスト
+    [HideInInspector]
+    public Dictionary<string, List<GameObject>> noteObjectPools = new Dictionary<string, List<GameObject>>();
+
+    // GameManagerが利用する、次に使用可能なノーツオブジェクトのインデックス（タイプごと）
+    [HideInInspector]
+    public Dictionary<string, int> nextAvailableNoteIndex = new Dictionary<string, int>();
 
     public static ObjectRelocation Instance; // シングルトンインスタンス
 
@@ -38,6 +47,10 @@ public class ObjectRelocation : MonoBehaviour
     //Jsonファイルから読み込んだ座標とインスペクタ上に指定したプレハブを複製して配置する
     void LoadObjectsFromJson()
     {
+        // プールとインデックスの初期化
+        noteObjectPools.Clear();
+        nextAvailableNoteIndex.Clear();
+
         string path = Path.Combine(Application.dataPath, "Resources", jsonFileName + ".json"); //パスの生成
         if (!File.Exists(path)) //パスが示す場所にJsonファイルがなければ
         {
@@ -59,24 +72,29 @@ public class ObjectRelocation : MonoBehaviour
             }
 
             // prefabCounters の値を index として使う
-            if (!prefabCounters.ContainsKey(mapping.originalName))
+            /*if (!prefabCounters.ContainsKey(mapping.originalName))
                 prefabCounters[mapping.originalName] = 0;
 
             int index = prefabCounters[mapping.originalName];
-            string newName = $"{mapping.originalName}_{index}";
+            string newName = $"{mapping.originalName}_{index}";*/
 
-            //プレハブを複製、配置する
+            // 既存の配置コード: オブジェクトを固定位置に生成
             GameObject instance = Instantiate(mapping.newPrefab, new Vector3(obj.x, obj.y, obj.z), Quaternion.Euler(obj.rx, obj.ry, obj.rz));
-            instance.name = newName;
-            
+            instance.name = $"{mapping.originalName}_{prefabCounters.GetValueOrDefault(mapping.originalName)}";
 
-            // type + lane(=index)で登録
-            if (!objectByTypeAndLane.ContainsKey(mapping.noteType))
-                objectByTypeAndLane[mapping.noteType] = new Dictionary<int, GameObject>();
+            // instance.SetActive(false); // ノーツが固定位置にあるため、ここでは非表示にせず、色で待機状態を表現します。
 
-            objectByTypeAndLane[mapping.noteType][index] = instance;
+            // 修正点: objectByTypeAndLane の代わりに noteObjectPools に登録
+            string type = mapping.noteType;
+            if (!noteObjectPools.ContainsKey(type))
+            {
+                noteObjectPools[type] = new List<GameObject>();
+                nextAvailableNoteIndex[type] = 0; // 次に使うインデックスを0に初期化
+            }
+            noteObjectPools[type].Add(instance);
 
-            prefabCounters[mapping.originalName]++;
+            // 既存のカウンターとリストの更新（互換性のために残す）
+            prefabCounters[mapping.originalName] = prefabCounters.GetValueOrDefault(mapping.originalName) + 1;
             spawnedNotes.Add(instance);
 
 
@@ -91,5 +109,25 @@ public class ObjectRelocation : MonoBehaviour
                 return mapping;
         }
         return null;
+    }
+
+    //新規メソッド: 次に使用するノーツオブジェクトを取得・再利用
+    public GameObject GetNextAvailableNote(string noteType)
+    {
+        if (!noteObjectPools.ContainsKey(noteType) || noteObjectPools[noteType].Count == 0)
+        {
+            Debug.LogError($"Note pool for type '{noteType}' is empty or not initialized.");
+            return null;
+        }
+
+        List<GameObject> pool = noteObjectPools[noteType];
+        int currentIndex = nextAvailableNoteIndex[noteType];
+
+        GameObject note = pool[currentIndex];
+
+        // 次に利用するオブジェクトのインデックスを更新（循環させる）
+        nextAvailableNoteIndex[noteType] = (currentIndex + 1) % pool.Count;
+
+        return note;
     }
 }

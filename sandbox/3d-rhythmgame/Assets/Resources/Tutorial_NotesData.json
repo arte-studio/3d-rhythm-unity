@@ -1,6 +1,11 @@
 {
   "notes": [
     { "time": 5.0, "lane": 1, "type": "touch" },
-    { "time": 7.0, "lane": 2, "type": "touch" }
+    { "time": 7.0, "lane": 2, "type": "touch" },
+    { "time": 14.0, "lane": 1, "type": "touch" },
+    { "time": 14.0, "lane": 2, "type": "touch" },
+    { "time": 21.0, "lane": 2, "type": "touch" },
+    { "time": 28.0, "lane": 1, "type": "touch" },
+    { "time": 30.0, "lane": 1, "type": "touch" }
   ]
 }

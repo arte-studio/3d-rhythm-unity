@@ -11,7 +11,7 @@ public class ConnectNotes_Judge : MonoBehaviour
 
     public float targetTime_start;  // スタートする時間
     public float targetTime_goal;   // ゴールする時間
-    private float targetTime;       // “つなげる”を何秒でやるかを指定する
+    private float targetTime_connect;       // “つなげる”を何秒でやるかを指定する
     public float notesignalTime = 3f;    // スタートする時間の何秒前から合図を合図を出すか
 
     bool isplaying = false;
