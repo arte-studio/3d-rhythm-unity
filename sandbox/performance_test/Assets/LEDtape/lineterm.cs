@@ -1,6 +1,6 @@
 using System;
 using System.Collections;
-using System.Diagnostics;
+//using System.Diagnostics;
 using UnityEngine;
 
 /// <summary>
@@ -65,11 +65,62 @@ public class lineterm : MonoBehaviour
         return bt;
     }
 
-    /*
+    private int ConvertID(int i)
+    {
+        int n = i % 30 * 3;
+        if ((int)i / 30 == 0) n += 0;
+        else if ((int)i / 30 == 1) n += 2;
+        else if ((int)i / 30 == 2) n += 1;
+        return n;
+    }
+
+    /// <summary>
+    /// 指定された範囲(beginからendまで)のIDのバイトデータを結合して1つのバイト配列として返す
+    /// </summary>
+    /// <param name="begin">結合を開始するID</param>
+    /// <param name="end">結合を終了するID</param>
+    /// <returns>結合されたバイト配列</returns>
+    public byte[] GetBytes2(int begin, int end)
+    {
+        return GetBytes(ConvertID(begin), ConvertID(end));
+    }
+
+    //*
     // デバッグ用のUpdate処理 (現在はコメントアウトされている)
     private void Update()
     {
-        Debug.Log(bytes[0][0]);
+        //Debug.Log(bytes[0][0]);
+        // すべてのIDの最初のR値をログ1行で出力
+        string log = "";
+        for (int i = 0; i < 90; i++)
+        {
+            // IDを計算
+            // int n = 0;
+            // if (i % 3 == 0) n = 0;
+            // else if (i % 3 == 1) n = 2;
+            // else if (i % 3 == 2) n = 1;
+            // n += (int)(i / 3);
+            int n = i % 30 * 3;
+            if ((int)i/30 == 0) n += 0;
+            else if ((int)i/30 == 1) n += 2;
+            else if ((int)i/30 == 2) n += 1;
+            // int n = i;
+
+            // 表示用の文字列を組み立てる
+            if (bytes[n] != null)
+            {
+                log += bytes[n][0] + " ";
+            }
+            else
+            {
+                log += "null ";
+            }
+            if (i % 10 == 9)
+                {
+                log += ",";
+            }
+        }
+        Debug.Log(log);
     }
-    */
+    //*/
 }

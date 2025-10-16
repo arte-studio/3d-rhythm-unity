@@ -89,13 +89,25 @@ public class newline : MonoBehaviour
                         bytes[i * 3] = colors[i].r; // R
                         bytes[i * 3 + 1] = colors[i].g; // G
                         bytes[i * 3 + 2] = colors[i].b; // B
+                        // if ((int)(ID / 3) % 2 == 0) // 偶数IDの場合、ピクセルの順番を反転
+                        // {
+                        //     bytes[i * 3] = colors[i].r; // R
+                        //     bytes[i * 3 + 1] = colors[i].g; // G
+                        //     bytes[i * 3 + 2] = colors[i].b; // B
+                        // }
+                        // else // 奇数IDの場合、そのまま
+                        // {
+                        //     bytes[(colors.Length - 1 - i) * 3] = colors[i].r; // R
+                        //     bytes[(colors.Length - 1 - i) * 3 + 1] = colors[i].g; // G
+                        //     bytes[(colors.Length - 1 - i) * 3 + 2] = colors[i].b; // B
+                        // }
                     }
 
                     // 変換したバイト配列を、linetermスクリプトのbytes配列に、自身のIDの位置に格納
                     term.bytes[ID] = bytes;
 
                     // デバッグ用: IDが0の場合のみ、最初のピクセルのR値をログに出力
-                    if (ID == 0) Debug.Log("id " + ID + " の最初のR値は " + colors[0].r);
+                    // if (ID == 0) Debug.Log("id " + ID + " の最初のR値は " + colors[0].r);
                 }
             });
         }
