@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Orca XML File Format -->
+<OrcaTrees ObjectTypeExpression="Full" BinaryEncodingType="Base64" FileVersion="3" FileRevision="0">
+  <OrcaTree OrcaName="(no name)">
+    <Orca OrcaName="GameMusic" ApplyCueLimitOfLinkedCue="False" ChannelConfiguration1="Mono" ChannelConfiguration10="None" ChannelConfiguration12="None" ChannelConfiguration16="None" ChannelConfiguration2="Stereo" ChannelConfiguration25="None" ChannelConfiguration3="3_LRC" ChannelConfiguration36="None" ChannelConfiguration4="Quadro" ChannelConfiguration49="None" ChannelConfiguration5="5ch" ChannelConfiguration6="5.1ch" ChannelConfiguration64="None" ChannelConfiguration7="6.1ch" ChannelConfiguration8="7.1ch" ChannelConfiguration9="None" EditionInfo="LE" EncryptionKeyType="CompositeKey" FormatVersion="Ver.1.08.01" IsMixerOperationMethodSet="True" LipSyncFormatOption="None" OoUniqId="23b70a46-1096-4c69-a47e-d743ccb479b9" VersionInfoV3="Ver.3.55.09" VersionSDKToExport="4294967295" OrcaType="CriMw.CriAtomCraft.AcCore.AcOoProjectV2">
+      <Orca OrcaName="WaveMarkerTagSetting" OrcaType="CriMw.CriAtomCraft.AcCore.AcOoWaveMarkerTagSetting"/>
+    </Orca>
+  </OrcaTree>
+</OrcaTrees>
+<!-- Copyright (c) CRI Middleware Co.,LTD. -->
+<!-- end of document -->
