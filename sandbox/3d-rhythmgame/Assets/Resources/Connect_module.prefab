@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 2915143153943185284}
   - component: {fileID: 8466168481738725553}
   - component: {fileID: 8000223685727790413}
+  - component: {fileID: 8645160161851689558}
   m_Layer: 0
   m_Name: Connect_module
   m_TagString: Untagged
@@ -108,3 +109,16 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8645160161851689558
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5874275566985760749}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7945876b82293364c9e64dd9ba5f938f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ledSpherePrefab: {fileID: 6373879224163243674, guid: f155674f97ba838498f8840b05dfe8b1, type: 3}

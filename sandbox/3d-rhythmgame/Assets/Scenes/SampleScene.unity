@@ -775,7 +775,7 @@ MonoBehaviour:
     newPrefab: {fileID: 929646446498496168, guid: 6c7a5516939a1034e9797d8e3799cc8d, type: 3}
     noteType: touch
   - originalName: Connect_module
-    newPrefab: {fileID: 8238217034095550426, guid: 0b0e8c6579a40cd43b334bcb11cba60b, type: 3}
+    newPrefab: {fileID: 926334611099484826, guid: 8a672087d96270741834bd2b9489c883, type: 3}
     noteType: connect
   spawnedNotes: []
 --- !u!4 &1062075167

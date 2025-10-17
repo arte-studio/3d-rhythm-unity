@@ -1,14 +1,14 @@
 using UnityEngine;
 
-public class Mugyu_LEDPerformance : MonoBehaviour
+public class Connect_LEDPerformance : MonoBehaviour
 {
-    public LEDMatrixGenerator matrixGenerator;
+    public ConnectLEDGenerator connectGenerator;
     private GameObject[,] frontLEDs;
     UdpController udpController;
 
     void Awake()
     {
-        matrixGenerator = GetComponentInChildren<LEDMatrixGenerator>();
+        connectGenerator = GetComponentInChildren<ConnectLEDGenerator>();
     }
     private void Start()
     {
@@ -17,8 +17,8 @@ public class Mugyu_LEDPerformance : MonoBehaviour
 
     public void SetLEDGenerate()
     {
-        if (matrixGenerator != null)
-            frontLEDs = matrixGenerator.GetFrontLEDs();
+        if (connectGenerator != null)
+            frontLEDs = connectGenerator.GetFrontLEDs();
 
     }
 

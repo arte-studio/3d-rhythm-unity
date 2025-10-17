@@ -1,17 +1,17 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class LEDMatrixGenerator : MonoBehaviour
 {
-    public GameObject ledSpherePrefab; // Inspector‚ÅLEDSphere.prefab‚ğw’è
+    public GameObject ledSpherePrefab; // Inspectorã§LEDSphere.prefabã‚’æŒ‡å®š
     private int rows = 8;
     private int cols = 8;
-    //private float spacing = 0.65f / 8f; // LEDMatrixƒTƒCƒY6.5cm‚ğ8•ªŠ„
+    //private float spacing = 0.65f / 8f; // LEDMatrixã‚µã‚¤ã‚º6.5cmã‚’8åˆ†å‰²
 
     private GameObject[,] frontLEDs;
 
     void Start()
     {
-        GenerateLEDMatrix(); // ÀsŠJn‚ÉLED‚ğ¶¬
+        GenerateLEDMatrix(); // å®Ÿè¡Œé–‹å§‹æ™‚ã«LEDã‚’ç”Ÿæˆ
     }
 
     public void GenerateLEDMatrix()
@@ -19,7 +19,7 @@ public class LEDMatrixGenerator : MonoBehaviour
         frontLEDs = new GameObject[rows, cols];
 
         float matrixSize = /*0.065f*/1; // 6.5cm
-        float ledSize = 0.1f; // LED’¼Œa
+        float ledSize = 0.1f; // LEDç›´å¾„
         float spacingX = (matrixSize - ledSize) / (cols - 1);
         float spacingY = (matrixSize - ledSize) / (rows - 1);
 

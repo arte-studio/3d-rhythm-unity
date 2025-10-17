@@ -21,7 +21,7 @@ public class ConnectNotes_Position : MonoBehaviour
                 if (hit.collider.gameObject == target)
                 {
                     localPos = target.transform.InverseTransformPoint(hit.point);
-                    Debug.Log("“–‚½‚Á‚Ä‚é");
+                    Debug.Log($"ConnectHit! LocalX: {localPos.x:F3}");
                 }
                 else
                 {

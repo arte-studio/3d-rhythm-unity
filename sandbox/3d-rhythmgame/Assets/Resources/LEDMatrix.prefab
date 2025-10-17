@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6386699351543773887}
   - component: {fileID: 6022411954987397076}
   - component: {fileID: 2023633230509595788}
-  - component: {fileID: -6383310106520716038}
+  - component: {fileID: -7872980712431127553}
   m_Layer: 0
   m_Name: LEDMatrix
   m_TagString: Untagged
@@ -109,7 +109,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &-6383310106520716038
+--- !u!114 &-7872980712431127553
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -122,3 +122,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ledSpherePrefab: {fileID: 6373879224163243674, guid: f155674f97ba838498f8840b05dfe8b1, type: 3}
+  rows: 8
+  cols: 8
+  z: -0.5
+  ledSize: 1
