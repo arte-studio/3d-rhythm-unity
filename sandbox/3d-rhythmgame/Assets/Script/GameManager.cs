@@ -145,6 +145,7 @@ public class GameManager : MonoBehaviour
 
     IEnumerator Start()
     {
+        Touch_score = 0;
         // ObjectRelocationの生成完了を待つ
         yield return new WaitForSeconds(0.1f);
 
@@ -329,14 +330,14 @@ public class GameManager : MonoBehaviour
                     //Debug.Log($"MISS! (Time Over) lane {currentActiveNote.Data.lane}");
                     judged = true;
                     // LEDをMissの色に設定 (例: 赤)
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.red);
+                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
                 }
                 // Miss判定 (早すぎ/遅すぎタッチ)
                 else if (currentActiveNote.FlagComponent.TouchFlag)
                 {
                     //Debug.Log($"MISS! (Tapped out of range) lane {currentActiveNote.Data.lane}");
                     judged = true;
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.red);
+                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
                     //mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
                 }
 
@@ -353,20 +354,23 @@ public class GameManager : MonoBehaviour
 
                     currentActiveNote.IsUsed = true;
                     currentActiveNote.FlagComponent.ResetFlag();
-                    // ノーツオブジェクトは固定位置にあるため、非アクティブ化せず、色を待機状態（黒）に戻す、または判定エフェクトを実行します。
 
-                    // 判定後、一定時間後に色を黒に戻すコルーチンを呼び出すなどして、再利用に備えます。
-                    // StartCoroutine(ResetNoteColorAfterDelay(currentActiveNote.NoteObject, 0.5f));
+                    if (currentActiveNote.NoteObject != null)
+                    {
+                        // 判定後、0.5秒後に色を黒に戻す処理を開始
+                        StartCoroutine(ResetNoteColorAfterDelay(currentActiveNote.NoteObject, 0.5f));
+                    }
                 }
 
                 //  判定可能範囲内での色変化
                 else if (Mathf.Abs(diff) <= JudgeTimeRange)
                 {
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.green);
+                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.yellow);
                 }
             }
         }
     }
+
 
 
     //ノーツを“つなげる”の判定処理をコンソールに表示する関数
@@ -499,10 +503,31 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public IEnumerator ResetNoteColorAfterDelay(GameObject noteObject, float delay)
+    {
+        // 指定された時間だけ実行を一時停止
+        yield return new WaitForSeconds(delay);
+
+        // 待機後、ノーツの色をリセット
+        if (noteObject != null)
+        {
+            // Mugyu_LEDPerformanceコンポーネントを取得
+            var ledPerformance = noteObject.GetComponent<Mugyu_LEDPerformance>();
+
+            if (ledPerformance != null)
+            {
+                // ノーツが再利用可能状態（非アクティブ/黒色）に戻るように色を設定
+                ledPerformance.SetAllLEDColor(Color.black);
+                // 必要に応じてノーツオブジェクトをプールに戻す処理などを追加できます。
+                // noteObject.SetActive(false);
+            }
+        }
+    }
+
     //合計スコアを計算する関数
     private void ScoreCalculate()
     {
-
+        Debug.Log($"{Touch_score}");
     }
 
     
