@@ -3,7 +3,6 @@ using UnityEngine;
 
 /// <summary>
 /// GameManagerの制御下で、上からボールをランダムに降らせる。
-/// モード2 (Strobe) の時に有効化される。
 /// </summary>
 public class BallSpawner : MonoBehaviour
 {
@@ -12,6 +11,11 @@ public class BallSpawner : MonoBehaviour
     public GameObject ballPrefab;
     [Tooltip("ボールを生成する間隔（秒）")]
     public float spawnInterval = 0.5f;
+    // ★★★ ここから追加 ★★★
+    [Tooltip("ボールの落下速度を調整します。数値が大きいほどゆっくりになります。")]
+    [Range(0f, 5f)] // 0から5の範囲でスライダー表示にする
+    public float fallDrag = 0.5f;
+    // ★★★ ここまで追加 ★★★
 
     [Header("落下範囲の設定")]
     [Tooltip("落下範囲の中心（通常はCylinderと同じでOK）")]
@@ -26,13 +30,11 @@ public class BallSpawner : MonoBehaviour
     // OnEnable/OnDisableでコルーチンを管理
     void OnEnable()
     {
-        // このコンポーネントが有効になった時にボール生成を開始
         StartCoroutine(SpawnBallsCoroutine());
     }
 
     void OnDisable()
     {
-        // 無効になった時にボール生成を停止
         StopAllCoroutines();
     }
 
@@ -41,17 +43,14 @@ public class BallSpawner : MonoBehaviour
         if (ballPrefab == null || centerTransform == null)
         {
             UnityEngine.Debug.LogError("BallSpawnerにPrefabまたはCenter Transformが設定されていません。");
-            yield break; // コルーチンを終了
+            yield break;
         }
 
-        // このオブジェクトが有効である限り、無限にボールを生成
         while (true)
         {
             Vector3 centerPos = centerTransform.position;
 
-            // ★ 修正点: UnityEngine.Random を明示
             float angle = UnityEngine.Random.Range(0f, 2f * Mathf.PI);
-            // ★ 修正点: UnityEngine.Random を明示
             float radius = UnityEngine.Random.Range(spawnInnerRadius, spawnOuterRadius);
 
             float x = centerPos.x + radius * Mathf.Cos(angle);
@@ -60,7 +59,19 @@ public class BallSpawner : MonoBehaviour
 
             Vector3 spawnPosition = new Vector3(x, y, z);
 
-            Instantiate(ballPrefab, spawnPosition, Quaternion.identity);
+            // ★★★ ここから修正 ★★★
+            // 生成したボールの情報を newBall 変数に格納
+            GameObject newBall = Instantiate(ballPrefab, spawnPosition, Quaternion.identity);
+
+            // newBall から Rigidbody コンポーネントを取得
+            Rigidbody rb = newBall.GetComponent<Rigidbody>();
+
+            // Rigidbody があれば、インスペクターで設定した空気抵抗 (drag) を設定
+            if (rb != null)
+            {
+                rb.linearDamping = fallDrag;
+            }
+            // ★★★ ここまで修正 ★★★
 
             yield return new WaitForSeconds(spawnInterval);
         }

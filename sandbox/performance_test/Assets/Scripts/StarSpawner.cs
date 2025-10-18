@@ -2,6 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// GameManagerの指示に応じて、設定された範囲に星を生成する。
+/// モード3 (FallingBall) の時は星を生成しない。
 /// </summary>
 public class StarSpawner : MonoBehaviour
 {
@@ -33,6 +34,15 @@ public class StarSpawner : MonoBehaviour
         }
 
         // --- 2. 新しい星を生成 ---
+        // ★★★ 修正点 ★★★
+        // モードが FallingBall の場合は、星を生成せずにここで処理を終了する
+        if (GameManager.CurrentMode == GameManager.DisplayMode.FallingBall)
+        {
+            return;
+        }
+        // ★★★★★★★★★★★
+
+        // --- 2. 新しい星を生成 (Calm と Strobe モードの場合のみ) ---
         if (starPrefab == null || cylinderTransform == null) return;
 
         if (innerRadius > outerRadius)

@@ -29,6 +29,15 @@ public class newline : MonoBehaviour
     // データ集約先となるlinetermスクリプトへの参照
     [SerializeField] lineterm term;
 
+    private int ConvertID(int i)
+    {
+        int n = i % 30 * 3;
+        if ((int)i / 30 == 0) n += 0;
+        else if ((int)i / 30 == 1) n += 2;
+        else if ((int)i / 30 == 2) n += 1;
+        return n;
+    }
+
     /// <summary>
     /// 初期化処理
     /// </summary>
@@ -86,21 +95,21 @@ public class newline : MonoBehaviour
                     byte[] bytes = new byte[colors.Length * 3];
                     for (int i = 0; i < colors.Length; i++)
                     {
-                        bytes[i * 3]     = colors[i].r; // R
-                        bytes[i * 3 + 1] = colors[i].g; // G
-                        bytes[i * 3 + 2] = colors[i].b; // B
-                        // if ((int)(ID / 3) % 2 == 0) // 偶数IDの場合、ピクセルの順番を反転
-                        // {
-                        //     bytes[i * 3] = colors[i].r; // R
-                        //     bytes[i * 3 + 1] = colors[i].g; // G
-                        //     bytes[i * 3 + 2] = colors[i].b; // B
-                        // }
-                        // else // 奇数IDの場合、そのまま
-                        // {
-                        //     bytes[(colors.Length - 1 - i) * 3] = colors[i].r; // R
-                        //     bytes[(colors.Length - 1 - i) * 3 + 1] = colors[i].g; // G
-                        //     bytes[(colors.Length - 1 - i) * 3 + 2] = colors[i].b; // B
-                        // }
+                        // bytes[i * 3]     = colors[i].r; // R
+                        // bytes[i * 3 + 1] = colors[i].g; // G
+                        // bytes[i * 3 + 2] = colors[i].b; // B
+                        if (ConvertID(ID) % 2 == 0) // 反転せず
+                        {
+                            bytes[i * 3]    = colors[i].r; // R
+                            bytes[i * 3 + 1] = colors[i].g; // G
+                            bytes[i * 3 + 2] = colors[i].b; // B
+                        }
+                        else // 反転
+                        {
+                            bytes[(colors.Length - 1 - i) * 3]     = colors[i].r; // R
+                            bytes[(colors.Length - 1 - i) * 3 + 1] = colors[i].g; // G
+                            bytes[(colors.Length - 1 - i) * 3 + 2] = colors[i].b; // B
+                        }
                     }
 
                     // 変換したバイト配列を、linetermスクリプトのbytes配列に、自身のIDの位置に格納

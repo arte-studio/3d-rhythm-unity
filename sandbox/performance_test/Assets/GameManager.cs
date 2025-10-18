@@ -9,8 +9,9 @@ public class GameManager : MonoBehaviour
     // 表示モードを定義する
     public enum DisplayMode
     {
-        Calm,   // モード1: 穏やかなモード
-        Strobe  // モード2: 激しいモード
+        Calm,        // モード1: 穏やかな星
+        Strobe,      // モード2: 激しいストロボ
+        FallingBall  // ★ モード3: ボール落下
     }
 
     // 現在のモード（他のスクリプトから参照できるように static にする）
@@ -28,7 +29,7 @@ public class GameManager : MonoBehaviour
     [Tooltip("シーン内の StarSpawner オブジェクト")]
     public StarSpawner starSpawner;
     [Tooltip("シーン内の BallSpawner オブジェクト")]
-    public BallSpawner ballSpawner; // ★ 追加
+    public BallSpawner ballSpawner;
 
     private float modeTimer; // モード切り替え用のタイマー
 
@@ -42,7 +43,7 @@ public class GameManager : MonoBehaviour
 
         // 初期モードを設定
         CurrentMode = initialMode;
-        UpdateModeFeatures(); // ★ モードに応じた機能を有効/無効化
+        UpdateModeFeatures();
         modeTimer = modeDuration;
 
         // 最初の星を生成する
@@ -51,7 +52,6 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        // モード自動切り替えが有効な場合のみタイマーを処理
         if (enableModeSwitching)
         {
             modeTimer -= Time.deltaTime;
@@ -59,35 +59,49 @@ public class GameManager : MonoBehaviour
             if (modeTimer <= 0)
             {
                 SwitchMode();
-                modeTimer = modeDuration; // タイマーをリセット
+                modeTimer = modeDuration;
             }
         }
     }
 
     /// <summary>
-    /// モードを切り替える
+    /// モードを順番に切り替える
     /// </summary>
     void SwitchMode()
     {
-        // 現在のモードに応じて次のモードを決定
-        CurrentMode = (CurrentMode == DisplayMode.Calm) ? DisplayMode.Strobe : DisplayMode.Calm;
+        // ★ 3つのモードを順番に切り替える
+        switch (CurrentMode)
+        {
+            case DisplayMode.Calm:
+                CurrentMode = DisplayMode.Strobe;
+                break;
+            case DisplayMode.Strobe:
+                CurrentMode = DisplayMode.FallingBall;
+                break;
+            case DisplayMode.FallingBall:
+                CurrentMode = DisplayMode.Calm;
+                break;
+        }
 
-        UpdateModeFeatures(); // ★ モードに応じた機能を有効/無効化
+        UpdateModeFeatures();
         starSpawner.RespawnStars();
     }
 
     /// <summary>
-    /// ★ 現在のモードに応じて、BallSpawnerなどの機能を有効/無効にする
+    /// 現在のモードに応じて、BallSpawnerなどの機能を有効/無効にする
     /// </summary>
     void UpdateModeFeatures()
     {
         switch (CurrentMode)
         {
             case DisplayMode.Calm:
-                ballSpawner.gameObject.SetActive(false); // ボール落下を無効化
+                ballSpawner.gameObject.SetActive(false); // ボール落下は無効
                 break;
             case DisplayMode.Strobe:
-                ballSpawner.gameObject.SetActive(true); // ボール落下を有効化
+                ballSpawner.gameObject.SetActive(true);  // ボール落下を有効化
+                break;
+            case DisplayMode.FallingBall:
+                ballSpawner.gameObject.SetActive(true);  // ボール落下を有効化
                 break;
         }
     }

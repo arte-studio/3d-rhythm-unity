@@ -6,7 +6,7 @@ using UnityEngine;
 /// </summary>
 public class Blinker : MonoBehaviour
 {
-    [Header("モード1: Calm の設定")]
+    [Header("モード1, 3 の設定")]
     [Tooltip("メインカラー")]
     public Color mainColor = Color.white;
     [Range(0, 100)] public int mainColorWeight = 75;
@@ -31,7 +31,6 @@ public class Blinker : MonoBehaviour
 
     void Awake()
     {
-        // 起動時に一度だけ実行
         albedoColorID = Shader.PropertyToID("_BaseColor");
         initialScale = transform.localScale;
         timeOffset = UnityEngine.Random.Range(0f, 10f);
@@ -48,7 +47,6 @@ public class Blinker : MonoBehaviour
     /// </summary>
     public void InitializeForMode(GameManager.DisplayMode mode)
     {
-        // モードに応じて挙動のパラメータを切り替える
         switch (mode)
         {
             // --- モード1: Calm ---
@@ -66,9 +64,17 @@ public class Blinker : MonoBehaviour
                 currentMaxScale = 1.5f;
                 currentBlinkSpeed = 10.0f; // 速く点滅させる
                 break;
+
+            // ★ --- モード3: FallingBall --- ★
+            //    背景の星は穏やかなモード (Calm) と同じ挙動にする
+            case GameManager.DisplayMode.FallingBall:
+                ChooseColorByWeight();
+                currentMinScale = 1.0f;
+                currentMaxScale = 1.2f;
+                currentBlinkSpeed = 1.0f;
+                break;
         }
 
-        // マテリアルの色を設定
         if (starMaterial != null)
         {
             starMaterial.SetColor(albedoColorID, baseColor);
@@ -77,16 +83,12 @@ public class Blinker : MonoBehaviour
 
     void Update()
     {
-        // 初期化されたパラメータに基づいて大きさを変化させる
         float time = (Time.time * currentBlinkSpeed) + timeOffset;
         float pingPongValue = Mathf.PingPong(time, 1.0f);
         float scaleMultiplier = Mathf.Lerp(currentMinScale, currentMaxScale, pingPongValue);
         transform.localScale = initialScale * scaleMultiplier;
     }
 
-    /// <summary>
-    /// 設定された重みに基づいて baseColor を決定する
-    /// </summary>
     void ChooseColorByWeight()
     {
         int totalWeight = mainColorWeight + subColorWeight + accentColorWeight;
