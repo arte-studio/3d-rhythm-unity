@@ -1,79 +1,87 @@
 using UnityEngine;
 
 /// <summary>
-/// オブジェクトのマテリアルの表面色（Albedo）をランダムに設定し、
-/// オブジェクトの大きさをリズミカルに変化させるスクリプト。
-/// 個々の星（Star）プレハブにアタッチします。
+/// StarSpawnerによって生成される際に、指定されたモードに応じて
+/// 色や大きさの変化を制御する。個々の星プレハブにアタッチする。
 /// </summary>
 public class Blinker : MonoBehaviour
 {
-    // [Header("点滅の明るさ")] // 光らせる設定は削除しました
-    // public float minIntensity = 0.5f;
-    // public float maxIntensity = 2.0f;
-
-    [Header("大きさの変化")]
-    [Tooltip("最も小さいときのスケール倍率")]
-    public float minScale = 1.0f;
-    [Tooltip("最も大きいときのスケール倍率")]
-    public float maxScale = 1.2f;
-
-    [Header("変化の速度")]
-    [Tooltip("拡縮する速さ")]
-    public float blinkSpeed = 1.0f;
-
-    [Header("色の設定（確率）")]
-    [Tooltip("メインで表示される色")]
+    [Header("モード1: Calm の設定")]
+    [Tooltip("メインカラー")]
     public Color mainColor = Color.white;
-    [Tooltip("メインカラーの出現率（重み）")]
     [Range(0, 100)] public int mainColorWeight = 75;
-
-    [Tooltip("サブで表示される色")]
-    public Color subColor = new Color(0.7f, 0.9f, 1f); // Light Blue
-    [Tooltip("サブカラーの出現率（重み）")]
+    [Tooltip("サブカラー")]
+    public Color subColor = new Color(0.7f, 0.9f, 1f);
     [Range(0, 100)] public int subColorWeight = 20;
-
-    [Tooltip("アクセントで表示される色")]
-    public Color accentColor = new Color(1f, 0.8f, 0.8f); // Light Pink
-    [Tooltip("アクセントカラーの出現率（重み）")]
+    [Tooltip("アクセントカラー")]
+    public Color accentColor = new Color(1f, 0.8f, 0.8f);
     [Range(0, 100)] public int accentColorWeight = 5;
 
-    // このオブジェクト専用のマテリアルインスタンス
+    // --- 内部で使う変数 ---
     private Material starMaterial;
-    // この星に適用される基準色
     private Color baseColor;
-    // 他の星とタイミングをずらすためのランダムなオフセット値
     private float timeOffset;
-    // 元の大きさを保存するための変数
     private Vector3 initialScale;
-
-    // マテリアルの表面色(Albedo)のプロパティIDをキャッシュする変数
     private int albedoColorID;
 
-    void Start()
+    // モードごとの挙動パラメータ
+    private float currentMinScale;
+    private float currentMaxScale;
+    private float currentBlinkSpeed;
+
+    void Awake()
     {
-        // ★ 修正点: URP/HDRPで一般的に使われる "_BaseColor" を指定します。
-        //   もし標準(Standard)シェーダーをお使いの場合は、ここを "_Color" に戻してください。
-        albedoColorID = Shader.PropertyToID("_Color");
-
-        // 元の大きさを保存
+        // 起動時に一度だけ実行
+        albedoColorID = Shader.PropertyToID("_BaseColor");
         initialScale = transform.localScale;
+        timeOffset = UnityEngine.Random.Range(0f, 10f);
 
-        // 自分のRendererコンポーネントを取得
         Renderer renderer = GetComponent<Renderer>();
         if (renderer != null)
         {
-            // .material を使うと、このオブジェクト専用のマテリアルインスタンスが作られます
             starMaterial = renderer.material;
+        }
+    }
 
-            // 重みに基づいてランダムに色を決定する
-            ChooseColorByWeight();
+    /// <summary>
+    /// StarSpawnerから呼び出される。指定されたモードに応じて星の挙動を初期化する。
+    /// </summary>
+    public void InitializeForMode(GameManager.DisplayMode mode)
+    {
+        // モードに応じて挙動のパラメータを切り替える
+        switch (mode)
+        {
+            // --- モード1: Calm ---
+            case GameManager.DisplayMode.Calm:
+                ChooseColorByWeight();
+                currentMinScale = 1.0f;
+                currentMaxScale = 1.2f;
+                currentBlinkSpeed = 1.0f;
+                break;
 
-            // 決定した色をマテリアルの表面色(Albedo)に設定する
-            starMaterial.SetColor(albedoColorID, baseColor);
+            // --- モード2: Strobe ---
+            case GameManager.DisplayMode.Strobe:
+                baseColor = Color.white; // 全ての色を白に
+                currentMinScale = 0.5f;
+                currentMaxScale = 1.5f;
+                currentBlinkSpeed = 10.0f; // 速く点滅させる
+                break;
         }
 
-        // 個々の星で大きさの変化のタイミングをずらす
-        timeOffset = UnityEngine.Random.Range(0f, 10f);
+        // マテリアルの色を設定
+        if (starMaterial != null)
+        {
+            starMaterial.SetColor(albedoColorID, baseColor);
+        }
+    }
+
+    void Update()
+    {
+        // 初期化されたパラメータに基づいて大きさを変化させる
+        float time = (Time.time * currentBlinkSpeed) + timeOffset;
+        float pingPongValue = Mathf.PingPong(time, 1.0f);
+        float scaleMultiplier = Mathf.Lerp(currentMinScale, currentMaxScale, pingPongValue);
+        transform.localScale = initialScale * scaleMultiplier;
     }
 
     /// <summary>
@@ -81,39 +89,17 @@ public class Blinker : MonoBehaviour
     /// </summary>
     void ChooseColorByWeight()
     {
-        // 全ての重みの合計を計算
         int totalWeight = mainColorWeight + subColorWeight + accentColorWeight;
         if (totalWeight <= 0)
         {
-            baseColor = mainColor; // 重みが設定されていない場合はメインカラーにする
+            baseColor = mainColor;
             return;
         }
-
-        // 0から重みの合計までのランダムな値を生成
         int randomValue = UnityEngine.Random.Range(0, totalWeight);
 
-        // ランダムな値がどの範囲にあるかで色を決定
-        if (randomValue < mainColorWeight)
-        {
-            baseColor = mainColor;
-        }
-        else if (randomValue < mainColorWeight + subColorWeight)
-        {
-            baseColor = subColor;
-        }
-        else
-        {
-            baseColor = accentColor;
-        }
-    }
-
-    void Update()
-    {
-        // --- 大きさの計算と適用 ---
-        float time = (Time.time * blinkSpeed) + timeOffset;
-        float pingPongValue = Mathf.PingPong(time, 1.0f);
-        float scaleMultiplier = Mathf.Lerp(minScale, maxScale, pingPongValue);
-        transform.localScale = initialScale * scaleMultiplier;
+        if (randomValue < mainColorWeight) baseColor = mainColor;
+        else if (randomValue < mainColorWeight + subColorWeight) baseColor = subColor;
+        else baseColor = accentColor;
     }
 }
 
