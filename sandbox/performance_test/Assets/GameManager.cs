@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour
     public enum DisplayMode
     {
         Calm,   // モード1: 穏やかなモード
-        Strobe  // モード2: 点滅が激しいモード
+        Strobe  // モード2: 激しいモード
     }
 
     // 現在のモード（他のスクリプトから参照できるように static にする）
@@ -27,19 +27,22 @@ public class GameManager : MonoBehaviour
     [Header("参照")]
     [Tooltip("シーン内の StarSpawner オブジェクト")]
     public StarSpawner starSpawner;
+    [Tooltip("シーン内の BallSpawner オブジェクト")]
+    public BallSpawner ballSpawner; // ★ 追加
 
     private float modeTimer; // モード切り替え用のタイマー
 
     void Start()
     {
-        if (starSpawner == null)
+        if (starSpawner == null || ballSpawner == null)
         {
-            UnityEngine.Debug.LogError("GameManagerにStarSpawnerが設定されていません。");
+            UnityEngine.Debug.LogError("GameManagerにStarSpawnerまたはBallSpawnerが設定されていません。");
             return;
         }
 
-        // 初期モードを設定してタイマーをリセット
-        CurrentMode = DisplayMode.Calm;
+        // 初期モードを設定
+        CurrentMode = initialMode;
+        UpdateModeFeatures(); // ★ モードに応じた機能を有効/無効化
         modeTimer = modeDuration;
 
         // 最初の星を生成する
@@ -48,14 +51,16 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        // タイマーを更新
-        modeTimer -= Time.deltaTime;
-
-        // タイマーが0になったらモードを切り替える
-        if (modeTimer <= 0)
+        // モード自動切り替えが有効な場合のみタイマーを処理
+        if (enableModeSwitching)
         {
-            SwitchMode();
-            modeTimer = modeDuration; // タイマーをリセット
+            modeTimer -= Time.deltaTime;
+
+            if (modeTimer <= 0)
+            {
+                SwitchMode();
+                modeTimer = modeDuration; // タイマーをリセット
+            }
         }
     }
 
@@ -65,16 +70,26 @@ public class GameManager : MonoBehaviour
     void SwitchMode()
     {
         // 現在のモードに応じて次のモードを決定
-        if (CurrentMode == DisplayMode.Calm)
-        {
-            CurrentMode = DisplayMode.Strobe;
-        }
-        else
-        {
-            CurrentMode = DisplayMode.Calm;
-        }
+        CurrentMode = (CurrentMode == DisplayMode.Calm) ? DisplayMode.Strobe : DisplayMode.Calm;
 
-        // StarSpawnerに星の再生成を指示
+        UpdateModeFeatures(); // ★ モードに応じた機能を有効/無効化
         starSpawner.RespawnStars();
     }
+
+    /// <summary>
+    /// ★ 現在のモードに応じて、BallSpawnerなどの機能を有効/無効にする
+    /// </summary>
+    void UpdateModeFeatures()
+    {
+        switch (CurrentMode)
+        {
+            case DisplayMode.Calm:
+                ballSpawner.gameObject.SetActive(false); // ボール落下を無効化
+                break;
+            case DisplayMode.Strobe:
+                ballSpawner.gameObject.SetActive(true); // ボール落下を有効化
+                break;
+        }
+    }
 }
+
