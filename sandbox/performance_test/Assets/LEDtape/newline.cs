@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering; // AsyncGPUReadbackを使用するために必要
 using static UnityEngine.GraphicsBuffer; // この行は現在のコードでは使用されていないため、削除しても問題ない可能性があります
@@ -86,7 +86,7 @@ public class newline : MonoBehaviour
                     byte[] bytes = new byte[colors.Length * 3];
                     for (int i = 0; i < colors.Length; i++)
                     {
-                        bytes[i * 3] = colors[i].r; // R
+                        bytes[i * 3]     = colors[i].r; // R
                         bytes[i * 3 + 1] = colors[i].g; // G
                         bytes[i * 3 + 2] = colors[i].b; // B
                         // if ((int)(ID / 3) % 2 == 0) // 偶数IDの場合、ピクセルの順番を反転
