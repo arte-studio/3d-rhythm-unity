@@ -223,7 +223,7 @@ Transform:
   m_GameObject: {fileID: 229559039}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.9846949, y: 1.09, z: 1.647906}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 2, y: 1, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -480,7 +480,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5493525485861260450, guid: c22d97350dc9e0447b79d4b9a79f4963, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.96
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5493525485861260450, guid: c22d97350dc9e0447b79d4b9a79f4963, type: 3}
       propertyPath: m_LocalPosition.y
@@ -488,7 +488,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5493525485861260450, guid: c22d97350dc9e0447b79d4b9a79f4963, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.35
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5493525485861260450, guid: c22d97350dc9e0447b79d4b9a79f4963, type: 3}
       propertyPath: m_LocalRotation.w
@@ -553,13 +553,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   starPrefab: {fileID: 6006166324126423734, guid: 8ca1db8e40e78154da6ef83ed6b58944, type: 3}
-  numberOfStars: 3000
+  numberOfStars: 4000
   minSize: 0.2
   maxSize: 1
   cylinderTransform: {fileID: 229559043}
-  innerRadius: 2
-  outerRadius: 6
-  cylinderHeight: 5
+  innerRadius: 1
+  outerRadius: 2
+  cylinderHeight: 4
 --- !u!4 &1903000938
 Transform:
   m_ObjectHideFlags: 0
