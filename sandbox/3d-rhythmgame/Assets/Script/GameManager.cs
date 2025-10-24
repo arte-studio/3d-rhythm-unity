@@ -1,4 +1,3 @@
-﻿using CriWare;
 using NUnit.Framework;
 using System.Collections;
 using Unity.VisualScripting;
@@ -75,11 +74,12 @@ public class GameManager : MonoBehaviour
 
     /* 音源ソース */
     [Header("MusicSource")]
-    public CriAtomSource Tutorial_MusicSource;  // Inspectorでチュートリアルの音源オブジェクトのCriAtomSourceをセット
-    public CriAtomSource Game_MusicSource;  // Inspectorで本番のゲームの音源オブジェクトのCriAtomSourceをセット
+    public AudioSource Tutorial_MusicSource;  // チュートリアルの音源オブジェクトのAudioSourceをセット
+    public AudioSource Game_MusicSource;      // 本番のゲームの音源オブジェクトのAudioSourceをセット
 
     /* 音楽の時間系 */
     private double StartTime = 0; // 音楽再生開始時刻
+    // UnityのAudioSourceは基本的にAudioSettings.dspTimeと連携して動作するため、ここは変更なし
     public double CurrentTime => AudioSettings.dspTime - StartTime; //現在の音楽の再生時間、他クラスから読み取り可能
 
     /* 譜面データ */
@@ -189,7 +189,7 @@ public class GameManager : MonoBehaviour
         yield return StartCoroutine(MusicPlayer(Tutorial_MusicSource)); //音楽を再生する
 
         // チュートリアル音楽の再生終了を確認する
-        while (Tutorial_MusicSource.status == CriAtomSource.Status.Playing)
+        while (Tutorial_MusicSource.isPlaying)
         {
             yield return null;
         }
@@ -221,12 +221,11 @@ public class GameManager : MonoBehaviour
         if(isplaying) //ノーツがすべて終わっていなければ
         {
             TouchNotes_judge();
-            ConnectNotes_judge();
         }
     }
 
     //MusicSourceを再生して、開始時刻を記録する
-    private IEnumerator MusicPlayer(CriAtomSource MusicSource)
+    private IEnumerator MusicPlayer(AudioSource MusicSource)
     {
         //音楽再生
         MusicSource.Play();
@@ -235,7 +234,7 @@ public class GameManager : MonoBehaviour
         StartTime = AudioSettings.dspTime;
 
         // 再生状態になるまで待機
-        while (MusicSource.status != CriAtomSource.Status.Playing)
+        while (!MusicSource.isPlaying)
         {
             yield return null; // 1フレーム待つ
         }
@@ -245,7 +244,7 @@ public class GameManager : MonoBehaviour
 
         lastSpawnedNoteIndex = 0; // プールから割り当てたノーツインデックスを初期化
 
-        while (MusicSource.status == CriAtomSource.Status.Playing)
+        while (MusicSource.isPlaying)
         {
             // ノーツ出現ロジック
             while (lastSpawnedNoteIndex < notes.Length && notes[lastSpawnedNoteIndex].time <= CurrentTime + notesignalTime)
@@ -367,138 +366,6 @@ public class GameManager : MonoBehaviour
                 {
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.yellow);
                 }
-            }
-        }
-    }
-
-
-
-    //ノーツを“つなげる”の判定処理をコンソールに表示する関数
-    private void ConnectNotes_judge()
-    {
-        for (int notenum = 0; notenum < activeNotes.Length; notenum++)
-        {
-            ActiveNote currentNote = activeNotes[notenum];
-
-
-            // なぜスキップされているかを確認
-            if (currentNote != null && currentNote.Data.type == "connect")
-            {
-                //Debug.Log($"Checking Connect Note {notenum}. IsUsed: {currentNote.IsUsed}, Time: {currentNote.Data.time}, CurrentTime: {CurrentTime:F3}");
-            }
-
-            // 判定処理が必要なノーツかチェック
-            if (currentNote == null || currentNote.IsUsed || currentNote.Data.type != "connect")
-                continue;
-
-            // ConnectNotes_Position の機能を持つコンポーネントを取得
-            ConnectNotes_Position notesPosition = currentNote.NoteObject.GetComponent<ConnectNotes_Position>();
-            if (notesPosition == null)
-            {
-                Debug.LogError($"Note {notenum}: ConnectNotes_Position is NULL on NoteObject!");
-                continue;
-            }
-
-            // マウス位置取得（ローカル座標）
-            notesPosition.GetMouseXOnCubeMM(currentNote.NoteObject);
-            float x_m = notesPosition.localPos.x;
-
-            // 判定開始時間からの経過時間
-            float timeElapsedSinceNoteStart = (float)(CurrentTime - currentNote.Data.time);
-
-            // 時間切れ判定
-            float missAbsoluteTime = currentNote.Data.time + currentNote.Connect_RequiredTime + currentNote.Connect_JudgeEndOffset;
-
-            // 判定開始時間よりも JudgeTimeRange分早く判定を開始する
-            // Connectノーツでは、判定開始＝ドラッグ受付開始とします。
-            float connectJudgeStartTime = (float)currentNote.Data.time - (float)JudgeTimeRange;
-
-            /*Debug.Log($"Note {notenum} Check: " + $"Time: {CurrentTime:F3}, Target: {currentNote.Data.time:F3}, " +
-            $"JudgeStart: {connectJudgeStartTime:F3}, " +$"DragStarted: {currentNote.Connect_DragStarted}, " +
-            $"CubeTouched: {currentNote.Connect_CubeTouched}, " +
-            $"LocalX: {x_m:F2}");*/
-
-
-            // 判定ウィンドウに入っていない場合はスキップ
-            if (CurrentTime < connectJudgeStartTime)
-            {
-                currentNote.NoteObject.GetComponent<Connect_LEDPerformance>()?.SetAllLEDColor(Color.black);
-                continue;
-            }
-                
-            Debug.Log($"Note {notenum}: Touched={currentNote.Connect_CubeTouched}, DragStarted={currentNote.Connect_DragStarted}, LocalX={x_m:F2}");
-
-            // 判定ウィンドウに入った後の経過時間
-            float timeElapsedSinceJudgeStart = (float)(CurrentTime - connectJudgeStartTime);
-
-            // 暫定的なタッチ判定: マウスが押されていて、かつ ConnectNotes_Position がログを出していることで代用
-            if (Input.GetMouseButton(0) && notesPosition.localPos != Vector3.zero)
-            {
-                currentNote.NoteObject.GetComponent<Connect_LEDPerformance>()?.SetAllLEDColor(Color.yellow);
-                currentNote.Connect_CubeTouched = true;
-            }
-                
-
-            // ドラッグ開始（左端）
-            if (!currentNote.Connect_DragStarted && x_m <= 0f && currentNote.Connect_CubeTouched) // CubeTouchedもチェック
-            {
-                currentNote.Connect_DragStarted = true;
-                currentNote.Connect_ElapsedTime = 0f;
-                Debug.Log($"Connectドラッグ開始: {timeElapsedSinceJudgeStart:F2} 秒 (local x = {x_m:F2})");
-            }
-
-            // ドラッグ中：経過時間を積算
-            if (currentNote.Connect_DragStarted && !currentNote.Connect_DragEnded)
-            {
-                currentNote.Connect_ElapsedTime += Time.deltaTime;
-            }
-
-            // ドラッグ終了（右端）
-            if (currentNote.Connect_DragStarted && x_m >= 0.45f)
-            {
-                currentNote.Connect_DragEnded = true;
-                Debug.Log($"Connectドラッグ終了: {timeElapsedSinceJudgeStart:F2} 秒");
-                Debug.Log($"Connectドラッグ時間: {currentNote.Connect_ElapsedTime:F2} 秒");
-
-                string result;
-                float elapsed = currentNote.Connect_ElapsedTime;
-                if (elapsed < 2.5f) result = "Miss";
-                else if (elapsed < 2.9f) result = "Good";
-                else if (elapsed < 3.1f) result = "Perfect";
-                else if (elapsed < 3.6f) result = "Good";
-                else result = "Miss";
-
-                Debug.Log($"Connect判定: {result}（目標 {currentNote.Connect_RequiredTime:F2} 秒）");
-                currentNote.IsUsed = true; // 判定終了
-                // 判定結果に応じてスコア加算ロジックを追加する必要があります。
-
-                // 演出の終了・リセットロジックをここに追加（色を黒に戻すなど）
-            }
-
-
-            // 判定が完了していないノーツが Miss 絶対時刻を超えたかチェック
-            if (CurrentTime >= currentNote.Connect_MissAbsoluteTime && !currentNote.Connect_DragEnded)
-            {
-                // Miss判定ロジック
-
-                if (!currentNote.Connect_CubeTouched)
-                {
-                    Debug.Log($"Connect Miss (Time Over): Cubeに一度も触れなかった. Time: {CurrentTime:F3}");
-                    currentNote.NoteObject.GetComponent<Connect_LEDPerformance>()?.SetAllLEDColor(Color.red);
-                }
-                else
-                {
-                    Debug.Log($"Connect Miss (Time Over): 時間内に右端へ到達できず. Time: {CurrentTime:F3}");
-                    currentNote.NoteObject.GetComponent<Connect_LEDPerformance>()?.SetAllLEDColor(Color.red);
-                }
-                    
-                currentNote.IsUsed = true; // 判定終了
-
-                //ノーツオブジェクトの Connect 状態をリセットし、再利用に備える
-                currentNote.Connect_DragStarted = false;
-                currentNote.Connect_DragEnded = false;
-                currentNote.Connect_CubeTouched = false;
-                currentNote.Connect_ElapsedTime = 0f;
             }
         }
     }

@@ -1,0 +1,6 @@
+GameMusic.wav => D:/3d-rhythm-unity/gamemusic_1024/NewProject/NewProject_Cache/WorkUnit_0_WorkUnit_0_GameMusic/b4bb9d3b553667372371db4140a1e10d.hca
+========== Encoding : GameMusic.wav ==========
+waveformSynthPath : /CriAtomCraftV2Root/WorkUnits/WorkUnit_0/CueSheetFolder/WorkUnit_0/GameMusic/GameMusic/Track_GameMusic/GameMusic.wav
+materialPath      : D:/3d-rhythm-unity/gamemusic_1024/NewProject/WorkUnits/WorkUnit_0/Materials/GameMusic.wav
+キャッシュ使用 "D:/3d-rhythm-unity/gamemusic_1024/NewProject/NewProject_Cache/WorkUnit_0_WorkUnit_0_GameMusic/b4bb9d3b553667372371db4140a1e10d.hca"
+Unhash : GameMusic_Enc_32000HCAHigh_2ch3_Public_f8fd98d7_94e39cec.hca
