@@ -21,13 +21,14 @@ public class UdpController : MonoBehaviour
 
     // --- LED設定 ---
     [Header("LED Settings")]
-    private const int NUM_DEVICES = 10;
+    private const int NUM_DEVICES = 8;
+    private const int NUM_TOUCH = 5;
     private const int NUM_PERF_LEDS = 480; // 演出用LED
     private const int NUM_NOTE_LEDS = 470; // ノーツ用LED
 
     // 各ESPデバイスのLED色データを保持する配列
     // [デバイスID][LEDインデックス]
-    private Color32[][] performanceLeds = new Color32[NUM_DEVICES][];
+    // private Color32[][] performanceLeds = new Color32[NUM_DEVICES][];
     private Color32[][] noteLeds = new Color32[NUM_DEVICES][];
 
     // --- タッチセンサー ---
@@ -36,11 +37,19 @@ public class UdpController : MonoBehaviour
     // [デバイスID][センサーインデックス]
     public bool[][] touchStates = new bool[NUM_DEVICES][];
 
+    private bool arraysInitialized;
+
     // --- UDP関連 ---
     private UdpClient sendClient;    // 送信用のUDPクライアント
     private UdpClient receiveClient; // 受信用のUDPクライアント
     private Thread receiveThread;    // 受信処理をバックグラウンドで行うためのスレッド
     private IPEndPoint sendEndPoint; // 送信先のエンドポイント
+
+    // --- デバイス管理 ---
+    [Header("Device Management")]
+    [Tooltip("各デバイスが登録済みかを表示")]
+    public bool[] deviceRegistered = new bool[NUM_DEVICES];
+    private IPEndPoint[] deviceEndPoints = new IPEndPoint[NUM_DEVICES];
 
     // --- データ送信用バッファ ---
     // パケットを毎回生成すると負荷が高いため、使いまわすためのバッファ
@@ -49,13 +58,28 @@ public class UdpController : MonoBehaviour
     // ノーツ用LEDパケット (ID, Type, 470 * 3 bytes)
     private byte[] notePacket = new byte[2 + NUM_NOTE_LEDS * 3];
 
-    TouchNotes_Flag touchNotes_Flag;
+    private lineterm term;
 
     /// <summary>
     /// スクリプトが有効になった最初のフレームで呼ばれる初期化処理
     /// </summary>
+    void Awake()
+    {
+        InitializeArrays();
+    }
+
     void Start()
     {
+        Application.targetFrameRate = 60; // 60fpsに設定
+
+        term = FindFirstObjectByType<lineterm>();
+        if (term == null)
+        {
+            Debug.LogError("lineterm コンポーネントが見つかりません。UdpController を無効化します。");
+            enabled = false;
+            return;
+        }
+
         InitializeArrays();
         InitializeUdp();
 
@@ -66,12 +90,12 @@ public class UdpController : MonoBehaviour
     /// <summary>
     /// 毎フレーム呼ばれる更新処理 
     /// </summary>
-    /*void Update()
+    void Update()
     {
-        // --- ここでゲームのロジックに応じてLEDの色を更新してください ---
-        // 例: performanceLeds[デバイスID][LED番号] = new Color32(255, 0, 0, 255);
-        // 例: noteLeds[デバイスID][LED番号] = Color.blue;
-
+        if (!arraysInitialized)
+        {
+            return;
+        }
         // フレームごとに全デバイスにLEDデータを送信
         SendAllLedData();
 
@@ -84,7 +108,7 @@ public class UdpController : MonoBehaviour
                 Debug.Log($"Device {i} Touch: {string.Join(", ", touchStates[i])}");
             }
         }
-    }*/
+    }
 
     /// <summary>
     /// アプリケーション終了時に呼ばれる処理
@@ -102,12 +126,36 @@ public class UdpController : MonoBehaviour
     /// </summary>
     private void InitializeArrays()
     {
+        if (arraysInitialized)
+        {
+            return;
+        }
+
+        // if (performanceLeds == null || performanceLeds.Length != NUM_DEVICES) performanceLeds = new Color32[NUM_DEVICES][];
+        if (noteLeds == null || noteLeds.Length != NUM_DEVICES) noteLeds = new Color32[NUM_DEVICES][];
+        if (touchStates == null || touchStates.Length != NUM_DEVICES) touchStates = new bool[NUM_DEVICES][];
+        if (deviceRegistered == null || deviceRegistered.Length != NUM_DEVICES) deviceRegistered = new bool[NUM_DEVICES];
+        if (deviceEndPoints == null || deviceEndPoints.Length != NUM_DEVICES) deviceEndPoints = new IPEndPoint[NUM_DEVICES];
+
         for (int i = 0; i < NUM_DEVICES; i++)
         {
-            performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
-            noteLeds[i] = new Color32[NUM_NOTE_LEDS];
-            touchStates[i] = new bool[7];
+            // if (performanceLeds[i] == null || performanceLeds[i].Length != NUM_PERF_LEDS * 3)
+            // {
+            //     performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
+            // }
+            if (noteLeds[i] == null || noteLeds[i].Length != NUM_NOTE_LEDS)
+            {
+                noteLeds[i] = new Color32[NUM_NOTE_LEDS];
+            }
+            if (touchStates[i] == null || touchStates[i].Length != NUM_TOUCH)
+            {
+                touchStates[i] = new bool[NUM_TOUCH];
+            }
+            deviceRegistered[i] = false;
+            deviceEndPoints[i] = null;
         }
+
+        arraysInitialized = true;
     }
 
     /// <summary>
@@ -133,22 +181,46 @@ public class UdpController : MonoBehaviour
     /// </summary>
     public void SendAllLedData()
     {
+        if (!arraysInitialized || sendClient == null)
+        {
+            return;
+        }
         // 0番から9番まで、すべてのデバイスIDに対してループ
         for (int deviceId = 0; deviceId < NUM_DEVICES; deviceId++)
         {
+            // 未登録のデバイスはスキップ
+            if (!deviceRegistered[deviceId])
+            {
+                continue;
+            }
+            // 宛先をブロードキャストから、登録済みのIPアドレスに変更
+            IPEndPoint targetEndPoint = deviceEndPoints[deviceId];
+
             // 演出用LEDデータを3パケットに分けて送信
             for (int i = 0; i < 3; i++)
             {
                 perfPacket[0] = (byte)deviceId;
                 perfPacket[1] = (byte)i;
+                // linetermからGetBytes2で配列を取得
+                int begin = deviceId * 4 + 30 * i;
+                int end = begin + 3;
+                byte[] ledData = term.GetBytes2(begin, end);
                 for (int j = 0; j < NUM_PERF_LEDS; j++)
                 {
-                    int ledIndex = i * NUM_PERF_LEDS + j;
-                    perfPacket[2 + j * 3 + 0] = performanceLeds[deviceId][ledIndex].r;
-                    perfPacket[2 + j * 3 + 1] = performanceLeds[deviceId][ledIndex].g;
-                    perfPacket[2 + j * 3 + 2] = performanceLeds[deviceId][ledIndex].b;
+                    perfPacket[2 + j * 3 + 1] = ledData[j * 3 + 0]; // todo キモいけどここ変えた
+                    perfPacket[2 + j * 3 + 0] = ledData[j * 3 + 1];
+                    perfPacket[2 + j * 3 + 2] = ledData[j * 3 + 2];
                 }
-                sendClient.Send(perfPacket, perfPacket.Length, sendEndPoint);
+                // --- 送信先を変更 ---
+                try
+                {
+                    sendClient.Send(perfPacket, perfPacket.Length, targetEndPoint);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Error sending to Device {deviceId} at {targetEndPoint}: {e.Message}");
+                    deviceRegistered[deviceId] = false; // エラーが出たら登録を解除して再発見を促す
+                }
             }
 
             // ノーツ用LEDデータを1パケットで送信
@@ -160,7 +232,8 @@ public class UdpController : MonoBehaviour
                 notePacket[2 + i * 3 + 1] = noteLeds[deviceId][i].g;
                 notePacket[2 + i * 3 + 2] = noteLeds[deviceId][i].b;
             }
-            sendClient.Send(notePacket, notePacket.Length, sendEndPoint);
+            // --- 送信先を変更 ---
+            sendClient.Send(notePacket, notePacket.Length, targetEndPoint);
 
             // 送信完了のログ（必要に応じてコメントアウトしてください）
             // Debug.Log($"Sent LED data to Device {deviceId}");
@@ -186,17 +259,42 @@ public class UdpController : MonoBehaviour
                 // Debug.Log($"Received {data.Length} bytes from {anyIP}");
                 // Debug.Log($"Data: {BitConverter.ToString(data)}");
 
-                // パケットの長さが期待通りかチェック (ID 1バイト + Touch 7バイト)
-                if (data.Length == 8)
+                // 発見パケット [255][ID] の処理を追加
+                if (data.Length == 2 && data[0] == 255)
+                {
+                    int deviceId = data[1];
+                    if (deviceId >= 0 && deviceId < NUM_DEVICES)
+                    {
+                        // 新しいデバイス、またはIPアドレスが変わったデバイスを発見
+                        if (!deviceRegistered[deviceId])
+                        {
+                            Debug.Log($"Device {deviceId} 発見！ IP: {anyIP.Address}. ACKを送信します。");
+                        }
+                        else if (!deviceEndPoints[deviceId].Address.Equals(anyIP.Address))
+                        {
+                            Debug.Log($"Device {deviceId} IP更新！ IP: {anyIP.Address}. ACKを送信します。");
+                        }
+                        else
+                        {
+                            Debug.Log($"Device {deviceId} 再発見！ IP: {anyIP.Address}. ACKを送信します。");
+                        }
+                        deviceEndPoints[deviceId] = new IPEndPoint(anyIP.Address, espPort);
+                        deviceRegistered[deviceId] = true;
+                        // 確認応答(ACK) [254] をユニキャストで返信
+                        byte[] ackPacket = { 254 };
+                        sendClient.Send(ackPacket, ackPacket.Length, deviceEndPoints[deviceId]);
+                    }
+                }
+                // パケットの長さが期待通りかチェック (ID 1バイト + Touch NUM_TOUCHバイト)
+                else if (data.Length == NUM_TOUCH+1)
                 {
                     int deviceId = data[0];
                     if (deviceId >= 0 && deviceId < NUM_DEVICES)
                     {
-                        for (int i = 0; i < 7; i++)
+                        for (int i = 0; i < NUM_TOUCH; i++)
                         {
                             // 受信した 1 or 0 を bool (true/false) に変換して配列に格納
                             touchStates[deviceId][i] = (data[i + 1] == 1);
-                            touchNotes_Flag.SetClicked();
                         }
                     }
                 }
@@ -226,10 +324,10 @@ public class UdpController : MonoBehaviour
             Color32 perfColor = Color.HSVToRGB((float)i / NUM_DEVICES, 0.8f, 1.0f);
             Color32 noteColor = Color.HSVToRGB(((float)i / NUM_DEVICES + 0.5f) % 1.0f, 1.0f, 1.0f);
 
-            for (int j = 0; j < NUM_PERF_LEDS * 3; j++)
-            {
-                performanceLeds[i][j] = perfColor;
-            }
+            // for (int j = 0; j < NUM_PERF_LEDS * 3; j++)
+            // {
+            //     performanceLeds[i][j] = perfColor;
+            // }
             for (int j = 0; j < NUM_NOTE_LEDS; j++)
             {
                 noteLeds[i][j] = noteColor;

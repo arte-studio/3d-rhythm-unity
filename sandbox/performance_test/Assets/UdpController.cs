@@ -13,7 +13,7 @@ public class UdpController : MonoBehaviour
     // --- ネットワーク設定 ---
     [Header("Network Settings")]
     [Tooltip("UDPパケットを送信するブロードキャストアドレス")]
-    public string broadcastAddress = "192.168.10.255";
+    public string broadcastAddress = "192.168.0.255";
     [Tooltip("ESP32側が待ち受けるポート番号")]
     public int espPort = 8888;
     [Tooltip("Unity側が待ち受けるポート番号")]
