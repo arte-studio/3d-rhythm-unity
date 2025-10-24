@@ -29,7 +29,7 @@ public class UdpController : MonoBehaviour
     // 各ESPデバイスのLED色データを保持する配列
     // [デバイスID][LEDインデックス]
     // private Color32[][] performanceLeds = new Color32[NUM_DEVICES][];
-    private Color32[][] noteLeds = new Color32[NUM_DEVICES][];
+    // private Color32[][] noteLeds = new Color32[NUM_DEVICES][];
 
     // --- タッチセンサー ---
     [Header("Touch Sensor State")]
@@ -59,6 +59,8 @@ public class UdpController : MonoBehaviour
     private byte[] notePacket = new byte[2 + NUM_NOTE_LEDS * 3];
 
     private lineterm term;
+    private NoteLeds noteLedsComponent;
+    private TouchNotes_Flag touchNotesFlagComponent;
 
     /// <summary>
     /// スクリプトが有効になった最初のフレームで呼ばれる初期化処理
@@ -132,7 +134,7 @@ public class UdpController : MonoBehaviour
         }
 
         // if (performanceLeds == null || performanceLeds.Length != NUM_DEVICES) performanceLeds = new Color32[NUM_DEVICES][];
-        if (noteLeds == null || noteLeds.Length != NUM_DEVICES) noteLeds = new Color32[NUM_DEVICES][];
+        // if (noteLeds == null || noteLeds.Length != NUM_DEVICES) noteLeds = new Color32[NUM_DEVICES][];
         if (touchStates == null || touchStates.Length != NUM_DEVICES) touchStates = new bool[NUM_DEVICES][];
         if (deviceRegistered == null || deviceRegistered.Length != NUM_DEVICES) deviceRegistered = new bool[NUM_DEVICES];
         if (deviceEndPoints == null || deviceEndPoints.Length != NUM_DEVICES) deviceEndPoints = new IPEndPoint[NUM_DEVICES];
@@ -143,10 +145,10 @@ public class UdpController : MonoBehaviour
             // {
             //     performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
             // }
-            if (noteLeds[i] == null || noteLeds[i].Length != NUM_NOTE_LEDS)
-            {
-                noteLeds[i] = new Color32[NUM_NOTE_LEDS];
-            }
+            // if (noteLeds[i] == null || noteLeds[i].Length != NUM_NOTE_LEDS)
+            // {
+            //     noteLeds[i] = new Color32[NUM_NOTE_LEDS];
+            // }
             if (touchStates[i] == null || touchStates[i].Length != NUM_TOUCH)
             {
                 touchStates[i] = new bool[NUM_TOUCH];
@@ -228,9 +230,10 @@ public class UdpController : MonoBehaviour
             notePacket[1] = 3;
             for (int i = 0; i < NUM_NOTE_LEDS; i++)
             {
-                notePacket[2 + i * 3 + 0] = noteLeds[deviceId][i].r;
-                notePacket[2 + i * 3 + 1] = noteLeds[deviceId][i].g;
-                notePacket[2 + i * 3 + 2] = noteLeds[deviceId][i].b;
+                Color32 noteLed = noteLedsComponent.GetLedColor(deviceId, i);
+                notePacket[2 + i * 3 + 0] = noteLed.r;
+                notePacket[2 + i * 3 + 1] = noteLed.g;
+                notePacket[2 + i * 3 + 2] = noteLed.b;
             }
             // --- 送信先を変更 ---
             sendClient.Send(notePacket, notePacket.Length, targetEndPoint);
@@ -295,6 +298,10 @@ public class UdpController : MonoBehaviour
                         {
                             // 受信した 1 or 0 を bool (true/false) に変換して配列に格納
                             touchStates[deviceId][i] = (data[i + 1] == 1);
+                            if (touchStates[deviceId][i])
+                            {
+                                touchNotesFlagComponent.SetClicked();
+                            }
                         }
                     }
                 }
@@ -336,3 +343,4 @@ public class UdpController : MonoBehaviour
         Debug.Log("テスト用のLEDデータを初期化しました。");
     }
 }
+x

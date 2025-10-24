@@ -31,6 +31,7 @@ public class ActiveNote
     public NoteData Data;          // 対応する譜面データ
     public bool IsUsed;            // 判定済みフラグ（notes_isused[index] の代わり）
     public TouchNotes_Flag FlagComponent; // フラグコンポーネンスへの参照を保持
+    public NoteLeds noteLeds; // LED制御用コンポーネントへの参照
 
     // Connect ノーツ用の状態管理 (ConnectNotes_Judge.csから移植)
     public bool Connect_DragStarted = false;
@@ -315,6 +316,7 @@ public class GameManager : MonoBehaviour
                     judged = true;
                     // LEDを判定結果の色に設定 (例: 白)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color32.white);
                 }
                 // Good判定
                 else if (Mathf.Abs(diff) <= goodRange && currentActiveNote.FlagComponent.TouchFlag)
@@ -323,6 +325,7 @@ public class GameManager : MonoBehaviour
                     Touch_score += Good_score;
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color32.white);
                 }
                 // Miss判定 (時間切れ)
                 else if (CurrentTime > targetTime + JudgeTimeRange)
@@ -331,6 +334,7 @@ public class GameManager : MonoBehaviour
                     judged = true;
                     // LEDをMissの色に設定 (例: 赤)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color32.cyan);
                 }
                 // Miss判定 (早すぎ/遅すぎタッチ)
                 else if (currentActiveNote.FlagComponent.TouchFlag)
@@ -338,7 +342,7 @@ public class GameManager : MonoBehaviour
                     //Debug.Log($"MISS! (Tapped out of range) lane {currentActiveNote.Data.lane}");
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
-                    //mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color32.cyan);
                 }
 
 
@@ -366,6 +370,7 @@ public class GameManager : MonoBehaviour
                 else if (Mathf.Abs(diff) <= JudgeTimeRange)
                 {
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.yellow);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color32.yellow);
                 }
             }
         }
