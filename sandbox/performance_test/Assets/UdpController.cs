@@ -207,8 +207,8 @@ public class UdpController : MonoBehaviour
                 byte[] ledData = term.GetBytes2(begin, end);
                 for (int j = 0; j < NUM_PERF_LEDS; j++)
                 {
-                    perfPacket[2 + j * 3 + 1] = ledData[j * 3 + 0]; // todo キモいけどここ変えた
-                    perfPacket[2 + j * 3 + 0] = ledData[j * 3 + 1];
+                    perfPacket[2 + j * 3 + 0] = ledData[j * 3 + 0]; // todo キモいけどここ変えた
+                    perfPacket[2 + j * 3 + 1] = ledData[j * 3 + 1];
                     perfPacket[2 + j * 3 + 2] = ledData[j * 3 + 2];
                 }
                 // --- 送信先を変更 ---

@@ -447,7 +447,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96f14d6c3d647e645a63d2652a965c15, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  broadcastAddress: 192.168.10.255
+  broadcastAddress: 192.168.0.255
   espPort: 8888
   unityPort: 9999
   deviceRegistered: 0000000000000000
