@@ -1,10 +1,10 @@
 using UnityEngine;
 
-//SphereƒIƒuƒWƒFƒNƒg‚ğƒNƒŠƒbƒN‚µ‚½‚©‚Ç‚¤‚©‚ÌƒXƒNƒŠƒvƒg‚È‚Ì‚ÅUnityã‚Ì‚İ•K—v‚È‚Í‚¸
+//Sphereã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ã‚¯ãƒªãƒƒã‚¯ã—ãŸã‹ã©ã†ã‹ã®ã‚¹ã‚¯ãƒªãƒ—ãƒˆãªã®ã§Unityä¸Šã®ã¿å¿…è¦ãªã¯ãš
 public class TouchNotes_Flag : MonoBehaviour
 {
     [HideInInspector]
-    public bool TouchFlag = false;  // ƒ^ƒbƒ`ƒtƒ‰ƒOitrue ‚ÅƒNƒŠƒbƒN‚³‚ê‚½‚±‚Æ‚ğ¦‚·j
+    public bool TouchFlag = false;  // ã‚¿ãƒƒãƒãƒ•ãƒ©ã‚°ï¼ˆtrue ã§ã‚¯ãƒªãƒƒã‚¯ã•ã‚ŒãŸã“ã¨ã‚’ç¤ºã™ï¼‰
 
 
     void OnMouseDown()
@@ -13,14 +13,14 @@ public class TouchNotes_Flag : MonoBehaviour
         
     }
 
-    // ƒtƒ‰ƒO‚ğ—§‚Ä‚éŠÖ”
+    // ãƒ•ãƒ©ã‚°ã‚’ç«‹ã¦ã‚‹é–¢æ•°
     public void SetClicked()
     {
         TouchFlag = true;
-        //Debug.Log("ƒm[ƒc‚ªƒNƒŠƒbƒN‚³‚ê‚Ü‚µ‚½B");
+        Debug.Log("ãƒãƒ¼ãƒ„ãŒã‚¯ãƒªãƒƒã‚¯ã•ã‚Œã¾ã—ãŸã€‚");
     }
 
-    // •K—v‚È‚çƒŠƒZƒbƒgŠÖ”‚à
+    // å¿…è¦ãªã‚‰ãƒªã‚»ãƒƒãƒˆé–¢æ•°ã‚‚
     public void ResetFlag()
     {
         TouchFlag = false;

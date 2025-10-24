@@ -326,7 +326,7 @@ public class GameManager : MonoBehaviour
                 // Miss判定 (時間切れ)
                 else if (CurrentTime > targetTime + JudgeTimeRange)
                 {
-                    //Debug.Log($"MISS! (Time Over) lane {currentActiveNote.Data.lane}");
+                    Debug.Log($"MISS! (Time Over) lane {currentActiveNote.Data.lane}");
                     judged = true;
                     // LEDをMissの色に設定 (例: 赤)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
@@ -334,7 +334,7 @@ public class GameManager : MonoBehaviour
                 // Miss判定 (早すぎ/遅すぎタッチ)
                 else if (currentActiveNote.FlagComponent.TouchFlag)
                 {
-                    //Debug.Log($"MISS! (Tapped out of range) lane {currentActiveNote.Data.lane}");
+                    Debug.Log($"MISS! (Tapped out of range) lane {currentActiveNote.Data.lane}");
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
                     //mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
