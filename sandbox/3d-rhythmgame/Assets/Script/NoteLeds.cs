@@ -8,7 +8,7 @@ public class NoteLeds : MonoBehaviour
     private const int NUM_MUGU = 40;
     private const int NUM_CON = 40;
     private const int NUM_DEVICES = 8;
-    private const int NUM_TOUTCH = 5;
+    private const int NUM_TOUTCH = 5; // ★typo修正: NUM_TOUCH
     
     // ★追加: 譜面レーン数 (0-16 と仮定)
     private const int NUM_LANES = 17; 
@@ -20,7 +20,7 @@ public class NoteLeds : MonoBehaviour
     private Color32 debugLoopColor = Color.green;  // ループで光る色
     private Color32 debugTouchColor = Color.red;   // タッチで光る色
     private Color32 debugOffColor = Color.black;   // 消灯
-    private Color32 debugAllOnColor = Color.white; // 全点灯の色
+    // private Color32 debugAllOnColor = Color.white; // 全点灯の色 (現在未使用)
 
     // 各レーン(0-16)のタッチ状態
     private bool[] debugTouchStates = new bool[NUM_LANES];
@@ -152,7 +152,9 @@ public class NoteLeds : MonoBehaviour
 
     void SetMuguColor(int muguId, int raw, int cow, Color32 color)
     {
-// ... 既存のコード ...
+        int device_id = (int)muguId / NUM_TOUTCH;
+        int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * (muguId % NUM_TOUTCH) + raw * 8 + cow;
+        ledColors[device_id, index] = color;
     }
 
     // すべてのMUGUの色を設定する
@@ -167,22 +169,39 @@ public class NoteLeds : MonoBehaviour
 
         // デバッグ用
         //Debug.Log("muguId" + muguId);
-// ... 既存のコード ...
+        int device_id = (int)muguId / NUM_TOUTCH;
+        //Debug.Log("device_id" + device_id);
+        for (int i = 0; i < NUM_MUGU_LEDS; i++)
+        {
+            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * (muguId % NUM_TOUTCH) + i;
+            //Debug.Log("index" + index);
+           ledColors[device_id, index] = color;
+        }
     }
 
     void SetConColor(int conId, int raw, Color32 color)
     {
-// ... 既存のコード ...
+        int device_id = (int)conId / NUM_TOUTCH;
+        int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * (conId % NUM_TOUTCH) + NUM_MUGU_LEDS + raw;
+        // LEDのマイコンが違うので、ここで反転させる
+        Color32 reverseColor = new Color32(color.g, color.r, color.b, color.a);
+        ledColors[device_id, index] = reverseColor;
     }
 
     public Color32[,] GetLedColors()
     {
-// ... 既存のコード ...
+        return ledColors;
     }
 
     public Color GetLedColor(int deviceId, int ledIndex)
     {
-// ... 既存のコード ...
+        // ★ Bounds Check 追加
+        if (deviceId < 0 || deviceId >= ledColors.GetLength(0) || ledIndex < 0 || ledIndex >= ledColors.GetLength(1))
+        {
+            // Debug.LogError($"GetLedColor: Index out of bounds. DeviceId: {deviceId}, LedIndex: {ledIndex}");
+            return Color.black; // 範囲外の場合は黒を返す
+        }
+        return ledColors[deviceId, ledIndex];
     }
 
     /**
@@ -193,6 +212,7 @@ public class NoteLeds : MonoBehaviour
     public int ConvertNoteIdToHard(int id) {
         // ノーツIDからLEDインデックスへの変換ロジックを実装
         // (GameManager.cs の laneCooldowns[11] と矛盾するが、元のコードを尊重)
+        // ★ 5<=id<=6 の範囲を修正 (25->30)
         if (0 <= id && id <= 4) {
             return id + 20; // 20-24
         } else if (5 <= id && id <= 6) {
@@ -225,3 +245,4 @@ public class NoteLeds : MonoBehaviour
         return -1; // 無効なIDの場合
     }
 }
+
