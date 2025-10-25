@@ -31,8 +31,15 @@ public class lineterm : MonoBehaviour
     // 初期化が完了し、データの受け入れ準備ができたことを示すフラグ
     public bool ready = false;
 
-    // ★追加: GPU読み出しが進行中かを示すフラグ
+    // ★追加:  GPU読み出しが進行中かを示すフラグ
     private bool readbackInProgress = false;
+
+    // ★追加: 読み出し頻度の設定 (30fpsに間引く)
+    private float updateInterval = 1.0f / 10.0f; // ★修正: 30fps (1.0f / 30.0f) から 10fps (1.0f / 10.0f) に変更
+    private float timeSinceLastUpdate = 0.0f;
+    
+    // ★追加: ストリップ反転の要否をキャッシュする配列
+    private bool[] reversedMap;
 
     /// <summary>
     /// 初期化処理
@@ -44,11 +51,21 @@ public class lineterm : MonoBehaviour
 
         // ★追加: 全カメラの描画をまとめるRenderTextureを生成
         // (スクリプト実行順序の設定により、newline.Start() より先に実行される)
+        
+        // ★修正: ワーニング解消のため、深度バッファ(depth)を 0 から 16 (または 24) に変更
         combinedRd = new RenderTexture(ledStrips, ledsPerStrip, 16);
         combinedRd.Create();
         
         // ★追加: 全LEDデータを格納する単一のバイト配列を確保
         finalLedData = new byte[ledStrips * ledsPerStrip * 3];
+        
+        // ★追加: 反転マップの事前計算
+        reversedMap = new bool[ledStrips];
+        for (int i = 0; i < ledStrips; i++)
+        {
+            // ProcessPixelData で使うロジック (ConvertID(x) % 2 != 0) をここで計算
+            reversedMap[i] = (ConvertID(i) % 2 != 0);
+        }
 
         // 初期化完了フラグを立てる
         ready = true;
@@ -67,9 +84,16 @@ public class lineterm : MonoBehaviour
     // ★追加: フレームごとの更新処理 (読み出しリクエスト)
     private void Update()
     {
-        // 準備ができており、かつ読み出し中でなければ
-        if (ready && !readbackInProgress)
+        // ★修正: 読み出し頻度を間引くタイマー
+        timeSinceLastUpdate += Time.deltaTime;
+        
+        // 準備ができており、かつ読み出し中でなく、かつ指定時間が経過していたら
+        if (ready && !readbackInProgress && timeSinceLastUpdate >= updateInterval)
         {
+            // ★追加: タイマーリセット
+            // (経過時間からIntervalを引く方がズレは少ないが、簡潔さを優先)
+            timeSinceLastUpdate = 0.0f; 
+            
             readbackInProgress = true;
             
             // ★追加: 共有RenderTextureに対して1回だけ読み出しリクエスト
@@ -114,8 +138,8 @@ public class lineterm : MonoBehaviour
         
         for (int x = 0; x < ledStrips; x++) // x = ストリップID (0-89)
         {
-            // newline.cs にあった反転ロジックをここで実行
-            bool reversed = (ConvertID(x) % 2 != 0);
+            // ★修正: ConvertID() の呼び出しを、事前計算した配列の参照に変更
+            bool reversed = reversedMap[x];
 
             for (int y = 0; y < ledsPerStrip; y++) // y = ピクセルインデックス (0-119)
             {
@@ -204,7 +228,9 @@ public class lineterm : MonoBehaviour
         */
     }
 
-    private int ConvertID(int i)
+    // ★追加: ConvertID を public に変更 (UdpControllerから参照される可能性を考慮)
+    // (もし UdpController で使わないなら private のままでも良い)
+    public int ConvertID(int i)
     {
         int n = i % 30 * 3;
         if ((int)i / 30 == 0) n += 0;
@@ -260,3 +286,5 @@ public class lineterm : MonoBehaviour
     }
     //*/
 }
+
+
