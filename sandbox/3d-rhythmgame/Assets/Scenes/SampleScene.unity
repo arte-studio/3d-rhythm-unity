@@ -538,6 +538,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: "LED\u30C6\u30FC\u30D7s"
       objectReference: {fileID: 0}
+    - target: {fileID: 836574836571044662, guid: c22d97350dc9e0447b79d4b9a79f4963, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5493525485861260450, guid: c22d97350dc9e0447b79d4b9a79f4963, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -755,6 +759,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Cylinder
       objectReference: {fileID: 0}
+    - target: {fileID: 7735756477690635736, guid: 22c6243bb9c8bcb47894798e7065cc16, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -868,7 +876,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4230550989954279523, guid: 63b4cd9cc9326944fa6b165a8352a34f, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1135,7 +1143,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1803489309
 MonoBehaviour:
   m_ObjectHideFlags: 0
