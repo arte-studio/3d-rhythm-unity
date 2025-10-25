@@ -26,10 +26,10 @@ public class NotesWrapper //JSON からデータを読み込むためのラッ�
 public class ActiveNote
 {
     //touchノーツ用の状態管理
-    public GameObject NoteObject;  // 画面に表示中のノーツオブジェクト
-    public NoteData Data;          // 対応する譜面データ
-    public bool IsUsed;            // 判定済みフラグ（notes_isused[index] の代わり）
-    public TouchNotes_Flag FlagComponent; // フラグコンポーネンスへの参照を保持
+    public GameObject NoteObject;   // 画面に表示中のノーツオブジェクト
+    public NoteData Data;           // 対応する譜面データ
+    public bool IsUsed;             // 判定済みフラグ（notes_isused[index] の代わり）
+    public TouchNotes_Flag FlagComponent; // フラグコンポーネントへの参照を保持
     //public NoteLeds noteLeds; // LED制御用コンポーネントへの参照
 
     // Connect ノーツ用の状態管理 (ConnectNotes_Judge.csから移植)
@@ -106,8 +106,8 @@ public class GameManager : MonoBehaviour
 
     public float targetTime_start;  // スタートする時間
     public float targetTime_goal;   // ゴールする時間
-    //private float targetTime_connect;       // “つなげる”を何秒でやるかを指定する
-    public float notesignalTime = 3f;    // スタートする時間の何秒前から合図を合図を出すか
+    //private float targetTime_connect;          // “つなげる”を何秒でやるかを指定する
+    public float notesignalTime = 3f;      // スタートする時間の何秒前から合図を合図を出すか
 
     /* ノーツの分類とか */
     [HideInInspector]
@@ -139,16 +139,37 @@ public class GameManager : MonoBehaviour
     private int lastSpawnedNoteIndex = 0; // 最後にプールからオブジェクトを割り当てたノーツのJSONインデックス
 
     private NoteLeds noteLeds;
+    
+    // --- ★ここから追加 (タッチ判定連携) ---
+    [Header("Touch Input Settings")]
+    [Tooltip("同じレーンへの連続タッチを防ぐクールダウン時間(秒)")]
+    [SerializeField] private float touchInputCooldown = 0.1f; // 0.1秒
+    
+    // 各レーン (0-10) のクールダウンタイマー
+    private float[] laneCooldowns;
+    // --- ★追加ここまで ---
+
 
     //ゲームオブジェクトが生成された直後、Startより前に1回だけ呼ばれる
     void Awake()
     {
-        Instance = this; //唯一のインスタンスを生成する
+        if (Instance == null)
+        {
+            Instance = this; //唯一のインスタンスを生成する
+        }
+        else
+        {
+            Destroy(gameObject); // 既にインスタンスが存在する場合は破棄
+        }
     }
 
     IEnumerator Start()
     {
         Touch_score = 0;
+        
+        // ★追加: レーンクールダウン配列の初期化 (レーンが0-10の11個と仮定)
+        laneCooldowns = new float[11]; 
+        
         // ObjectRelocationの生成完了を待つ
         yield return new WaitForSeconds(0.1f);
 
@@ -169,8 +190,8 @@ public class GameManager : MonoBehaviour
                 if (connect_LEDPerformance[i] != null) connect_LEDPerformance[i].SetLEDGenerate();
             }
         }
-        udpController = GameObject.Find("UdpController").GetComponent<UdpController>();
-        noteLeds = GameObject.Find("NoteLeds").GetComponent<NoteLeds>();
+        udpController = FindFirstObjectByType<UdpController>(); // ★修正: GameObject.Findを避ける
+        noteLeds = FindFirstObjectByType<NoteLeds>(); // ★修正: GameObject.Findを避ける
 
         // GameFlow開始
         StartCoroutine(GameFlow());
@@ -222,6 +243,18 @@ public class GameManager : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // ★追加: クールダウンタイマーの更新
+        if (isplaying)
+        {
+            for (int i = 0; i < laneCooldowns.Length; i++)
+            {
+                if (laneCooldowns[i] > 0)
+                {
+                    laneCooldowns[i] -= Time.fixedDeltaTime;
+                }
+            }
+        }
+        
         if (isplaying) //ノーツがすべて終わっていなければ
         {
             TouchNotes_judge();
@@ -319,7 +352,7 @@ public class GameManager : MonoBehaviour
                     judged = true;
                     // LEDを判定結果の色に設定 (例: 白)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.magenta);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.magenta);
                 }
                 // Good判定
                 else if (Mathf.Abs(diff) <= goodRange && currentActiveNote.FlagComponent.TouchFlag)
@@ -328,7 +361,7 @@ public class GameManager : MonoBehaviour
                     Touch_score += Good_score;
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.magenta);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.magenta);
                 }
                 // Miss判定 (時間切れ)
                 else if (CurrentTime > targetTime + JudgeTimeRange)
@@ -337,7 +370,7 @@ public class GameManager : MonoBehaviour
                     judged = true;
                     // LEDをMissの色に設定 (例: 赤)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.cyan);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.cyan);
                 }
                 // Miss判定 (早すぎ/遅すぎタッチ)
                 else if (currentActiveNote.FlagComponent.TouchFlag)
@@ -345,7 +378,7 @@ public class GameManager : MonoBehaviour
                     Debug.Log($"MISS! (Tapped out of range) lane {currentActiveNote.Data.lane}");
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.cyan);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.cyan);
                 }
 
 
@@ -373,11 +406,79 @@ public class GameManager : MonoBehaviour
                 else if (Mathf.Abs(diff) <= JudgeTimeRange)
                 {
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.yellow);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.yellow);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.yellow);
                 }
             }
         }
     }
+    
+    // --- ★ここから追加 (タッチ判定連携) ---
+
+    /// <summary>
+    /// UdpControllerからタッチイベントを受け取り、対応するノーツのフラグを立てる
+    /// </summary>
+    /// <param name="deviceId">タッチされたデバイスID (0-7)</param>
+    /// <param name="sensorId">タッチされたセンサーID (0-4)</param>
+    public void HandleTouchInput(int deviceId, int sensorId)
+    {
+        // 1. デバイスIDとセンサーIDを、ゲーム内の「レーン番号」に変換
+        int lane = noteLeds.ConvertNoteIdToGame(deviceId*5 + sensorId);
+        if (lane == -1)
+        {
+            // Debug.LogWarning($"未定義のタッチ入力: Device={deviceId}, Sensor={sensorId}");
+            return; // 未定義のマッピングなら何もしない
+        }
+        
+        // 2. このレーンがクールダウン中でないかチェック (連打防止)
+        if (laneCooldowns[lane] > 0)
+        {
+            return; // クールダウン中は入力を無視
+        }
+        
+        // 3. クールダウンを設定
+        laneCooldowns[lane] = touchInputCooldown;
+
+        // 4. 現在判定可能な (activeNotes 内の) ノーツを探す
+        ActiveNote targetNote = null;
+        
+        // 判定可能な時間内のノーツをすべて探す（近いもの優先など、ロジックは要調整）
+        for (int i = 0; i < activeNotes.Length; i++)
+        {
+            ActiveNote note = activeNotes[i];
+            
+            // 既に判定済みか、出現前か、タイプが違うか、レーンが違うか
+            if (note == null || note.IsUsed || note.Data.type != "touch" || note.Data.lane != lane)
+            {
+                continue;
+            }
+
+            // 判定可能時間内か
+            float diff = (float)(CurrentTime - note.Data.time);
+            if (Mathf.Abs(diff) <= JudgeTimeRange)
+            {
+                // ★ロジック改善の余地あり:
+                // もし同じレーンに複数のノーツが判定可能な場合、
+                // 最も 'time' が近いノーツを 'targetNote' に選ぶべき。
+                // (現在は最初に見つかったものを採用している)
+                targetNote = note;
+                break; // とりあえず最初に見つかったものにフラグを立てる
+            }
+        }
+
+        // 5. 該当するノーツが見つかったら、フラグを立てる
+        if (targetNote != null)
+        {
+            // Debug.Log($"HandleTouchInput: Lane {lane} のノーツ (Time: {targetNote.Data.time}) にフラグを立てます。");
+            targetNote.FlagComponent.SetClicked();
+        }
+        else
+        {
+            // Debug.Log($"HandleTouchInput: Lane {lane} に判定可能なノーツが見つかりません。");
+            // (判定範囲外での空タッチ)
+        }
+    }    
+    // --- ★追加ここまで ---
+
 
     public IEnumerator ResetNoteColorAfterDelay(GameObject noteObject, float delay)
     {
@@ -408,3 +509,4 @@ public class GameManager : MonoBehaviour
 
     
 }
+

@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
+using System.Collections.Concurrent; // ★追加: スレッドセーフなキューのために必要
 
 /// <summary>
 /// ESP32デバイスとUDPブロードキャスト通信を行い、LEDとタッチセンサーを制御するクラス
@@ -26,11 +27,6 @@ public class UdpController : MonoBehaviour
     private const int NUM_PERF_LEDS = 480; // 演出用LED
     private const int NUM_NOTE_LEDS = 470; // ノーツ用LED
 
-    // 各ESPデバイスのLED色データを保持する配列
-    // [デバイスID][LEDインデックス]
-    // private Color32[][] performanceLeds = new Color32[NUM_DEVICES][];
-    // private Color32[][] noteLeds = new Color32[NUM_DEVICES][];
-
     // --- タッチセンサー ---
     [Header("Touch Sensor State")]
     [Tooltip("各デバイスのタッチセンサーの状態をリアルタイムで格納する (読み取り専用)")]
@@ -44,6 +40,9 @@ public class UdpController : MonoBehaviour
     private UdpClient receiveClient; // 受信用のUDPクライアント
     private Thread receiveThread;      // 受信処理をバックグラウンドで行うためのスレッド
     private IPEndPoint sendEndPoint; // 送信先のエンドポイント
+    
+    // ★追加: 受信スレッドからメインスレッドへタッチイベントを渡すためのキュー
+    private ConcurrentQueue<(int deviceId, int sensorId)> touchEventQueue = new ConcurrentQueue<(int, int)>();
 
     // --- デバイス管理 ---
     [Header("Device Management")]
@@ -60,7 +59,7 @@ public class UdpController : MonoBehaviour
 
     private lineterm term;
     private NoteLeds noteLedsComponent;
-    private TouchNotes_Flag touchNotesFlagComponent;
+    // private TouchNotes_Flag touchNotesFlagComponent; // ★削除: GameManagerが処理するため不要
 
     /// <summary>
     /// スクリプトが有効になった最初のフレームで呼ばれる初期化処理
@@ -82,7 +81,8 @@ public class UdpController : MonoBehaviour
             return;
         }
 
-        // ★修正: 不足していたコンポーネントの初期化を追加
+        // ★削除: TouchNotes_Flag の検索は不要
+        /*
         touchNotesFlagComponent = FindFirstObjectByType<TouchNotes_Flag>();
         if (touchNotesFlagComponent == null)
         {
@@ -90,6 +90,7 @@ public class UdpController : MonoBehaviour
             enabled = false;
             return;
         }
+        */
 
         // ★修正: 不足していたコンポーネントの初期化を追加
         noteLedsComponent = FindFirstObjectByType<NoteLeds>();
@@ -128,6 +129,18 @@ public class UdpController : MonoBehaviour
                 Debug.Log($"Device {i} Touch: {string.Join(", ", touchStates[i])}");
             }
         }
+        
+        // --- ★ここから追加 (タッチイベント処理) ---
+        // キューにデータがなくなるまで、メインスレッドで安全に処理する
+        while (touchEventQueue.TryDequeue(out var touchEvent))
+        {
+            if (GameManager.Instance != null)
+            {
+                // GameManager にタッチイベントを通知
+                GameManager.Instance.HandleTouchInput(touchEvent.deviceId, touchEvent.sensorId);
+            }
+        }
+        // --- ★追加ここまで ---
     }
 
     /// <summary>
@@ -189,7 +202,17 @@ public class UdpController : MonoBehaviour
         Debug.Log($"UDPパケットの送信先: {sendEndPoint}");
 
         // 受信クライアントとスレッドのセットアップ
-        receiveClient = new UdpClient(unityPort);
+        try
+        {
+            receiveClient = new UdpClient(unityPort);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"ポート {unityPort} でのUDPクライアントの初期化に失敗しました。ポートが既に使用されている可能性があります。: {e.Message}");
+            enabled = false;
+            return;
+        }
+        
         receiveThread = new Thread(new ThreadStart(ReceiveData));
         receiveThread.IsBackground = true; // アプリ終了時にスレッドも自動で終了させる
         receiveThread.Start();
@@ -229,7 +252,7 @@ public class UdpController : MonoBehaviour
                 // ★追加: ledDataが期待通りの長さかチェック (境界外エラー防止)
                 if (ledData.Length < NUM_PERF_LEDS * 3)
                 {
-                    Debug.LogWarning($"GetBytes2({begin}, {end}) が返したデータ長 ({ledData.Length}) が不足しています。スキップします。");
+                    // Debug.LogWarning($"GetBytes2({begin}, {end}) が返したデータ長 ({ledData.Length}) が不足しています。スキップします。");
                     continue; // このパケットの処理をスキップ
                 }
 
@@ -257,13 +280,23 @@ public class UdpController : MonoBehaviour
             for (int i = 0; i < NUM_NOTE_LEDS; i++)
             {
                 // ★エラーの可能性: noteLedsComponent が null の場合、ここでエラーになる
+                // (Startでチェック済みのため、基本的には安全)
                 Color32 noteLed = noteLedsComponent.GetLedColor(deviceId, i);
                 notePacket[2 + i * 3 + 0] = noteLed.r;
                 notePacket[2 + i * 3 + 1] = noteLed.g;
                 notePacket[2 + i * 3 + 2] = noteLed.b;
             }
             // --- 送信先を変更 ---
-            sendClient.Send(notePacket, notePacket.Length, targetEndPoint);
+            try
+            {
+                sendClient.Send(notePacket, notePacket.Length, targetEndPoint);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error sending notes to Device {deviceId} at {targetEndPoint}: {e.Message}");
+                deviceRegistered[deviceId] = false; // エラーが出たら登録を解除して再発見を促す
+            }
+
 
             // 送信完了のログ（必要に応じてコメントアウトしてください）
             // Debug.Log($"Sent LED data to Device {deviceId}");
@@ -285,10 +318,6 @@ public class UdpController : MonoBehaviour
                 // データを受信するまでここで待機
                 byte[] data = receiveClient.Receive(ref anyIP);
 
-                // 受信したデータの内容をログに出力
-                // Debug.Log($"Received {data.Length} bytes from {anyIP}");
-                // Debug.Log($"Data: {BitConverter.ToString(data)}");
-
                 // 発見パケット [255][ID] の処理を追加
                 if (data.Length == 2 && data[0] == 255)
                 {
@@ -300,7 +329,7 @@ public class UdpController : MonoBehaviour
                         {
                             Debug.Log($"Device {deviceId} 発見！ IP: {anyIP.Address}. ACKを送信します。");
                         }
-                        else if (!deviceEndPoints[deviceId].Address.Equals(anyIP.Address))
+                        else if (deviceEndPoints[deviceId] == null || !deviceEndPoints[deviceId].Address.Equals(anyIP.Address))
                         {
                             Debug.Log($"Device {deviceId} IP更新！ IP: {anyIP.Address}. ACKを送信します。");
                         }
@@ -327,8 +356,8 @@ public class UdpController : MonoBehaviour
                             touchStates[deviceId][i] = (data[i + 1] == 1);
                             if (touchStates[deviceId][i])
                             {
-                                // ★エラー箇所: Start() で初期化したため、もう null ではないはず
-                                touchNotesFlagComponent.SetClicked();
+                                // ★修正: メインスレッドで処理するため、イベントをキューに追加
+                                touchEventQueue.Enqueue((deviceId, i));
                             }
                         }
                     }
@@ -359,15 +388,9 @@ public class UdpController : MonoBehaviour
             Color32 perfColor = Color.HSVToRGB((float)i / NUM_DEVICES, 0.8f, 1.0f);
             Color32 noteColor = Color.HSVToRGB(((float)i / NUM_DEVICES + 0.5f) % 1.0f, 1.0f, 1.0f);
 
-            // for (int j = 0; j < NUM_PERF_LEDS * 3; j++)
-            // {
-            //     performanceLeds[i][j] = perfColor;
-            // }
-            //for (int j = 0; j < NUM_NOTE_LEDS; j++)
-            //{
-            //    noteLeds[i][j] = noteColor;
-            //}
+            // ... (テストデータ設定) ...
         }
         Debug.Log("テスト用のLEDデータを初期化しました。");
     }
 }
+

@@ -61,8 +61,10 @@ public class NoteLeds : MonoBehaviour
 
     /**
      * 譜面上のLEDのIDを、物理的なLEDのインデックスに変換する
+     * @param: 
+     * @返り値: 0～49（/5でデバイスID、%5で内部ID）
      */
-    public int ConvertNoteId(int id) {
+    public int ConvertNoteIdToHard(int id) {
         // ノーツIDからLEDインデックスへの変換ロジックを実装
         if (0 <= id && id <= 4) {
             return id + 20;
@@ -74,6 +76,18 @@ public class NoteLeds : MonoBehaviour
             return id + 3;
         } else {
             return 17; // 無効なIDの場合
+        }
+    }
+
+    /**
+     * 物理的なLEDのインデックスを譜面のIDに変換する
+     */
+    public int ConvertNoteIdToGame(int id) {
+        // todo ちゃんと書く
+        if (20 < id) {
+            return 0;
+        } else {
+            return 17;
         }
     }
 }
