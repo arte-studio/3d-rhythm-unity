@@ -261,7 +261,7 @@ GameObject:
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
   - component: {fileID: 330585548}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Main Camera
   m_TagString: MainCamera
   m_Icon: {fileID: 0}
@@ -315,7 +315,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 55
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -830,6 +830,10 @@ PrefabInstance:
       propertyPath: m_PlayOnAwake
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1917323885350565231, guid: 63b4cd9cc9326944fa6b165a8352a34f, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 3602386135442436825, guid: 63b4cd9cc9326944fa6b165a8352a34f, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0
@@ -873,6 +877,10 @@ PrefabInstance:
     - target: {fileID: 4230550989954279523, guid: 63b4cd9cc9326944fa6b165a8352a34f, type: 3}
       propertyPath: m_Name
       value: tutu
+      objectReference: {fileID: 0}
+    - target: {fileID: 4230550989954279523, guid: 63b4cd9cc9326944fa6b165a8352a34f, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 4230550989954279523, guid: 63b4cd9cc9326944fa6b165a8352a34f, type: 3}
       propertyPath: m_IsActive
@@ -1008,7 +1016,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 55
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -1137,7 +1145,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1803489310}
   - component: {fileID: 1803489309}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: StarSpawner
   m_TagString: Untagged
   m_Icon: {fileID: 0}

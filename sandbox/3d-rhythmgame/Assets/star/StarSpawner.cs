@@ -28,6 +28,15 @@ public class StarSpawner : MonoBehaviour
     [Tooltip("星を配置する高さの範囲")]
     public float cylinderHeight = 5.0f;
 
+    // ★追加: LEDカメラがキャプチャするレイヤー名
+    [Header("レイヤー設定")]
+    [Tooltip("生成する星に設定するレイヤー名")]
+    [SerializeField]
+    private string captureLayerName = "LEDCapture";
+    
+    // ★追加: レイヤー名の文字列から変換したレイヤーインデックス
+    private int ledLayer;
+
     void Start()
     {
         // 必要なオブジェクトが設定されているか確認
@@ -37,6 +46,19 @@ public class StarSpawner : MonoBehaviour
             UnityEngine.Debug.LogError("Star Prefab または Cylinder Transform が Inspector で設定されていません。");
             return;
         }
+
+        // --- ★ここから追加 (レイヤー設定) ---
+        // 1. 文字列のレイヤー名を、int型のレイヤーインデックスに変換
+        ledLayer = LayerMask.NameToLayer(captureLayerName);
+
+        // 2. レイヤーが見つからなかった場合のエラー処理
+        if (ledLayer == -1)
+        {
+            UnityEngine.Debug.LogError($"レイヤー '{captureLayerName}' が見つかりません。Project Settings > Tags and Layers で作成してください。", this.gameObject);
+            return; // レイヤーがないと続行できないため終了
+        }
+        // --- ★追加ここまで ---
+
 
         // 半径の大小関係を自動補正（入力ミスがあっても動作するように）
         if (innerRadius > outerRadius)
@@ -78,7 +100,32 @@ public class StarSpawner : MonoBehaviour
 
             // 7. 生成した星のスケールを変更
             newStar.transform.localScale = new Vector3(randomScale, randomScale, randomScale);
+            
+            // --- ★追加 (レイヤー設定) ---
+            // 8. 生成した星と、そのすべての子オブジェクトのレイヤーを設定
+            SetLayerRecursively(newStar, ledLayer);
+            // --- ★追加ここまで ---
+        }
+    }
+    
+    /// <summary>
+    /// ★追加: 指定されたゲームオブジェクトと、そのすべての子オブジェクトのレイヤーを再帰的に設定する
+    /// </summary>
+    /// <param name="obj">レイヤーを設定する親オブジェクト</param>
+    /// <param name="newLayer">設定するレイヤーのインデックス</param>
+    void SetLayerRecursively(GameObject obj, int newLayer)
+    {
+        if (obj == null) return;
+        
+        // 自身のレイヤーを設定
+        obj.layer = newLayer;
+        
+        // すべての子をループ
+        foreach (Transform child in obj.transform)
+        {
+            if (child == null) continue;
+            // 子に対してもこの関数を呼び出す（再帰）
+            SetLayerRecursively(child.gameObject, newLayer);
         }
     }
 }
-

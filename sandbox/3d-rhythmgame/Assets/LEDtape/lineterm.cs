@@ -34,12 +34,19 @@ public class lineterm : MonoBehaviour
     // ★追加:  GPU読み出しが進行中かを示すフラグ
     private bool readbackInProgress = false;
 
-    // ★追加: 読み出し頻度の設定 (30fpsに間引く)
-    private float updateInterval = 1.0f / 10.0f; // ★修正: 30fps (1.0f / 30.0f) から 10fps (1.0f / 10.0f) に変更
+    // ★追加: 読み出し頻度の設定 (10fps)
+    private float updateInterval = 1.0f / 10.0f; // 10fps
     private float timeSinceLastUpdate = 0.0f;
     
     // ★追加: ストリップ反転の要否をキャッシュする配列
     private bool[] reversedMap;
+
+    // ★追加: デバッグモード設定
+    [Header("Debug Settings")]
+    [Tooltip("デバッグ時にプレイヤーが見るメインカメラ")]
+    [SerializeField] private Camera mainCamera;
+    [Tooltip("チェックを外すと、起動時にメインカメラを無効化します")]
+    [SerializeField] private bool isDebugMode = false;
 
     /// <summary>
     /// 初期化処理
@@ -65,6 +72,16 @@ public class lineterm : MonoBehaviour
         {
             // ProcessPixelData で使うロジック (ConvertID(x) % 2 != 0) をここで計算
             reversedMap[i] = (ConvertID(i) % 2 != 0);
+        }
+
+        // ★追加: デバッグモードでないならメインカメラを無効化
+        if (mainCamera != null)
+        {
+            mainCamera.gameObject.SetActive(isDebugMode);
+            if (!isDebugMode)
+            {
+                Debug.Log("メインカメラを無効化しました。");
+            }
         }
 
         // 初期化完了フラグを立てる
@@ -162,7 +179,7 @@ public class lineterm : MonoBehaviour
 
                 // finalLedData内の書き込み先インデックスを計算
                 // (ストリップID * 1ストリップのバイト長) + (ピクセル位置 * 3)
-                int baseByteIndex = (x * ledsPerStrip * 3) + (pixelIndexInColumn * 3);
+                int baseByteIndex = (x * ledStrips * 3) + (pixelIndexInColumn * 3);
 
                 finalLedData[baseByteIndex + 0] = color.r;
                 finalLedData[baseByteIndex + 1] = color.g;
@@ -203,8 +220,9 @@ public class lineterm : MonoBehaviour
         
         if (finalLedData == null || finalLedData.Length < (endStrip + 1) * stripLengthInBytes)
         {
-            Debug.LogWarning("finalLedData がまだ準備できていません。");
-            return new byte[0];
+            // ★修正: 準備できていない場合のログをWarningからLogに変更 (頻繁に出る可能性があるため)
+            // Debug.LogWarning("finalLedData がまだ準備できていません。");
+            return new byte[totalBytesToCopy]; // ★修正: 空配列ではなく、ゼロ埋めされた配列を返す（エラー防止）
         }
 
         // 1. 最終的なサイズの配列を1つだけ確保する
@@ -286,5 +304,4 @@ public class lineterm : MonoBehaviour
     }
     //*/
 }
-
 
