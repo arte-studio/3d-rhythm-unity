@@ -695,6 +695,7 @@ MonoBehaviour:
   laneIndex: 0
   Perfect_score: 5
   Good_score: 3
+  touchInputCooldown: 0.1
 --- !u!114 &849797065
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -884,7 +885,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4230550989954279523, guid: 63b4cd9cc9326944fa6b165a8352a34f, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1151,7 +1152,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1803489309
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1172,6 +1173,7 @@ MonoBehaviour:
   innerRadius: 1
   outerRadius: 2
   cylinderHeight: 4
+  captureLayerName: LEDCapture
 --- !u!4 &1803489310
 Transform:
   m_ObjectHideFlags: 0

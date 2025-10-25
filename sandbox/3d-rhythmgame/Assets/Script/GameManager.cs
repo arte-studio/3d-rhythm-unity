@@ -73,6 +73,13 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance; //クラス全体で共有される唯一のインスタンス
 
+    // --- ★ここから修正 (デバッグモード) ---
+    [Header("Debug Settings")]
+    // [Tooltip("デバッグモードを有効にする（ノーツLEDの動作確認用）")]
+    // [SerializeField] private bool isDebugMode = false; // private から public に変更
+    public bool isDebugMode = false;
+    // --- ★修正ここまで ---
+
     /* 音源ソース */
     [Header("MusicSource")]
     public AudioSource Tutorial_MusicSource;  // チュートリアルの音源オブジェクトのAudioSourceをセット
@@ -167,8 +174,9 @@ public class GameManager : MonoBehaviour
     {
         Touch_score = 0;
         
-        // ★追加: レーンクールダウン配列の初期化 (レーンが0-10の11個と仮定)
-        laneCooldowns = new float[11]; 
+        // ★修正: レーンクールダウン配列の初期化 (レーンが0-16の17個と仮定)
+        // ConvertNoteIdToHard/Game の実装に基づき 17 に変更
+        laneCooldowns = new float[17]; 
         
         // ObjectRelocationの生成完了を待つ
         yield return new WaitForSeconds(0.1f);
@@ -192,6 +200,14 @@ public class GameManager : MonoBehaviour
         }
         udpController = FindFirstObjectByType<UdpController>(); // ★修正: GameObject.Findを避ける
         noteLeds = FindFirstObjectByType<NoteLeds>(); // ★修正: GameObject.Findを避ける
+
+        // --- ★ここから追加 (デバッグモード) ---
+        // デバッグモードが有効なら、NoteLedsに開始を指示
+        if (isDebugMode && noteLeds != null)
+        {
+            noteLeds.StartDebugMode();
+        }
+        // --- ★追加ここまで ---
 
         // GameFlow開始
         StartCoroutine(GameFlow());
@@ -254,6 +270,36 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+
+        // --- ★ここから追加 (デバッグモード) ---
+        if (isDebugMode)
+        {
+            if (udpController != null && noteLeds != null)
+            {
+                // UdpController の touchStates (ハードウェア入力) をスキャン
+                for (int dev = 0; dev < 8; dev++) // NUM_DEVICES
+                {
+                    if (udpController.touchStates[dev] == null) continue;
+                    for (int sen = 0; sen < 5; sen++) // NUM_TOUCH
+                    {
+                        // ハードID (0-39) を 譜面レーンID (0-16) に変換
+                        int hardId = dev * 5 + sen;
+                        int lane = noteLeds.ConvertNoteIdToGame(hardId);
+                        
+                        if (lane != -1) // -1 は無効レーン
+                        {
+                            // 押されているかどうか
+                            bool isTouching = udpController.touchStates[dev][sen];
+                            // NoteLedsにタッチ状態を通知
+                            noteLeds.SetDebugTouchState(lane, isTouching);
+                        }
+                    }
+                }
+            }
+            // デバッグモード中は通常のノーツ判定をスキップ
+            return;
+        }
+        // --- ★追加ここまで ---
         
         if (isplaying) //ノーツがすべて終わっていなければ
         {
@@ -352,7 +398,8 @@ public class GameManager : MonoBehaviour
                     judged = true;
                     // LEDを判定結果の色に設定 (例: 白)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.magenta);
+                    // ★修正: notenum ではなく lane を渡す
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);
                 }
                 // Good判定
                 else if (Mathf.Abs(diff) <= goodRange && currentActiveNote.FlagComponent.TouchFlag)
@@ -361,7 +408,8 @@ public class GameManager : MonoBehaviour
                     Touch_score += Good_score;
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.magenta);
+                    // ★修正: notenum ではなく lane を渡す
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);
                 }
                 // Miss判定 (時間切れ)
                 else if (CurrentTime > targetTime + JudgeTimeRange)
@@ -370,7 +418,8 @@ public class GameManager : MonoBehaviour
                     judged = true;
                     // LEDをMissの色に設定 (例: 赤)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.cyan);
+                    // ★修正: notenum ではなく lane を渡す
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.cyan);
                 }
                 // Miss判定 (早すぎ/遅すぎタッチ)
                 else if (currentActiveNote.FlagComponent.TouchFlag)
@@ -378,7 +427,8 @@ public class GameManager : MonoBehaviour
                     Debug.Log($"MISS! (Tapped out of range) lane {currentActiveNote.Data.lane}");
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.cyan);
+                    // ★修正: notenum ではなく lane を渡す
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.cyan);
                 }
 
 
@@ -406,7 +456,8 @@ public class GameManager : MonoBehaviour
                 else if (Mathf.Abs(diff) <= JudgeTimeRange)
                 {
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.yellow);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(notenum), Color.yellow);
+                    // ★修正: notenum ではなく lane を渡す
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.yellow);
                 }
             }
         }
@@ -422,7 +473,10 @@ public class GameManager : MonoBehaviour
     public void HandleTouchInput(int deviceId, int sensorId)
     {
         // 1. デバイスIDとセンサーIDを、ゲーム内の「レーン番号」に変換
-        int lane = noteLeds.ConvertNoteIdToGame(deviceId*5 + sensorId);
+        // ★修正: ConvertNoteIdToGame はハードID (0-39) を受け取る
+        int hardId = deviceId * 5 + sensorId;
+        int lane = noteLeds.ConvertNoteIdToGame(hardId);
+        
         if (lane == -1)
         {
             // Debug.LogWarning($"未定義のタッチ入力: Device={deviceId}, Sensor={sensorId}");
@@ -476,7 +530,51 @@ public class GameManager : MonoBehaviour
             // Debug.Log($"HandleTouchInput: Lane {lane} に判定可能なノーツが見つかりません。");
             // (判定範囲外での空タッチ)
         }
-    }    
+    }
+
+    /// <summary>
+    /// (仮実装) デバイスIDとセンサーIDを、譜面データのレーン番号(0-10)に変換する
+    /// ★★★ ここのマッピングは、実際のハードウェア仕様に合わせて必ず修正してください ★★★
+    /// </summary>
+    /// <returns>対応するレーン番号 (0-10)。見つからない場合は -1。</returns>
+    private int ConvertDeviceAndSensorToLane(int deviceId, int sensorId)
+    {
+        // ※この関数は HandleTouchInput 内で noteLeds.ConvertNoteIdToGame を
+        // 使うように変更されたため、現在は使用されていません。
+        // ハードウェア仕様の参照用として残しておきます。
+        
+        // 例: デバイス0のセンサー0-4 が レーン0-4
+        if (deviceId == 0)
+        {
+            if (sensorId >= 0 && sensorId <= 4)
+            {
+                return sensorId; // 0, 1, 2, 3, 4
+            }
+        }
+        // 例: デバイス1のセンサー0-4 が レーン5-9
+        else if (deviceId == 1)
+        {
+            if (sensorId >= 0 && sensorId <= 4)
+            {
+                return sensorId + 5; // 5, 6, 7, 8, 9
+            }
+        }
+        // 例: デバイス2のセンサー0 が レーン10
+        else if (deviceId == 2)
+        {
+            if (sensorId == 0)
+            {
+                return 10;
+            }
+        }
+        
+        // ... 他のデバイスのマッピングをここに追加 ...
+        
+        
+        // 該当なし
+        return -1;
+    }
+    
     // --- ★追加ここまで ---
 
 
@@ -505,8 +603,5 @@ public class GameManager : MonoBehaviour
     private void ScoreCalculate()
     {
         Debug.Log($"{Touch_score}");
-    }
-
-    
+    }  
 }
-
