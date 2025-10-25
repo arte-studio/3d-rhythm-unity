@@ -6,171 +6,247 @@ using System.Threading;
 using System.Collections.Generic;
 
 /// <summary>
-/// ESP32ƒfƒoƒCƒX‚ÆUDPƒuƒ[ƒhƒLƒƒƒXƒg’ÊM‚ğs‚¢ALED‚Æƒ^ƒbƒ`ƒZƒ“ƒT[‚ğ§Œä‚·‚éƒNƒ‰ƒX
+/// ESP32ãƒ‡ãƒã‚¤ã‚¹ã¨UDPãƒ–ãƒ­ãƒ¼ãƒ‰ã‚­ãƒ£ã‚¹ãƒˆé€šä¿¡ã‚’è¡Œã„ã€LEDã¨ã‚¿ãƒƒãƒã‚»ãƒ³ã‚µãƒ¼ã‚’åˆ¶å¾¡ã™ã‚‹ã‚¯ãƒ©ã‚¹
 /// </summary>
 public class UdpController : MonoBehaviour
 {
-    // --- ƒlƒbƒgƒ[ƒNİ’è ---
+    // --- ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯è¨­å®š ---
     [Header("Network Settings")]
-    [Tooltip("UDPƒpƒPƒbƒg‚ğ‘—M‚·‚éƒuƒ[ƒhƒLƒƒƒXƒgƒAƒhƒŒƒX")]
+    [Tooltip("UDPãƒ‘ã‚±ãƒƒãƒˆã‚’é€ä¿¡ã™ã‚‹ãƒ–ãƒ­ãƒ¼ãƒ‰ã‚­ãƒ£ã‚¹ãƒˆã‚¢ãƒ‰ãƒ¬ã‚¹")]
     public string broadcastAddress = "192.168.0.255";
-    [Tooltip("ESP32‘¤‚ª‘Ò‚¿ó‚¯‚éƒ|[ƒg”Ô†")]
+    [Tooltip("ESP32å´ãŒå¾…ã¡å—ã‘ã‚‹ãƒãƒ¼ãƒˆç•ªå·")]
     public int espPort = 8888;
-    [Tooltip("Unity‘¤‚ª‘Ò‚¿ó‚¯‚éƒ|[ƒg”Ô†")]
+    [Tooltip("Unityå´ãŒå¾…ã¡å—ã‘ã‚‹ãƒãƒ¼ãƒˆç•ªå·")]
     public int unityPort = 9999;
 
-    // --- LEDİ’è ---
+    // --- LEDè¨­å®š ---
     [Header("LED Settings")]
-    private const int NUM_DEVICES = 10;
-    private const int NUM_PERF_LEDS = 480; // ‰‰o—pLED
-    private const int NUM_NOTE_LEDS = 470; // ƒm[ƒc—pLED
+    private const int NUM_DEVICES = 8;
+    private const int NUM_TOUCH = 5;
+    private const int NUM_PERF_LEDS = 480; // æ¼”å‡ºç”¨LED
+    private const int NUM_NOTE_LEDS = 470; // ãƒãƒ¼ãƒ„ç”¨LED
 
-    // ŠeESPƒfƒoƒCƒX‚ÌLEDFƒf[ƒ^‚ğ•Û‚·‚é”z—ñ
-    // [ƒfƒoƒCƒXID][LEDƒCƒ“ƒfƒbƒNƒX]
-    private Color32[][] performanceLeds = new Color32[NUM_DEVICES][];
-    private Color32[][] noteLeds = new Color32[NUM_DEVICES][];
+    // å„ESPãƒ‡ãƒã‚¤ã‚¹ã®LEDè‰²ãƒ‡ãƒ¼ã‚¿ã‚’ä¿æŒã™ã‚‹é…åˆ—
+    // [ãƒ‡ãƒã‚¤ã‚¹ID][LEDã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹]
+    // private Color32[][] performanceLeds = new Color32[NUM_DEVICES][];
+    // private Color32[][] noteLeds = new Color32[NUM_DEVICES][];
 
-    // --- ƒ^ƒbƒ`ƒZƒ“ƒT[ ---
+    // --- ã‚¿ãƒƒãƒã‚»ãƒ³ã‚µãƒ¼ ---
     [Header("Touch Sensor State")]
-    [Tooltip("ŠeƒfƒoƒCƒX‚Ìƒ^ƒbƒ`ƒZƒ“ƒT[‚Ìó‘Ô‚ğƒŠƒAƒ‹ƒ^ƒCƒ€‚ÅŠi”[‚·‚é (“Ç‚İæ‚èê—p)")]
-    // [ƒfƒoƒCƒXID][ƒZƒ“ƒT[ƒCƒ“ƒfƒbƒNƒX]
+    [Tooltip("å„ãƒ‡ãƒã‚¤ã‚¹ã®ã‚¿ãƒƒãƒã‚»ãƒ³ã‚µãƒ¼ã®çŠ¶æ…‹ã‚’ãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ ã§æ ¼ç´ã™ã‚‹ (èª­ã¿å–ã‚Šå°‚ç”¨)")]
+    // [ãƒ‡ãƒã‚¤ã‚¹ID][ã‚»ãƒ³ã‚µãƒ¼ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹]
     public bool[][] touchStates = new bool[NUM_DEVICES][];
 
-    // --- UDPŠÖ˜A ---
-    private UdpClient sendClient;    // ‘—M—p‚ÌUDPƒNƒ‰ƒCƒAƒ“ƒg
-    private UdpClient receiveClient; // óM—p‚ÌUDPƒNƒ‰ƒCƒAƒ“ƒg
-    private Thread receiveThread;    // óMˆ—‚ğƒoƒbƒNƒOƒ‰ƒEƒ“ƒh‚Ås‚¤‚½‚ß‚ÌƒXƒŒƒbƒh
-    private IPEndPoint sendEndPoint; // ‘—Mæ‚ÌƒGƒ“ƒhƒ|ƒCƒ“ƒg
+    private bool arraysInitialized;
 
-    // --- ƒf[ƒ^‘—M—pƒoƒbƒtƒ@ ---
-    // ƒpƒPƒbƒg‚ğ–ˆ‰ñ¶¬‚·‚é‚Æ•‰‰×‚ª‚‚¢‚½‚ßAg‚¢‚Ü‚í‚·‚½‚ß‚Ìƒoƒbƒtƒ@
-    // ‰‰o—pLEDƒpƒPƒbƒg (ID, Type, 480 * 3 bytes)
+    // --- UDPé–¢é€£ ---
+    private UdpClient sendClient;    // é€ä¿¡ç”¨ã®UDPã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆ
+    private UdpClient receiveClient; // å—ä¿¡ç”¨ã®UDPã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆ
+    private Thread receiveThread;    // å—ä¿¡å‡¦ç†ã‚’ãƒãƒƒã‚¯ã‚°ãƒ©ã‚¦ãƒ³ãƒ‰ã§è¡Œã†ãŸã‚ã®ã‚¹ãƒ¬ãƒƒãƒ‰
+    private IPEndPoint sendEndPoint; // é€ä¿¡å…ˆã®ã‚¨ãƒ³ãƒ‰ãƒã‚¤ãƒ³ãƒˆ
+
+    // --- ãƒ‡ãƒã‚¤ã‚¹ç®¡ç† ---
+    [Header("Device Management")]
+    [Tooltip("å„ãƒ‡ãƒã‚¤ã‚¹ãŒç™»éŒ²æ¸ˆã¿ã‹ã‚’è¡¨ç¤º")]
+    public bool[] deviceRegistered = new bool[NUM_DEVICES];
+    private IPEndPoint[] deviceEndPoints = new IPEndPoint[NUM_DEVICES];
+
+    // --- ãƒ‡ãƒ¼ã‚¿é€ä¿¡ç”¨ãƒãƒƒãƒ•ã‚¡ ---
+    // ãƒ‘ã‚±ãƒƒãƒˆã‚’æ¯å›ç”Ÿæˆã™ã‚‹ã¨è² è·ãŒé«˜ã„ãŸã‚ã€ä½¿ã„ã¾ã‚ã™ãŸã‚ã®ãƒãƒƒãƒ•ã‚¡
+    // æ¼”å‡ºç”¨LEDãƒ‘ã‚±ãƒƒãƒˆ (ID, Type, 480 * 3 bytes)
     private byte[] perfPacket = new byte[2 + NUM_PERF_LEDS * 3];
-    // ƒm[ƒc—pLEDƒpƒPƒbƒg (ID, Type, 470 * 3 bytes)
+    // ãƒãƒ¼ãƒ„ç”¨LEDãƒ‘ã‚±ãƒƒãƒˆ (ID, Type, 470 * 3 bytes)
     private byte[] notePacket = new byte[2 + NUM_NOTE_LEDS * 3];
 
-    TouchNotes_Flag touchNotes_Flag;
+    private lineterm term;
+    private NoteLeds noteLedsComponent;
+    private TouchNotes_Flag touchNotesFlagComponent;
 
     /// <summary>
-    /// ƒXƒNƒŠƒvƒg‚ª—LŒø‚É‚È‚Á‚½Å‰‚ÌƒtƒŒ[ƒ€‚ÅŒÄ‚Î‚ê‚é‰Šú‰»ˆ—
+    /// ã‚¹ã‚¯ãƒªãƒ—ãƒˆãŒæœ‰åŠ¹ã«ãªã£ãŸæœ€åˆã®ãƒ•ãƒ¬ãƒ¼ãƒ ã§å‘¼ã°ã‚Œã‚‹åˆæœŸåŒ–å‡¦ç†
     /// </summary>
+    void Awake()
+    {
+        InitializeArrays();
+    }
+
     void Start()
     {
+        Application.targetFrameRate = 60; // 60fpsã«è¨­å®š
+
+        term = FindFirstObjectByType<lineterm>();
+        if (term == null)
+        {
+            Debug.LogError("lineterm ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚UdpController ã‚’ç„¡åŠ¹åŒ–ã—ã¾ã™ã€‚");
+            enabled = false;
+            return;
+        }
+
         InitializeArrays();
         InitializeUdp();
 
-        // ƒeƒXƒg—p‚ÉLEDƒf[ƒ^‚ğ‰Šú‰»i•s—v‚Èê‡‚ÍƒRƒƒ“ƒgƒAƒEƒg‚µ‚Ä‚­‚¾‚³‚¢j
+        // ãƒ†ã‚¹ãƒˆç”¨ã«LEDãƒ‡ãƒ¼ã‚¿ã‚’åˆæœŸåŒ–ï¼ˆä¸è¦ãªå ´åˆã¯ã‚³ãƒ¡ãƒ³ãƒˆã‚¢ã‚¦ãƒˆã—ã¦ãã ã•ã„ï¼‰
         InitializeTestData();
     }
 
     /// <summary>
-    /// –ˆƒtƒŒ[ƒ€ŒÄ‚Î‚ê‚éXVˆ— 
+    /// æ¯ãƒ•ãƒ¬ãƒ¼ãƒ å‘¼ã°ã‚Œã‚‹æ›´æ–°å‡¦ç† 
     /// </summary>
-    /*void Update()
+    void Update()
     {
-        // --- ‚±‚±‚ÅƒQ[ƒ€‚ÌƒƒWƒbƒN‚É‰‚¶‚ÄLED‚ÌF‚ğXV‚µ‚Ä‚­‚¾‚³‚¢ ---
-        // —á: performanceLeds[ƒfƒoƒCƒXID][LED”Ô†] = new Color32(255, 0, 0, 255);
-        // —á: noteLeds[ƒfƒoƒCƒXID][LED”Ô†] = Color.blue;
-
-        // ƒtƒŒ[ƒ€‚²‚Æ‚É‘SƒfƒoƒCƒX‚ÉLEDƒf[ƒ^‚ğ‘—M
+        if (!arraysInitialized)
+        {
+            return;
+        }
+        // ãƒ•ãƒ¬ãƒ¼ãƒ ã”ã¨ã«å…¨ãƒ‡ãƒã‚¤ã‚¹ã«LEDãƒ‡ãƒ¼ã‚¿ã‚’é€ä¿¡
         SendAllLedData();
 
-        // ƒfƒoƒbƒO—p‚ÉASpaceƒL[‚ª‰Ÿ‚³‚ê‚½‚çƒ^ƒbƒ`ó‘Ô‚ğƒRƒ“ƒ\[ƒ‹‚É•\¦
+        // ãƒ‡ãƒãƒƒã‚°ç”¨ã«ã€Spaceã‚­ãƒ¼ãŒæŠ¼ã•ã‚ŒãŸã‚‰ã‚¿ãƒƒãƒçŠ¶æ…‹ã‚’ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã«è¡¨ç¤º
         if (Input.GetKeyDown(KeyCode.Space))
         {
             for (int i = 0; i < NUM_DEVICES; i++)
             {
-                // string.Join‚Å”z—ñ‚ğƒJƒ“ƒ}‹æØ‚è‚Ì•¶š—ñ‚É•ÏŠ·‚µ‚Ä•\¦
+                // string.Joinã§é…åˆ—ã‚’ã‚«ãƒ³ãƒåŒºåˆ‡ã‚Šã®æ–‡å­—åˆ—ã«å¤‰æ›ã—ã¦è¡¨ç¤º
                 Debug.Log($"Device {i} Touch: {string.Join(", ", touchStates[i])}");
             }
         }
-    }*/
+    }
 
     /// <summary>
-    /// ƒAƒvƒŠƒP[ƒVƒ‡ƒ“I—¹‚ÉŒÄ‚Î‚ê‚éˆ—
+    /// ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³çµ‚äº†æ™‚ã«å‘¼ã°ã‚Œã‚‹å‡¦ç†
     /// </summary>
     void OnDestroy()
     {
-        // ƒXƒŒƒbƒh‚âƒNƒ‰ƒCƒAƒ“ƒg‚ğ³‚µ‚­•Â‚¶‚ÄƒŠƒ\[ƒX‚ğ‰ğ•ú‚·‚é
+        // ã‚¹ãƒ¬ãƒƒãƒ‰ã‚„ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã‚’æ­£ã—ãé–‰ã˜ã¦ãƒªã‚½ãƒ¼ã‚¹ã‚’è§£æ”¾ã™ã‚‹
         if (receiveThread != null && receiveThread.IsAlive) receiveThread.Abort();
         if (sendClient != null) sendClient.Close();
         if (receiveClient != null) receiveClient.Close();
     }
 
     /// <summary>
-    /// LED‚âƒ^ƒbƒ`ƒZƒ“ƒT[‚Ì”z—ñ‚ğ‰Šú‰»‚·‚é
+    /// LEDã‚„ã‚¿ãƒƒãƒã‚»ãƒ³ã‚µãƒ¼ã®é…åˆ—ã‚’åˆæœŸåŒ–ã™ã‚‹
     /// </summary>
     private void InitializeArrays()
     {
+        if (arraysInitialized)
+        {
+            return;
+        }
+
+        // if (performanceLeds == null || performanceLeds.Length != NUM_DEVICES) performanceLeds = new Color32[NUM_DEVICES][];
+        // if (noteLeds == null || noteLeds.Length != NUM_DEVICES) noteLeds = new Color32[NUM_DEVICES][];
+        if (touchStates == null || touchStates.Length != NUM_DEVICES) touchStates = new bool[NUM_DEVICES][];
+        if (deviceRegistered == null || deviceRegistered.Length != NUM_DEVICES) deviceRegistered = new bool[NUM_DEVICES];
+        if (deviceEndPoints == null || deviceEndPoints.Length != NUM_DEVICES) deviceEndPoints = new IPEndPoint[NUM_DEVICES];
+
         for (int i = 0; i < NUM_DEVICES; i++)
         {
-            performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
-            noteLeds[i] = new Color32[NUM_NOTE_LEDS];
-            touchStates[i] = new bool[7];
+            // if (performanceLeds[i] == null || performanceLeds[i].Length != NUM_PERF_LEDS * 3)
+            // {
+            //     performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
+            // }
+            // if (noteLeds[i] == null || noteLeds[i].Length != NUM_NOTE_LEDS)
+            // {
+            //     noteLeds[i] = new Color32[NUM_NOTE_LEDS];
+            // }
+            if (touchStates[i] == null || touchStates[i].Length != NUM_TOUCH)
+            {
+                touchStates[i] = new bool[NUM_TOUCH];
+            }
+            deviceRegistered[i] = false;
+            deviceEndPoints[i] = null;
         }
+
+        arraysInitialized = true;
     }
 
     /// <summary>
-    /// UDPƒNƒ‰ƒCƒAƒ“ƒg‚ğ‰Šú‰»‚µAóMƒXƒŒƒbƒh‚ğŠJn‚·‚é
+    /// UDPã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã‚’åˆæœŸåŒ–ã—ã€å—ä¿¡ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’é–‹å§‹ã™ã‚‹
     /// </summary>
     private void InitializeUdp()
     {
-        // ‘—MƒNƒ‰ƒCƒAƒ“ƒg‚ÌƒZƒbƒgƒAƒbƒv
+        // é€ä¿¡ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã®ã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ—
         sendClient = new UdpClient();
         sendEndPoint = new IPEndPoint(IPAddress.Parse(broadcastAddress), espPort);
-        Debug.Log($"UDPƒpƒPƒbƒg‚Ì‘—Mæ: {sendEndPoint}");
+        Debug.Log($"UDPãƒ‘ã‚±ãƒƒãƒˆã®é€ä¿¡å…ˆ: {sendEndPoint}");
 
-        // óMƒNƒ‰ƒCƒAƒ“ƒg‚ÆƒXƒŒƒbƒh‚ÌƒZƒbƒgƒAƒbƒv
+        // å—ä¿¡ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã¨ã‚¹ãƒ¬ãƒƒãƒ‰ã®ã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ—
         receiveClient = new UdpClient(unityPort);
         receiveThread = new Thread(new ThreadStart(ReceiveData));
-        receiveThread.IsBackground = true; // ƒAƒvƒŠI—¹‚ÉƒXƒŒƒbƒh‚à©“®‚ÅI—¹‚³‚¹‚é
+        receiveThread.IsBackground = true; // ã‚¢ãƒ—ãƒªçµ‚äº†æ™‚ã«ã‚¹ãƒ¬ãƒƒãƒ‰ã‚‚è‡ªå‹•ã§çµ‚äº†ã•ã›ã‚‹
         receiveThread.Start();
-        Debug.Log($"UDPƒpƒPƒbƒg‚Ì‘Òóƒ|[ƒg: {unityPort}");
+        Debug.Log($"UDPãƒ‘ã‚±ãƒƒãƒˆã®å¾…å—ãƒãƒ¼ãƒˆ: {unityPort}");
     }
 
     /// <summary>
-    /// ‘S‚Ä‚ÌƒfƒoƒCƒXi10‘ä•ªj‚ÌLEDƒf[ƒ^‚ğ‘—M‚·‚éƒƒCƒ“‚ÌŠÖ”
+    /// å…¨ã¦ã®ãƒ‡ãƒã‚¤ã‚¹ï¼ˆ10å°åˆ†ï¼‰ã®LEDãƒ‡ãƒ¼ã‚¿ã‚’é€ä¿¡ã™ã‚‹ãƒ¡ã‚¤ãƒ³ã®é–¢æ•°
     /// </summary>
     public void SendAllLedData()
     {
-        // 0”Ô‚©‚ç9”Ô‚Ü‚ÅA‚·‚×‚Ä‚ÌƒfƒoƒCƒXID‚É‘Î‚µ‚Äƒ‹[ƒv
+        if (!arraysInitialized || sendClient == null)
+        {
+            return;
+        }
+        // 0ç•ªã‹ã‚‰9ç•ªã¾ã§ã€ã™ã¹ã¦ã®ãƒ‡ãƒã‚¤ã‚¹IDã«å¯¾ã—ã¦ãƒ«ãƒ¼ãƒ—
         for (int deviceId = 0; deviceId < NUM_DEVICES; deviceId++)
         {
-            // ‰‰o—pLEDƒf[ƒ^‚ğ3ƒpƒPƒbƒg‚É•ª‚¯‚Ä‘—M
+            // æœªç™»éŒ²ã®ãƒ‡ãƒã‚¤ã‚¹ã¯ã‚¹ã‚­ãƒƒãƒ—
+            if (!deviceRegistered[deviceId])
+            {
+                continue;
+            }
+            // å®›å…ˆã‚’ãƒ–ãƒ­ãƒ¼ãƒ‰ã‚­ãƒ£ã‚¹ãƒˆã‹ã‚‰ã€ç™»éŒ²æ¸ˆã¿ã®IPã‚¢ãƒ‰ãƒ¬ã‚¹ã«å¤‰æ›´
+            IPEndPoint targetEndPoint = deviceEndPoints[deviceId];
+
+            // æ¼”å‡ºç”¨LEDãƒ‡ãƒ¼ã‚¿ã‚’3ãƒ‘ã‚±ãƒƒãƒˆã«åˆ†ã‘ã¦é€ä¿¡
             for (int i = 0; i < 3; i++)
             {
                 perfPacket[0] = (byte)deviceId;
                 perfPacket[1] = (byte)i;
+                // linetermã‹ã‚‰GetBytes2ã§é…åˆ—ã‚’å–å¾—
+                int begin = deviceId * 4 + 30 * i;
+                int end = begin + 3;
+                byte[] ledData = term.GetBytes2(begin, end);
                 for (int j = 0; j < NUM_PERF_LEDS; j++)
                 {
-                    int ledIndex = i * NUM_PERF_LEDS + j;
-                    perfPacket[2 + j * 3 + 0] = performanceLeds[deviceId][ledIndex].r;
-                    perfPacket[2 + j * 3 + 1] = performanceLeds[deviceId][ledIndex].g;
-                    perfPacket[2 + j * 3 + 2] = performanceLeds[deviceId][ledIndex].b;
+                    perfPacket[2 + j * 3 + 1] = ledData[j * 3 + 0]; // todo ã‚­ãƒ¢ã„ã‘ã©ã“ã“å¤‰ãˆãŸ
+                    perfPacket[2 + j * 3 + 0] = ledData[j * 3 + 1];
+                    perfPacket[2 + j * 3 + 2] = ledData[j * 3 + 2];
                 }
-                sendClient.Send(perfPacket, perfPacket.Length, sendEndPoint);
+                // --- é€ä¿¡å…ˆã‚’å¤‰æ›´ ---
+                try
+                {
+                    sendClient.Send(perfPacket, perfPacket.Length, targetEndPoint);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Error sending to Device {deviceId} at {targetEndPoint}: {e.Message}");
+                    deviceRegistered[deviceId] = false; // ã‚¨ãƒ©ãƒ¼ãŒå‡ºãŸã‚‰ç™»éŒ²ã‚’è§£é™¤ã—ã¦å†ç™ºè¦‹ã‚’ä¿ƒã™
+                }
             }
 
-            // ƒm[ƒc—pLEDƒf[ƒ^‚ğ1ƒpƒPƒbƒg‚Å‘—M
+            // ãƒãƒ¼ãƒ„ç”¨LEDãƒ‡ãƒ¼ã‚¿ã‚’1ãƒ‘ã‚±ãƒƒãƒˆã§é€ä¿¡
             notePacket[0] = (byte)deviceId;
             notePacket[1] = 3;
             for (int i = 0; i < NUM_NOTE_LEDS; i++)
             {
-                notePacket[2 + i * 3 + 0] = noteLeds[deviceId][i].r;
-                notePacket[2 + i * 3 + 1] = noteLeds[deviceId][i].g;
-                notePacket[2 + i * 3 + 2] = noteLeds[deviceId][i].b;
+                Color32 noteLed = noteLedsComponent.GetLedColor(deviceId, i);
+                notePacket[2 + i * 3 + 0] = noteLed.r;
+                notePacket[2 + i * 3 + 1] = noteLed.g;
+                notePacket[2 + i * 3 + 2] = noteLed.b;
             }
-            sendClient.Send(notePacket, notePacket.Length, sendEndPoint);
+            // --- é€ä¿¡å…ˆã‚’å¤‰æ›´ ---
+            sendClient.Send(notePacket, notePacket.Length, targetEndPoint);
 
-            // ‘—MŠ®—¹‚ÌƒƒOi•K—v‚É‰‚¶‚ÄƒRƒƒ“ƒgƒAƒEƒg‚µ‚Ä‚­‚¾‚³‚¢j
+            // é€ä¿¡å®Œäº†ã®ãƒ­ã‚°ï¼ˆå¿…è¦ã«å¿œã˜ã¦ã‚³ãƒ¡ãƒ³ãƒˆã‚¢ã‚¦ãƒˆã—ã¦ãã ã•ã„ï¼‰
             // Debug.Log($"Sent LED data to Device {deviceId}");
         }
-        // ‘—MŠ®—¹‚ÌƒƒO
+        // é€ä¿¡å®Œäº†ã®ãƒ­ã‚°
         // Debug.Log("Sent Data");
     }
 
     /// <summary>
-    /// ƒoƒbƒNƒOƒ‰ƒEƒ“ƒhƒXƒŒƒbƒh‚ÅESP32‚©‚ç‚Ìƒf[ƒ^‚ğóM‚µ‘±‚¯‚éŠÖ”
+    /// ãƒãƒƒã‚¯ã‚°ãƒ©ã‚¦ãƒ³ãƒ‰ã‚¹ãƒ¬ãƒƒãƒ‰ã§ESP32ã‹ã‚‰ã®ãƒ‡ãƒ¼ã‚¿ã‚’å—ä¿¡ã—ç¶šã‘ã‚‹é–¢æ•°
     /// </summary>
     private void ReceiveData()
     {
@@ -179,62 +255,91 @@ public class UdpController : MonoBehaviour
         {
             try
             {
-                // ƒf[ƒ^‚ğóM‚·‚é‚Ü‚Å‚±‚±‚Å‘Ò‹@
+                // ãƒ‡ãƒ¼ã‚¿ã‚’å—ä¿¡ã™ã‚‹ã¾ã§ã“ã“ã§å¾…æ©Ÿ
                 byte[] data = receiveClient.Receive(ref anyIP);
 
-                // óM‚µ‚½ƒf[ƒ^‚Ì“à—e‚ğƒƒO‚Éo—Í
+                // å—ä¿¡ã—ãŸãƒ‡ãƒ¼ã‚¿ã®å†…å®¹ã‚’ãƒ­ã‚°ã«å‡ºåŠ›
                 // Debug.Log($"Received {data.Length} bytes from {anyIP}");
                 // Debug.Log($"Data: {BitConverter.ToString(data)}");
 
-                // ƒpƒPƒbƒg‚Ì’·‚³‚ªŠú‘Ò’Ê‚è‚©ƒ`ƒFƒbƒN (ID 1ƒoƒCƒg + Touch 7ƒoƒCƒg)
-                if (data.Length == 8)
+                // ç™ºè¦‹ãƒ‘ã‚±ãƒƒãƒˆ [255][ID] ã®å‡¦ç†ã‚’è¿½åŠ 
+                if (data.Length == 2 && data[0] == 255)
+                {
+                    int deviceId = data[1];
+                    if (deviceId >= 0 && deviceId < NUM_DEVICES)
+                    {
+                        // æ–°ã—ã„ãƒ‡ãƒã‚¤ã‚¹ã€ã¾ãŸã¯IPã‚¢ãƒ‰ãƒ¬ã‚¹ãŒå¤‰ã‚ã£ãŸãƒ‡ãƒã‚¤ã‚¹ã‚’ç™ºè¦‹
+                        if (!deviceRegistered[deviceId])
+                        {
+                            Debug.Log($"Device {deviceId} ç™ºè¦‹ï¼ IP: {anyIP.Address}. ACKã‚’é€ä¿¡ã—ã¾ã™ã€‚");
+                        }
+                        else if (!deviceEndPoints[deviceId].Address.Equals(anyIP.Address))
+                        {
+                            Debug.Log($"Device {deviceId} IPæ›´æ–°ï¼ IP: {anyIP.Address}. ACKã‚’é€ä¿¡ã—ã¾ã™ã€‚");
+                        }
+                        else
+                        {
+                            Debug.Log($"Device {deviceId} å†ç™ºè¦‹ï¼ IP: {anyIP.Address}. ACKã‚’é€ä¿¡ã—ã¾ã™ã€‚");
+                        }
+                        deviceEndPoints[deviceId] = new IPEndPoint(anyIP.Address, espPort);
+                        deviceRegistered[deviceId] = true;
+                        // ç¢ºèªå¿œç­”(ACK) [254] ã‚’ãƒ¦ãƒ‹ã‚­ãƒ£ã‚¹ãƒˆã§è¿”ä¿¡
+                        byte[] ackPacket = { 254 };
+                        sendClient.Send(ackPacket, ackPacket.Length, deviceEndPoints[deviceId]);
+                    }
+                }
+                // ãƒ‘ã‚±ãƒƒãƒˆã®é•·ã•ãŒæœŸå¾…é€šã‚Šã‹ãƒã‚§ãƒƒã‚¯ (ID 1ãƒã‚¤ãƒˆ + Touch NUM_TOUCHãƒã‚¤ãƒˆ)
+                else if (data.Length == NUM_TOUCH + 1)
                 {
                     int deviceId = data[0];
                     if (deviceId >= 0 && deviceId < NUM_DEVICES)
                     {
-                        for (int i = 0; i < 7; i++)
+                        for (int i = 0; i < NUM_TOUCH; i++)
                         {
-                            // óM‚µ‚½ 1 or 0 ‚ğ bool (true/false) ‚É•ÏŠ·‚µ‚Ä”z—ñ‚ÉŠi”[
+                            // å—ä¿¡ã—ãŸ 1 or 0 ã‚’ bool (true/false) ã«å¤‰æ›ã—ã¦é…åˆ—ã«æ ¼ç´
                             touchStates[deviceId][i] = (data[i + 1] == 1);
-                            touchNotes_Flag.SetClicked();
+                            if (touchStates[deviceId][i])
+                            {
+                                touchNotesFlagComponent.SetClicked();
+                            }
                         }
                     }
                 }
                 else
                 {
                     // Debug.LogWarning($"Unexpected packet size: {data.Length} bytes from {anyIP}");
-                    // // óM‚µ‚½ƒf[ƒ^‚Ì“à—e‚ğƒƒO‚Éo—Í
+                    // // å—ä¿¡ã—ãŸãƒ‡ãƒ¼ã‚¿ã®å†…å®¹ã‚’ãƒ­ã‚°ã«å‡ºåŠ›
                     // Debug.LogWarning($"Data: {BitConverter.ToString(data)}");
                 }
             }
             catch (Exception err)
             {
-                // ƒXƒŒƒbƒh‚ª’†’f‚³‚ê‚½ê‡‚È‚Ç‚ÌƒGƒ‰[‚ğƒƒO‚Éo—Í
+                // ã‚¹ãƒ¬ãƒƒãƒ‰ãŒä¸­æ–­ã•ã‚ŒãŸå ´åˆãªã©ã®ã‚¨ãƒ©ãƒ¼ã‚’ãƒ­ã‚°ã«å‡ºåŠ›
                 Debug.LogError(err.ToString());
             }
         }
     }
 
     /// <summary>
-    /// “®ìŠm”F—p‚ÉALED”z—ñ‚ğ‰Šú‚ÌF‚Å“h‚è‚Â‚Ô‚·
+    /// å‹•ä½œç¢ºèªç”¨ã«ã€LEDé…åˆ—ã‚’åˆæœŸã®è‰²ã§å¡—ã‚Šã¤ã¶ã™
     /// </summary>
     private void InitializeTestData()
     {
         for (int i = 0; i < NUM_DEVICES; i++)
         {
-            // ƒfƒoƒCƒX‚²‚Æ‚É­‚µ‚¸‚ÂF‘Š‚ğ‚¸‚ç‚µ‚½F‚ğ¶¬
+            // ãƒ‡ãƒã‚¤ã‚¹ã”ã¨ã«å°‘ã—ãšã¤è‰²ç›¸ã‚’ãšã‚‰ã—ãŸè‰²ã‚’ç”Ÿæˆ
             Color32 perfColor = Color.HSVToRGB((float)i / NUM_DEVICES, 0.8f, 1.0f);
             Color32 noteColor = Color.HSVToRGB(((float)i / NUM_DEVICES + 0.5f) % 1.0f, 1.0f, 1.0f);
 
-            for (int j = 0; j < NUM_PERF_LEDS * 3; j++)
-            {
-                performanceLeds[i][j] = perfColor;
-            }
-            for (int j = 0; j < NUM_NOTE_LEDS; j++)
-            {
-                noteLeds[i][j] = noteColor;
-            }
+            // for (int j = 0; j < NUM_PERF_LEDS * 3; j++)
+            // {
+            //     performanceLeds[i][j] = perfColor;
+            // }
+            //for (int j = 0; j < NUM_NOTE_LEDS; j++)
+            //{
+            //    noteLeds[i][j] = noteColor;
+            //}
         }
-        Debug.Log("ƒeƒXƒg—p‚ÌLEDƒf[ƒ^‚ğ‰Šú‰»‚µ‚Ü‚µ‚½B");
+        Debug.Log("ãƒ†ã‚¹ãƒˆç”¨ã®LEDãƒ‡ãƒ¼ã‚¿ã‚’åˆæœŸåŒ–ã—ã¾ã—ãŸã€‚");
     }
 }

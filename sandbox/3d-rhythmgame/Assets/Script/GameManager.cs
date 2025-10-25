@@ -30,6 +30,7 @@ public class ActiveNote
     public NoteData Data;          // 対応する譜面データ
     public bool IsUsed;            // 判定済みフラグ（notes_isused[index] の代わり）
     public TouchNotes_Flag FlagComponent; // フラグコンポーネンスへの参照を保持
+    //public NoteLeds noteLeds; // LED制御用コンポーネントへの参照
 
     // Connect ノーツ用の状態管理 (ConnectNotes_Judge.csから移植)
     public bool Connect_DragStarted = false;
@@ -56,7 +57,7 @@ public class ActiveNote
             Connect_DragEnded = false;
             Connect_CubeTouched = false;
             Connect_ElapsedTime = 0f;
-            Connect_MissAbsoluteTime = data.time+ Connect_RequiredTime + Connect_JudgeEndOffset;
+            Connect_MissAbsoluteTime = data.time + Connect_RequiredTime + Connect_JudgeEndOffset;
         }
 
         //touchノーツの場合
@@ -137,6 +138,8 @@ public class GameManager : MonoBehaviour
     private ActiveNote[] activeNotes; //  譜面データ全てのActiveNoteを管理
     private int lastSpawnedNoteIndex = 0; // 最後にプールからオブジェクトを割り当てたノーツのJSONインデックス
 
+    private NoteLeds noteLeds;
+
     //ゲームオブジェクトが生成された直後、Startより前に1回だけ呼ばれる
     void Awake()
     {
@@ -160,13 +163,14 @@ public class GameManager : MonoBehaviour
             {
                 Debug.Log(Notes[i].name);
                 mugyu_LEDPerformance.Add(Notes[i].GetComponent<Mugyu_LEDPerformance>());
-                if (mugyu_LEDPerformance[i] != null)mugyu_LEDPerformance[i].SetLEDGenerate();
+                if (mugyu_LEDPerformance[i] != null) mugyu_LEDPerformance[i].SetLEDGenerate();
 
                 connect_LEDPerformance.Add(Notes[i].GetComponent<Connect_LEDPerformance>());
                 if (connect_LEDPerformance[i] != null) connect_LEDPerformance[i].SetLEDGenerate();
             }
         }
         udpController = GameObject.Find("UdpController").GetComponent<UdpController>();
+        noteLeds = GameObject.Find("NoteLeds").GetComponent<NoteLeds>();
 
         // GameFlow開始
         StartCoroutine(GameFlow());
@@ -179,7 +183,7 @@ public class GameManager : MonoBehaviour
         yield return StartCoroutine(Tutorial());
 
         // チュートリアル終了後、本編開始
-        yield return StartCoroutine(Game());
+        //yield return StartCoroutine(Game());
     }
 
     //チュートリアル実行
@@ -213,14 +217,15 @@ public class GameManager : MonoBehaviour
         //  修正点: ActiveNote配列を初期化
         activeNotes = new ActiveNote[notes.Length];
         notes_isused = new bool[notes.Length];
-        for(int i = 0; i < notes_isused.Length; i++) notes_isused[i] = false;
+        for (int i = 0; i < notes_isused.Length; i++) notes_isused[i] = false;
     }
 
     private void FixedUpdate()
     {
-        if(isplaying) //ノーツがすべて終わっていなければ
+        if (isplaying) //ノーツがすべて終わっていなければ
         {
             TouchNotes_judge();
+            //ConnectNotes_judge();
         }
     }
 
@@ -313,7 +318,8 @@ public class GameManager : MonoBehaviour
                     Touch_score += Perfect_score;
                     judged = true;
                     // LEDを判定結果の色に設定 (例: 白)
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
+                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.magenta);
                 }
                 // Good判定
                 else if (Mathf.Abs(diff) <= goodRange && currentActiveNote.FlagComponent.TouchFlag)
@@ -321,7 +327,8 @@ public class GameManager : MonoBehaviour
                     //Debug.Log($"GOOD! lane {currentActiveNote.Data.lane}");
                     Touch_score += Good_score;
                     judged = true;
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
+                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.magenta);
                 }
                 // Miss判定 (時間切れ)
                 else if (CurrentTime > targetTime + JudgeTimeRange)
@@ -330,6 +337,7 @@ public class GameManager : MonoBehaviour
                     judged = true;
                     // LEDをMissの色に設定 (例: 赤)
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.cyan);
                 }
                 // Miss判定 (早すぎ/遅すぎタッチ)
                 else if (currentActiveNote.FlagComponent.TouchFlag)
@@ -337,7 +345,7 @@ public class GameManager : MonoBehaviour
                     Debug.Log($"MISS! (Tapped out of range) lane {currentActiveNote.Data.lane}");
                     judged = true;
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
-                    //mugyu_LEDPerformance[notenum].SetAllLEDColor(Color.white);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.cyan);
                 }
 
 
@@ -365,6 +373,7 @@ public class GameManager : MonoBehaviour
                 else if (Mathf.Abs(diff) <= JudgeTimeRange)
                 {
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.yellow);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteId(notenum), Color.yellow);
                 }
             }
         }
