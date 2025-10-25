@@ -40,9 +40,9 @@ public class UdpController : MonoBehaviour
     private bool arraysInitialized;
 
     // --- UDP関連 ---
-    private UdpClient sendClient;    // 送信用のUDPクライアント
+    private UdpClient sendClient;      // 送信用のUDPクライアント
     private UdpClient receiveClient; // 受信用のUDPクライアント
-    private Thread receiveThread;    // 受信処理をバックグラウンドで行うためのスレッド
+    private Thread receiveThread;      // 受信処理をバックグラウンドで行うためのスレッド
     private IPEndPoint sendEndPoint; // 送信先のエンドポイント
 
     // --- デバイス管理 ---
@@ -78,6 +78,24 @@ public class UdpController : MonoBehaviour
         if (term == null)
         {
             Debug.LogError("lineterm コンポーネントが見つかりません。UdpController を無効化します。");
+            enabled = false;
+            return;
+        }
+
+        // ★修正: 不足していたコンポーネントの初期化を追加
+        touchNotesFlagComponent = FindFirstObjectByType<TouchNotes_Flag>();
+        if (touchNotesFlagComponent == null)
+        {
+            Debug.LogError("TouchNotes_Flag コンポーネントが見つかりません。UdpController を無効化します。");
+            enabled = false;
+            return;
+        }
+
+        // ★修正: 不足していたコンポーネントの初期化を追加
+        noteLedsComponent = FindFirstObjectByType<NoteLeds>();
+        if (noteLedsComponent == null)
+        {
+            Debug.LogError("NoteLeds コンポーネントが見つかりません。UdpController を無効化します。");
             enabled = false;
             return;
         }
@@ -207,6 +225,14 @@ public class UdpController : MonoBehaviour
                 int begin = deviceId * 4 + 30 * i;
                 int end = begin + 3;
                 byte[] ledData = term.GetBytes2(begin, end);
+                
+                // ★追加: ledDataが期待通りの長さかチェック (境界外エラー防止)
+                if (ledData.Length < NUM_PERF_LEDS * 3)
+                {
+                    Debug.LogWarning($"GetBytes2({begin}, {end}) が返したデータ長 ({ledData.Length}) が不足しています。スキップします。");
+                    continue; // このパケットの処理をスキップ
+                }
+
                 for (int j = 0; j < NUM_PERF_LEDS; j++)
                 {
                     perfPacket[2 + j * 3 + 1] = ledData[j * 3 + 0]; // todo キモいけどここ変えた
@@ -230,6 +256,7 @@ public class UdpController : MonoBehaviour
             notePacket[1] = 3;
             for (int i = 0; i < NUM_NOTE_LEDS; i++)
             {
+                // ★エラーの可能性: noteLedsComponent が null の場合、ここでエラーになる
                 Color32 noteLed = noteLedsComponent.GetLedColor(deviceId, i);
                 notePacket[2 + i * 3 + 0] = noteLed.r;
                 notePacket[2 + i * 3 + 1] = noteLed.g;
@@ -300,6 +327,7 @@ public class UdpController : MonoBehaviour
                             touchStates[deviceId][i] = (data[i + 1] == 1);
                             if (touchStates[deviceId][i])
                             {
+                                // ★エラー箇所: Start() で初期化したため、もう null ではないはず
                                 touchNotesFlagComponent.SetClicked();
                             }
                         }

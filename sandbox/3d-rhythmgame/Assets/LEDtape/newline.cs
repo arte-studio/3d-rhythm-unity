@@ -1,14 +1,14 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering; // AsyncGPUReadbackを使用するために必要
-using static UnityEngine.GraphicsBuffer; // この行は現在のコードでは使用されていないため、削除しても問題ない可能性があります
+// using static UnityEngine.GraphicsBuffer; // この行は現在のコードでは使用されていないため、削除しても問題ない可能性があります
 
 /// <summary>
 /// カメラの描画結果をテクスチャから読み取り、バイトデータに変換するクラス
 /// </summary>
 public class newline : MonoBehaviour
 {
-    // カメラの描画結果を保存するためのレンダーテクスチャ
+    // カメラの描画結果を保存するためのレンダーテクスチャ (★ linetermから共有のものを受け取る)
     RenderTexture rd;
 
     // このオブジェクトのMeshRendererが持つマテリアルの配列
@@ -29,22 +29,28 @@ public class newline : MonoBehaviour
     // データ集約先となるlinetermスクリプトへの参照
     [SerializeField] lineterm term;
 
-    private int ConvertID(int i)
-    {
-        int n = i % 30 * 3;
-        if ((int)i / 30 == 0) n += 0;
-        else if ((int)i / 30 == 1) n += 2;
-        else if ((int)i / 30 == 2) n += 1;
-        return n;
-    }
+    // ★ lineterm側でConvertIDを使用するため、こちらはコメントアウトまたは削除
+    // private int ConvertID(int i)
+    // {
+    //     ...
+    // }
 
     /// <summary>
     /// 初期化処理
     /// </summary>
     void Start()
     {
-        // 1x120ピクセルのレンダーテクスチャを作成
-        rd = new RenderTexture(1, 120, 0);
+        // ★修正: linetermから共有RenderTextureを取得
+        // (スクリプト実行順序の設定により、term.combinedRdは初期化済みのはず)
+        rd = term.combinedRd;
+        if (rd == null)
+        {
+            Debug.LogError($"lineterm (ID: {ID}) から combinedRd を取得できませんでした。スクリプト実行順序を確認してください。");
+            return;
+        }
+
+        // 1x120ピクセルのレンダーテクスチャを作成 (★削除)
+        // rd = new RenderTexture(1, 120, 0);
 
         // Inspectorで指定されたシェーダーから新しいマテリアルを作成
         mtr = new Material(shader);
@@ -52,8 +58,19 @@ public class newline : MonoBehaviour
         // 作成したマテリアルのメインテクスチャに、レンダーテクスチャ(rd)を設定
         mtr.SetTexture("_MainTex", rd);
 
-        // このゲームオブジェクトの子にあるカメラを探し、その描画先をレンダーテクスチャ(rd)に設定
-        this.gameObject.GetComponentInChildren<Camera>().targetTexture = rd;
+        // このゲームオブジェクトの子にあるカメラを探す
+        Camera cam = this.gameObject.GetComponentInChildren<Camera>();
+        
+        // ★修正: 描画先を共有レンダーテクスチャ(rd)に設定
+        cam.targetTexture = rd;
+
+        // ★追加: 共有テクスチャ内の描画位置(ビューポート)を指定
+        // (ID 0 は (0,0,1,120), ID 1 は (1,0,1,120)...)
+        cam.pixelRect = new Rect(ID, 0, 1, 120);
+        
+        // ★追加: カメラが背景をクリアしないように設定 (重要)
+        // 他のカメラの描画を上書きしないようにする
+        cam.clearFlags = CameraClearFlags.Nothing;
 
         // このゲームオブジェクトのMeshRendererからマテリアル配列を取得
         mats = this.gameObject.GetComponent<MeshRenderer>().materials;
@@ -73,52 +90,12 @@ public class newline : MonoBehaviour
     /// </summary>
     private void Update()
     {
-        // linetermとこのスクリプトの両方の準備ができたら処理を開始
+        // ★修正: lineterm側で一括処理するため、ここでの読み出し処理はすべて削除
+        /*
         if (term.ready && ready)
         {
-            // GPU上のレンダーテクスチャ(rd)のピクセルデータを非同期でリクエストする
-            AsyncGPUReadback.Request(rd, 0, request => {
-                // リクエストにエラーがあった場合
-                if (request.hasError)
-                {
-                    Debug.LogError("GPUデータの読み込みに失敗しました。");
-                }
-                // リクエストが成功した場合
-                else
-                {
-                    // 読み込んだデータをColor32の配列として取得
-                    var data = request.GetData<Color32>();
-                    Color32[] colors = data.ToArray();
-
-                    // Color32配列をRGBのバイト配列に変換する
-                    // (各ピクセルからR, G, Bの3バイトを取り出す)
-                    byte[] bytes = new byte[colors.Length * 3];
-                    for (int i = 0; i < colors.Length; i++)
-                    {
-                        // bytes[i * 3]     = colors[i].r; // R
-                        // bytes[i * 3 + 1] = colors[i].g; // G
-                        // bytes[i * 3 + 2] = colors[i].b; // B
-                        if (ConvertID(ID) % 2 == 0) // 反転せず
-                        {
-                            bytes[i * 3]    = colors[i].r; // R
-                            bytes[i * 3 + 1] = colors[i].g; // G
-                            bytes[i * 3 + 2] = colors[i].b; // B
-                        }
-                        else // 反転
-                        {
-                            bytes[(colors.Length - 1 - i) * 3]     = colors[i].r; // R
-                            bytes[(colors.Length - 1 - i) * 3 + 1] = colors[i].g; // G
-                            bytes[(colors.Length - 1 - i) * 3 + 2] = colors[i].b; // B
-                        }
-                    }
-
-                    // 変換したバイト配列を、linetermスクリプトのbytes配列に、自身のIDの位置に格納
-                    term.bytes[ID] = bytes;
-
-                    // デバッグ用: IDが0の場合のみ、最初のピクセルのR値をログに出力
-                    // if (ID == 0) Debug.Log("id " + ID + " の最初のR値は " + colors[0].r);
-                }
-            });
+            // (AsyncGPUReadback.Request(...) などの処理をすべて削除)
         }
+        */
     }
 }

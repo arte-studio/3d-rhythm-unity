@@ -86,7 +86,7 @@ public class GameManager : MonoBehaviour
     /* 譜面データ */
     [Header("NotesData_filename")]
     public string Tutorial_NotesData; //チュートリアル用譜面データのファイル名
-    public string Game_NotesData;　//本番用譜面データのファイル名
+    public string Game_NotesData; //本番用譜面データのファイル名
 
     /* ノーツ判定処理系 */
     [HideInInspector]
