@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System.Collections;
 using Unity.VisualScripting;
 using UnityEditor.Experimental.GraphView;
@@ -206,6 +206,7 @@ public class GameManager : MonoBehaviour
         if (isDebugMode && noteLeds != null)
         {
             noteLeds.StartDebugMode();
+            Debug.Log("デバッグモードに入りました");
         }
         // --- ★追加ここまで ---
 
