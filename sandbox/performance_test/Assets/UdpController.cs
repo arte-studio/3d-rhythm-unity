@@ -205,7 +205,11 @@ public class UdpController : MonoBehaviour
                 int begin = deviceId * 4 + 30 * i;
                 int end = begin + 3;
                 byte[] ledData = term.GetBytes2(begin, end);
-                for (int j = 0; j < NUM_PERF_LEDS; j++)
+                int array_length = ledData.Length;
+                Debug.Log($"length{array_length}");
+                int numPerfLeds = Math.Min(NUM_PERF_LEDS, array_length);
+                if (deviceId == 7) numPerfLeds = Math.Min(230, array_length);// NUM_PERF_LEDS / 2;
+                for (int j = 0; j < numPerfLeds; j++)
                 {
                     perfPacket[2 + j * 3 + 0] = ledData[j * 3 + 0]; // todo キモいけどここ変えた
                     perfPacket[2 + j * 3 + 1] = ledData[j * 3 + 1];
