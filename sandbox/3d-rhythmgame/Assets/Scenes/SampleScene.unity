@@ -681,14 +681,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a7ee159e7308ea4c951783226283fc4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isDebugMode: 0
   Tutorial_MusicSource: {fileID: 189738156}
   Game_MusicSource: {fileID: 189738156}
-  Tutorial_NotesData: Kokasai_NoteData_mugyu
-  Game_NotesData: Kokasai_NoteData_mugyu
+  Tutorial_NotesData: Kokasai_NoteData_1026
+  Game_NotesData: Kokasai_NoteData_1026
   targetTime: 0
-  perfectRange: 0.5
-  goodRange: 0.6
-  JudgeTimeRange: 0.8
+  perfectRange: 1.5
+  goodRange: 1.5
+  JudgeTimeRange: 2
   targetTime_start: 0
   targetTime_goal: 0
   notesignalTime: 3
