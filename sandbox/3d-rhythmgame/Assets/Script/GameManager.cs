@@ -84,6 +84,8 @@ public class GameManager : MonoBehaviour
     [Header("MusicSource")]
     public AudioSource Tutorial_MusicSource;  // チュートリアルの音源オブジェクトのAudioSourceをセット
     public AudioSource Game_MusicSource;      // 本番のゲームの音源オブジェクトのAudioSourceをセット
+    public AudioSource perfectgood_EffectSource;      // 本番のゲームの音源オブジェクトのAudioSourceをセット
+    public AudioSource miss_EffectSource;      // 本番のゲームの音源オブジェクトのAudioSourceをセット
 
     /* 音楽の時間系 */
     private double StartTime = 0; // 音楽再生開始時刻
@@ -101,9 +103,9 @@ public class GameManager : MonoBehaviour
 
     /* “タッチ”ノーツの判定の厳しさパラメータ */
     [Header("Judge Settings - Sphere")]
-    public double perfectRange = 0.3f; //Perfectの範囲内の時間
-    public double goodRange = 0.5f; //Goodの範囲内の時間
-    public double JudgeTimeRange = 0.7f; //Missを出すための時間
+    public double perfectRange = 1.0f; //Perfectの範囲内の時間
+    public double goodRange = 3.0f; //Goodの範囲内の時間
+    public double missRange = 0.5f; //Missの範囲内の時間
 
     //public ConnectNotes_Position notesPosition; // InspectorでConnectNotes_Positionを指定
     //public GameObject ConnectNotes_prefab;         // InspectorでCubeプレハブを指定
@@ -217,15 +219,13 @@ public class GameManager : MonoBehaviour
     //チュートリアルから本番までやる流れの全体の処理
     private IEnumerator GameFlow()
     {
-        // チュートリアル開始 → 終了まで待機
-        yield return StartCoroutine(Tutorial());
+        // ゲーム終了まで待機
+        yield return StartCoroutine(Game());
 
-        // チュートリアル終了後、本編開始
-        //yield return StartCoroutine(Game());
     }
 
-    //チュートリアル実行
-    private IEnumerator Tutorial()
+    //実行
+    private IEnumerator Game()
     {
         LoadNotesFromJson(Tutorial_NotesData); //譜面データ読み込み
         yield return StartCoroutine(MusicPlayer(Tutorial_MusicSource)); //音楽を再生する
@@ -235,15 +235,8 @@ public class GameManager : MonoBehaviour
         {
             yield return null;
         }
-
-    }
-
-    //本番実行
-    private IEnumerator Game()
-    {
-        LoadNotesFromJson(Game_NotesData); //譜面データ読み込み
-        yield return StartCoroutine(MusicPlayer(Game_MusicSource)); //音楽を再生する
         ScoreCalculate();
+
     }
 
     //JSON ファイルからノーツデータを読み込む
@@ -359,7 +352,12 @@ public class GameManager : MonoBehaviour
         }
         isplaying = false;
 
+    }
 
+    private void EffectPlayer(AudioSource MusicSource)
+    {
+        //音楽再生
+        MusicSource.Play();
     }
 
     private void TouchNotes_judge()
@@ -385,8 +383,8 @@ public class GameManager : MonoBehaviour
                 //Debug.Log($"Checking Note Index: {notenum}, IsUsed: {activeNotes[notenum].IsUsed}");
             }
 
-            // ノーツの判定が開始する時間 (JudgeTimeRange 前から)
-            if (CurrentTime >= targetTime - JudgeTimeRange)
+            // ノーツの判定時間かどうか
+            if ((CurrentTime >= targetTime - goodRange)&&(CurrentTime <= targetTime + goodRange + missRange))
             {
                 //  Perfect/Good/Missの判定ロジック (currentActiveNote.FlagComponent.TouchFlag を利用)
                 bool judged = false;
@@ -394,53 +392,44 @@ public class GameManager : MonoBehaviour
                 // Perfect判定
                 if (Mathf.Abs(diff) <= perfectRange && currentActiveNote.FlagComponent.TouchFlag)
                 {
-                    //Debug.Log($"PERFECT! lane {currentActiveNote.Data.lane}");
                     Touch_score += Perfect_score;
                     judged = true;
-                    // LEDを判定結果の色に設定 (例: 白)
+                    //色変化
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
-                    // ★修正: notenum ではなく lane を渡す
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);//notenum ではなく lane を渡す
+                    //音変化
+                    EffectPlayer(perfectgood_EffectSource);
                 }
                 // Good判定
                 else if (Mathf.Abs(diff) <= goodRange && currentActiveNote.FlagComponent.TouchFlag)
                 {
-                    //Debug.Log($"GOOD! lane {currentActiveNote.Data.lane}");
                     Touch_score += Good_score;
                     judged = true;
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
-                    // ★修正: notenum ではなく lane を渡す
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);
+                    //色変化
+                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.white);// notenum ではなく lane を渡す
+                    //音変化
+                    EffectPlayer(perfectgood_EffectSource);
                 }
                 // Miss判定 (時間切れ)
-                else if (CurrentTime > targetTime + JudgeTimeRange)
+                else if (CurrentTime > targetTime + missRange)
                 {
-                    Debug.Log($"MISS! (Time Over) lane {currentActiveNote.Data.lane}");
                     judged = true;
-                    // LEDをMissの色に設定 (例: 赤)
+                    //色変化
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
-                    // ★修正: notenum ではなく lane を渡す
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.cyan);
-                }
-                // Miss判定 (早すぎ/遅すぎタッチ)
-                else if (currentActiveNote.FlagComponent.TouchFlag)
-                {
-                    Debug.Log($"MISS! (Tapped out of range) lane {currentActiveNote.Data.lane}");
-                    judged = true;
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
-                    // ★修正: notenum ではなく lane を渡す
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.cyan);
+                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.cyan);// notenum ではなく lane を渡す
+                    //音変化
+                    EffectPlayer(miss_EffectSource);
                 }
 
-
+                //判定確定後
                 if (judged)
                 {
-                    //  修正 1: 判定確定ログは、フラグ設定前に行い、表示落ちを防ぐ
                     if (Mathf.Abs(diff) <= perfectRange)
                         Debug.Log($"PERFECT! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
                     else if (Mathf.Abs(diff) <= goodRange)
                         Debug.Log($"GOOD! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
-                    else
+                    else if (CurrentTime > targetTime + missRange)
                         Debug.Log($"MISS! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
 
                     currentActiveNote.IsUsed = true;
@@ -454,16 +443,37 @@ public class GameManager : MonoBehaviour
                 }
 
                 //  判定可能範囲内での色変化
-                else if (Mathf.Abs(diff) <= JudgeTimeRange)
+                else if (Mathf.Abs(diff) <= targetTime + goodRange)
                 {
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.yellow);
-                    // ★修正: notenum ではなく lane を渡す
+                    // 修正: notenum ではなく lane を渡す
                     noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.yellow);
                 }
             }
         }
     }
-    
+
+    public IEnumerator ResetNoteColorAfterDelay(GameObject noteObject, float delay)
+    {
+        // 指定された時間だけ実行を一時停止
+        yield return new WaitForSeconds(delay);
+
+        // 待機後、ノーツの色をリセット
+        if (noteObject != null)
+        {
+            // Mugyu_LEDPerformanceコンポーネントを取得
+            var ledPerformance = noteObject.GetComponent<Mugyu_LEDPerformance>();
+
+            if (ledPerformance != null)
+            {
+                // ノーツが再利用可能状態（非アクティブ/黒色）に戻るように色を設定
+                ledPerformance.SetAllLEDColor(Color.black);
+                // 必要に応じてノーツオブジェクトをプールに戻す処理などを追加できます。
+                // noteObject.SetActive(false);
+            }
+        }
+    }
+
     // --- ★ここから追加 (タッチ判定連携) ---
 
     /// <summary>
@@ -509,7 +519,7 @@ public class GameManager : MonoBehaviour
 
             // 判定可能時間内か
             float diff = (float)(CurrentTime - note.Data.time);
-            if (Mathf.Abs(diff) <= JudgeTimeRange)
+            if ((CurrentTime >= note.Data.time - goodRange) && (CurrentTime <= note.Data.time + goodRange + missRange))
             {
                 // ★ロジック改善の余地あり:
                 // もし同じレーンに複数のノーツが判定可能な場合、
@@ -578,27 +588,6 @@ public class GameManager : MonoBehaviour
     
     // --- ★追加ここまで ---
 
-
-    public IEnumerator ResetNoteColorAfterDelay(GameObject noteObject, float delay)
-    {
-        // 指定された時間だけ実行を一時停止
-        yield return new WaitForSeconds(delay);
-
-        // 待機後、ノーツの色をリセット
-        if (noteObject != null)
-        {
-            // Mugyu_LEDPerformanceコンポーネントを取得
-            var ledPerformance = noteObject.GetComponent<Mugyu_LEDPerformance>();
-
-            if (ledPerformance != null)
-            {
-                // ノーツが再利用可能状態（非アクティブ/黒色）に戻るように色を設定
-                ledPerformance.SetAllLEDColor(Color.black);
-                // 必要に応じてノーツオブジェクトをプールに戻す処理などを追加できます。
-                // noteObject.SetActive(false);
-            }
-        }
-    }
 
     //合計スコアを計算する関数
     private void ScoreCalculate()
