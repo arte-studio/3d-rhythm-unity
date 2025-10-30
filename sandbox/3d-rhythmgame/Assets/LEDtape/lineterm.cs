@@ -25,8 +25,8 @@ public class lineterm : MonoBehaviour
     public RenderTexture combinedRd;
 
     // ★追加: LEDマトリクスの設定
-    private int ledStrips = 90;
-    private int ledsPerStrip = 120;
+    private int ledStrips = 90; // ストリップ数
+    private int ledsPerStrip = 120; // 1ストリップあたりのLED数
 
     // 初期化が完了し、データの受け入れ準備ができたことを示すフラグ
     public bool ready = false;
@@ -179,7 +179,7 @@ public class lineterm : MonoBehaviour
 
                 // finalLedData内の書き込み先インデックスを計算
                 // (ストリップID * 1ストリップのバイト長) + (ピクセル位置 * 3)
-                int baseByteIndex = (x * ledStrips * 3) + (pixelIndexInColumn * 3);
+                int baseByteIndex = (x * ledsPerStrip * 3) + (pixelIndexInColumn * 3);
 
                 finalLedData[baseByteIndex + 0] = color.r;
                 finalLedData[baseByteIndex + 1] = color.g;

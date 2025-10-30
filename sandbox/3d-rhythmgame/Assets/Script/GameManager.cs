@@ -149,6 +149,12 @@ public class GameManager : MonoBehaviour
 
     private NoteLeds noteLeds;
     
+    // --- Brightness settings (inspector) ---
+    [Header("Brightness Settings")] 
+    [UnityEngine.Range(0,255)] public int brightnessPerformance = 255; // 演出用明るさ (0-255)
+    [UnityEngine.Range(0,255)] public int brightnessNotes = 255; // ノーツ用明るさ (0-255)
+    private Coroutine brightnessCoroutine;
+    
     // --- ★ここから追加 (タッチ判定連携) ---
     [Header("Touch Input Settings")]
     [Tooltip("同じレーンへの連続タッチを防ぐクールダウン時間(秒)")]
@@ -213,6 +219,12 @@ public class GameManager : MonoBehaviour
         // --- ★追加ここまで ---
 
         // GameFlow開始
+        // 明るさ送信コルーチンを開始 (5秒ごと)
+        if (brightnessCoroutine == null)
+        {
+            brightnessCoroutine = StartCoroutine(BrightnessSenderCoroutine());
+        }
+
         StartCoroutine(GameFlow());
     }
 
@@ -471,6 +483,29 @@ public class GameManager : MonoBehaviour
                 // 必要に応じてノーツオブジェクトをプールに戻す処理などを追加できます。
                 // noteObject.SetActive(false);
             }
+        }
+    }
+    
+    /// <summary>
+    /// 5秒ごとに明るさを送信するコルーチン
+    /// </summary>
+    private IEnumerator BrightnessSenderCoroutine()
+    {
+        // 初回は即送信し、その後Waitで5秒ごと
+        while (true)
+        {
+            if (udpController != null)
+            {
+                try
+                {
+                    udpController.SendBrightness((byte)brightnessPerformance, (byte)brightnessNotes);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"BrightnessSenderCoroutine error: {e.Message}");
+                }
+            }
+            yield return new WaitForSeconds(5f);
         }
     }
 
