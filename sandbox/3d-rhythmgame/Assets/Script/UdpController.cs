@@ -432,6 +432,42 @@ public class UdpController : MonoBehaviour
             }
         }
     }
+
+    /// <summary>
+    /// ブロードキャストで明るさ設定パケットを送信します。
+    /// パケット形式: [BROADCAST_ID=255][PACKET_TYPE_BRIGHTNESS=100][brightness_perf][brightness_notes]
+    /// </summary>
+    /// <param name="perf">演出用明るさ (0-255)</param>
+    /// <param name="notes">ノーツ用明るさ (0-255)</param>
+    public void SendBrightness(byte perf, byte notes)
+    {
+        try
+        {
+            if (sendClient == null)
+            {
+                Debug.LogWarning("SendBrightness: sendClient is null, skipping brightness send.");
+                return;
+            }
+
+            // 定義に合わせる
+            const byte BROADCAST_ID = 255;
+            const byte PACKET_TYPE_BRIGHTNESS = 100;
+
+            byte[] packet = new byte[4];
+            packet[0] = BROADCAST_ID;
+            packet[1] = PACKET_TYPE_BRIGHTNESS;
+            packet[2] = perf;
+            packet[3] = notes;
+
+            IPEndPoint ep = sendEndPoint ?? new IPEndPoint(IPAddress.Parse(broadcastAddress), espPort);
+            sendClient.Send(packet, packet.Length, ep);
+            // Debug.Log($"Sent brightness packet: perf={perf}, notes={notes} to {ep}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error sending brightness packet: {e.Message}");
+        }
+    }
     
     /// <summary>
     /// デバイスの接続状況と通信状況を StatusDisplay に表示する
