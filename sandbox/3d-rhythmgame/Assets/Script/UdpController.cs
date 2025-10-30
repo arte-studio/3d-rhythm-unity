@@ -28,9 +28,12 @@ public class UdpController : MonoBehaviour
     [Header("LED Settings")]
     private const int NUM_DEVICES = 8;
     private const int NUM_TOUCH = 5;
-    private const int NUM_PERF_LEDS = 480; // 演出用LED
-    private const int NUM_PREF_LEDS_7 = 240; // デバイス7用の演出LED
+    private const int NUM_PERF_LEDS = 480; // 演出用LED (4ストリップ * 120 LED)
+    private const int NUM_PREF_LEDS_7 = 240; // デバイス7用の演出LED (2ストリップ * 120 LED)
     private const int NUM_NOTE_LEDS = 470; // ノーツ用LED
+    
+    // 1ストリップあたりのバイト長 (120 LED * 3 バイト)
+    private const int BYTES_PER_STRIP = 360; 
 
     // --- タッチセンサー ---
     [Header("Touch Sensor State")]
@@ -49,9 +52,9 @@ public class UdpController : MonoBehaviour
     // メインスレッドへタッチイベントを渡すためのキュー (タッチONの瞬間)
     private ConcurrentQueue<(int deviceId, int sensorId)> touchEventQueue = new ConcurrentQueue<(int, int)>();
     
-    // ★追加: デバイス発見をメインスレッドに通知するキュー
+    // デバイス発見をメインスレッドに通知するキュー
     private ConcurrentQueue<int> discoveryQueue = new ConcurrentQueue<int>();
-    // ★追加: タッチ通信受信(生存確認)をメインスレッドに通知するキュー
+    // タッチ通信受信(生存確認)をメインスレッドに通知するキュー
     private ConcurrentQueue<int> touchActivityQueue = new ConcurrentQueue<int>();
 
 
@@ -61,7 +64,7 @@ public class UdpController : MonoBehaviour
     public bool[] deviceRegistered = new bool[NUM_DEVICES];
     private IPEndPoint[] deviceEndPoints = new IPEndPoint[NUM_DEVICES];
 
-    // ★追加: デバイスのステータス監視用
+    // デバイスのステータス監視用
     // 最後にデバイスを発見した時刻 (Time.time)
     private float[] lastDiscoveryTime = new float[NUM_DEVICES];
     // 最後にタッチパケットを受信した時刻 (Time.time)
@@ -78,7 +81,7 @@ public class UdpController : MonoBehaviour
 
     private lineterm term;
     private NoteLeds noteLedsComponent;
-    // private TouchNotes_Flag touchNotesFlagComponent; // ★削除: GameManagerが処理するため不要
+    // private TouchNotes_Flag touchNotesFlagComponent; // 削除: GameManagerが処理するため不要
 
     /// <summary>
     /// スクリプトが有効になった最初のフレームで呼ばれる初期化処理
@@ -95,27 +98,24 @@ public class UdpController : MonoBehaviour
         term = FindFirstObjectByType<lineterm>();
         if (term == null)
         {
-            Debug.LogError("lineterm コンポーネントが見つかりません。UdpController を無効化します。");
+            Debug.LogError("lineterm コンポーネントが見つかりません．UdpController を無効化します．");
             enabled = false;
             return;
         }
 
-        // ★削除: TouchNotes_Flag の検索は不要
-        /*
-        touchNotesFlagComponent = FindFirstObjectByType<TouchNotes_Flag>();
-        if (touchNotesFlagComponent == null)
+        // lineterm の finalLedData が利用可能か確認
+        if (term.finalLedData == null)
         {
-            Debug.LogError("TouchNotes_Flag コンポーネントが見つかりません。UdpController を無効化します。");
+            Debug.LogError("lineterm.finalLedData が参照できません．lineterm.cs側で public に設定されているか，または初期化が完了しているか確認してください．");
             enabled = false;
             return;
         }
-        */
 
-        // ★修正: 不足していたコンポーネントの初期化を追加
+        // 不足していたコンポーネントの初期化を追加
         noteLedsComponent = FindFirstObjectByType<NoteLeds>();
         if (noteLedsComponent == null)
         {
-            Debug.LogError("NoteLeds コンポーネントが見つかりません。UdpController を無効化します。");
+            Debug.LogError("NoteLeds コンポーネントが見つかりません．UdpController を無効化します．");
             enabled = false;
             return;
         }
@@ -149,7 +149,7 @@ public class UdpController : MonoBehaviour
             }
         }
         
-        // --- ★ここから追加 (タッチイベント処理) ---
+        // --- タッチイベント処理 ---
         // キューにデータがなくなるまで、メインスレッドで安全に処理する
         while (touchEventQueue.TryDequeue(out var touchEvent))
         {
@@ -160,18 +160,13 @@ public class UdpController : MonoBehaviour
             }
         }
         
-        // --- ★ここから追加 (デバイスステータス更新処理) ---
+        // --- デバイスステータス更新処理 ---
 
         // 1. デバイス発見キューを処理
         // (別スレッドからEnqueueされたデバイスIDを取り出す)
         while (discoveryQueue.TryDequeue(out int discoveredId))
         {
-            // ★変更: 毎回 "First" (最終発見) の時刻を更新する (再発見を反映するため)
-            // 0f は「未記録」とする。初回発見時のみ時刻を記録
-            // if (lastDiscoveryTime[discoveredId] == 0f) 
-            // {
-            //     lastDiscoveryTime[discoveredId] = Time.time;
-            // }
+            // 最終発見 の時刻を更新する (再発見を反映するため)
             lastDiscoveryTime[discoveredId] = Time.time;
         }
         
@@ -185,8 +180,6 @@ public class UdpController : MonoBehaviour
         
         // 3. StatusDisplay (IMGUI) を更新
         UpdateStatusDisplay();
-        
-        // --- ★追加ここまで ---
     }
 
     /// <summary>
@@ -210,26 +203,16 @@ public class UdpController : MonoBehaviour
             return;
         }
 
-        // if (performanceLeds == null || performanceLeds.Length != NUM_DEVICES) performanceLeds = new Color32[NUM_DEVICES][];
-        // if (noteLeds == null || noteLeds.Length != NUM_DEVICES) noteLeds = new Color32[NUM_DEVICES][];
         if (touchStates == null || touchStates.Length != NUM_DEVICES) touchStates = new bool[NUM_DEVICES][];
         if (deviceRegistered == null || deviceRegistered.Length != NUM_DEVICES) deviceRegistered = new bool[NUM_DEVICES];
         if (deviceEndPoints == null || deviceEndPoints.Length != NUM_DEVICES) deviceEndPoints = new IPEndPoint[NUM_DEVICES];
 
-        // ★追加: ステータス用配列の初期化
+        // ステータス用配列の初期化
         if (lastDiscoveryTime == null || lastDiscoveryTime.Length != NUM_DEVICES) lastDiscoveryTime = new float[NUM_DEVICES];
         if (lastTouchTime == null || lastTouchTime.Length != NUM_DEVICES) lastTouchTime = new float[NUM_DEVICES];
 
         for (int i = 0; i < NUM_DEVICES; i++)
         {
-            // if (performanceLeds[i] == null || performanceLeds[i].Length != NUM_PERF_LEDS * 3)
-            // {
-            //     performanceLeds[i] = new Color32[NUM_PERF_LEDS * 3];
-            // }
-            // if (noteLeds[i] == null || noteLeds[i].Length != NUM_NOTE_LEDS)
-            // {
-            //     noteLeds[i] = new Color32[NUM_NOTE_LEDS];
-            // }
             if (touchStates[i] == null || touchStates[i].Length != NUM_TOUCH)
             {
                 touchStates[i] = new bool[NUM_TOUCH];
@@ -237,7 +220,7 @@ public class UdpController : MonoBehaviour
             deviceRegistered[i] = false;
             deviceEndPoints[i] = null;
 
-            // ★追加: 時刻を 0f (未受信) で初期化
+            // 時刻を 0f (未受信) で初期化
             lastDiscoveryTime[i] = 0f;
             lastTouchTime[i] = 0f;
         }
@@ -262,7 +245,7 @@ public class UdpController : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"ポート {unityPort} でのUDPクライアントの初期化に失敗しました。ポートが既に使用されている可能性があります。: {e.Message}");
+            Debug.LogError($"ポート {unityPort} でのUDPクライアントの初期化に失敗しました．ポートが既に使用されている可能性があります．: {e.Message}");
             enabled = false;
             return;
         }
@@ -274,14 +257,31 @@ public class UdpController : MonoBehaviour
     }
 
     /// <summary>
+    /// lineterm.cs の ConvertID と同じロジック．
+    /// 譜面ID (0-89) を lineterm の物理ストリップID (0-89) に変換する．
+    /// </summary>
+    private int ConvertLinetermID(int i)
+    {
+        if (i < 0 || i >= 90) return -1; // 範囲外チェック
+        int n = i % 30 * 3;
+        if ((int)i / 30 == 0) n += 0;
+        else if ((int)i / 30 == 1) n += 2;
+        else if ((int)i / 30 == 2) n += 1;
+        return n;
+    }
+
+    /// <summary>
     /// 全てのデバイス（10台分）のLEDデータを送信するメインの関数
     /// </summary>
     public void SendAllLedData()
     {
-        if (!arraysInitialized || sendClient == null)
+        // lineterm が準備完了しているかチェック
+        if (!arraysInitialized || sendClient == null || term.finalLedData == null || term.finalLedData.Length < (90 * BYTES_PER_STRIP))
         {
+            // lineterm がまだデータを生成していない (または初期化中)
             return;
         }
+        
         // 0番から9番まで、すべてのデバイスIDに対してループ
         for (int deviceId = 0; deviceId < NUM_DEVICES; deviceId++)
         {
@@ -296,29 +296,73 @@ public class UdpController : MonoBehaviour
             // 演出用LEDデータを3パケットに分けて送信
             for (int i = 0; i < 3; i++)
             {
+                // デバイス7は i=0 のパケット(type 0)のみ送信し、i=1, 2 はスキップ
+                if (deviceId == 7 && i > 0) continue; 
+                
                 perfPacket[0] = (byte)deviceId;
                 perfPacket[1] = (byte)i;
-                // linetermからGetBytes2で配列を取得
-                int begin = deviceId * 4 + 30 * i;
-                int end = begin + 3;
-                if (deviceId == 7) end = begin + 1; // デバイス7は240個なので調整
-                byte[] ledData = term.GetBytes2(begin, end);
                 
-                // ★追加: ledDataが期待通りの長さかチェック (境界外エラー防止)
-                if ((ledData.Length < NUM_PERF_LEDS * 3 && deviceId != 7) || (deviceId == 7 && ledData.Length < NUM_PREF_LEDS_7 * 3))
-                {
-                    Debug.LogWarning($"GetBytes2({begin}, {end}) が返したデータ長 ({ledData.Length}) が不足しています。スキップします。");
-                    continue; // このパケットの処理をスキップ
-                }
+                // --- 根本修正 (GC対策) ---
+                // byte[] ledData = term.GetBytes2(begin, end); // ★削除 (GCの原因)
 
-                int numPerfLeds = NUM_PERF_LEDS;
-                if (deviceId == 7) numPerfLeds = NUM_PREF_LEDS_7;
-                for (int j = 0; j < numPerfLeds; j++)
+                // このパケットで送信するストリップ数 (通常4, デバイス7は2)
+                int numStripsThisPacket = (deviceId == 7) ? 2 : 4;
+                // このパケットで送信するLED数 (通常480, デバイス7は240)
+                int numPerfLeds = (deviceId == 7) ? NUM_PREF_LEDS_7 : NUM_PERF_LEDS;
+
+                // 譜面IDの開始インデックス
+                int beginNoteId = deviceId * 4 + 30 * i;
+                
+                // コピー先のオフセット (perfPacket の 2バイト目以降)
+                int destOffset = 2;
+
+                for (int j = 0; j < numStripsThisPacket; j++)
                 {
-                    perfPacket[2 + j * 3 + 1] = ledData[j * 3 + 0]; // todo キモいけどここ変えた
-                    perfPacket[2 + j * 3 + 0] = ledData[j * 3 + 1];
-                    perfPacket[2 + j * 3 + 2] = ledData[j * 3 + 2];
+                    // 譜面ID (0-89)
+                    int noteId = beginNoteId + j; 
+                    
+                    // 物理ストリップID (0-89) に変換
+                    int physicalStripId = ConvertLinetermID(noteId); 
+
+                    // 物理IDが不正 (範囲外) の場合はスキップ
+                    if (physicalStripId == -1)
+                    {
+                        Debug.LogWarning($"ConvertLinetermID({noteId}) が無効な値 -1 を返しました．");
+                        destOffset += BYTES_PER_STRIP; // オフセットだけ進めておく (データはコピーされない)
+                        continue;
+                    }
+
+                    // コピー元のオフセット (finalLedData の当該ストリップの開始位置)
+                    int sourceOffset = physicalStripId * BYTES_PER_STRIP;
+
+                    // 境界チェック (安全のため)
+                    if (term.finalLedData.Length < sourceOffset + BYTES_PER_STRIP ||
+                        perfPacket.Length < destOffset + BYTES_PER_STRIP)
+                    {
+                        Debug.LogError($"[GC Fix] Array.Copy 境界外エラー．noteId={noteId}, physicalId={physicalStripId}");
+                        destOffset += BYTES_PER_STRIP;
+                        continue; // このストリップのコピーをスキップ
+                    }
+
+                    // lineterm の finalLedData から perfPacket に 1ストリップ分(360 bytes)コピー
+                    Array.Copy(term.finalLedData, sourceOffset, perfPacket, destOffset, BYTES_PER_STRIP);
+
+                    // 次のコピー先オフセット
+                    destOffset += BYTES_PER_STRIP;
                 }
+                
+                // --- 根本修正 (ここまで) ---
+
+                // ESP32側は GRB 順を期待しているため，RとGを入れ替える (GRB -> RGB 変換)
+                // for (int j = 0; j < numPerfLeds; j++)
+                // {
+                //     int idx = 2 + j * 3; // perfPacket 内のオフセット (ヘッダ2バイト分)
+                //     byte val0 = perfPacket[idx + 0]; // R (または G)
+                //     byte val1 = perfPacket[idx + 1]; // G (または R)
+                //     perfPacket[idx + 0] = val1; // Rの位置に G を
+                //     perfPacket[idx + 1] = val0; // Gの位置に R を
+                //     // B (idx + 2) はそのまま
+                // }
                 // --- 送信先を変更 ---
                 try
                 {
@@ -326,7 +370,7 @@ public class UdpController : MonoBehaviour
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"Error sending to Device {deviceId} at {targetEndPoint}: {e.Message}");
+                    Debug.LogError($"Error sending perf data to Device {deviceId} at {targetEndPoint}: {e.Message}");
                     deviceRegistered[deviceId] = false; // エラーが出たら登録を解除して再発見を促す
                 }
             }
@@ -336,8 +380,6 @@ public class UdpController : MonoBehaviour
             notePacket[1] = 3;
             for (int i = 0; i < NUM_NOTE_LEDS; i++)
             {
-                // ★エラーの可能性: noteLedsComponent が null の場合、ここでエラーになる
-                // (Startでチェック済みのため、基本的には安全)
                 Color32 noteLed = noteLedsComponent.GetLedColor(deviceId, i);
                 notePacket[2 + i * 3 + 0] = noteLed.r;
                 notePacket[2 + i * 3 + 1] = noteLed.g;
@@ -353,10 +395,6 @@ public class UdpController : MonoBehaviour
                 Debug.LogError($"Error sending notes to Device {deviceId} at {targetEndPoint}: {e.Message}");
                 deviceRegistered[deviceId] = false; // エラーが出たら登録を解除して再発見を促す
             }
-
-
-            // 送信完了のログ（必要に応じてコメントアウトしてください）
-            // Debug.Log($"Sent LED data to Device {deviceId}");
         }
         // 送信完了のログ
         // Debug.Log("Sent Data");
@@ -384,20 +422,21 @@ public class UdpController : MonoBehaviour
                         // 新しいデバイス、またはIPアドレスが変わったデバイスを発見
                         if (!deviceRegistered[deviceId])
                         {
-                            Debug.Log($"Device {deviceId} 発見！ IP: {anyIP.Address}. ACKを送信します。");
+                            Debug.Log($"Device {deviceId} 発見！ IP: {anyIP.Address}. ACKを送信します．");
                         }
                         else if (deviceEndPoints[deviceId] == null || !deviceEndPoints[deviceId].Address.Equals(anyIP.Address))
                         {
-                            Debug.Log($"Device {deviceId} IP更新！ IP: {anyIP.Address}. ACKを送信します。");
+                            Debug.Log($"Device {deviceId} IP更新！ IP: {anyIP.Address}. ACKを送信します．");
                         }
                         else
                         {
-                            Debug.Log($"Device {deviceId} 再発見！ IP: {anyIP.Address}. ACKを送信します。");
+                            // 頻繁にログが出すぎるためコメントアウト
+                            // Debug.Log($"Device {deviceId} 再発見！ IP: {anyIP.Address}. ACKを送信します．");
                         }
                         deviceEndPoints[deviceId] = new IPEndPoint(anyIP.Address, espPort);
                         deviceRegistered[deviceId] = true;
                         
-                        // ★追加: メインスレッドにデバイス発見を通知
+                        // メインスレッドにデバイス発見を通知
                         discoveryQueue.Enqueue(deviceId);
                         
                         // 確認応答(ACK) [254] をユニキャストで返信
@@ -416,18 +455,21 @@ public class UdpController : MonoBehaviour
                             // 受信した 1 or 0 を bool (true/false) に変換
                             bool newState = (data[i + 1] == 1);
                             
-                            // ★変更: 状態が ON になった瞬間だけをキューに入れる
-                            if (newState == true && touchStates[deviceId][i] == false)
+                            // 状態が ON になった瞬間だけをキューに入れる
+                            if (newState == true && (touchStates[deviceId] == null || touchStates[deviceId][i] == false)) // 配列初期化中のエラー回避
                             {
                                 // メインスレッドで処理するため、イベントをキューに追加
                                 touchEventQueue.Enqueue((deviceId, i));
                             }
                             
-                            // メインスレッドが参照する配列の状態を更新
-                            touchStates[deviceId][i] = newState; 
+                            // メインスレッドが参照する配列の状態を更新 (配列が初期化されていれば)
+                            if (touchStates[deviceId] != null)
+                            {
+                                touchStates[deviceId][i] = newState; 
+                            }
                         }
 
-                        // ★追加: タッチパケットを受信したこと(生存確認)をメインスレッドに通知
+                        // タッチパケットを受信したこと(生存確認)をメインスレッドに通知
                         touchActivityQueue.Enqueue(deviceId);
                     }
                 }
@@ -447,7 +489,7 @@ public class UdpController : MonoBehaviour
     }
 
     /// <summary>
-    /// ブロードキャストで明るさ設定パケットを送信します。
+    /// ブロードキャストで明るさ設定パケットを送信します．
     /// パケット形式: [BROADCAST_ID=255][PACKET_TYPE_BRIGHTNESS=100][brightness_perf][brightness_notes]
     /// </summary>
     /// <param name="perf">演出用明るさ (0-255)</param>
@@ -517,7 +559,7 @@ public class UdpController : MonoBehaviour
             float lastDiscovery = lastDiscoveryTime[i];
             if (lastDiscovery > 0f)
             {
-                // ★変更: 経過時間ではなく、Time.time の絶対値を表示
+                // 最終発見時刻を表示
                 statusBuilder.Append($"Discovery: {lastDiscovery:F1}. ");
             }
             else
@@ -535,7 +577,7 @@ public class UdpController : MonoBehaviour
                 // 2秒以上途絶えたら警告 (赤色)
                 string colorTag = (elapsed > 2.0f) ? "<color=red>" : "<color=green>";
                 
-                // ★変更: 経過時間ではなく、Time.time の絶対値を表示
+                // 最終タッチ時刻を表示
                 statusBuilder.Append($"LastTouch: {colorTag}{lastTouch:F1}</color>");
             }
             else
@@ -566,7 +608,7 @@ public class UdpController : MonoBehaviour
             // ... (テストデータ設定) ...
             // (この部分は元のコードから省略されているため、そのままにしています)
         }
-        Debug.Log("テスト用のLEDデータを初期化しました。");
+        Debug.Log("テスト用のLEDデータを初期化しました．");
     }
 }
 
