@@ -151,8 +151,8 @@ public class GameManager : MonoBehaviour
     
     // --- Brightness settings (inspector) ---
     [Header("Brightness Settings")] 
-    [UnityEngine.Range(0,255)] public int brightnessPerformance = 255; // 演出用明るさ (0-255)
-    [UnityEngine.Range(0,255)] public int brightnessNotes = 255; // ノーツ用明るさ (0-255)
+    [UnityEngine.Range(0,255)] public int brightnessPerformance = 5; // 演出用明るさ (0-255)
+    [UnityEngine.Range(0,255)] public int brightnessNotes = 10; // ノーツ用明るさ (0-255)
     private Coroutine brightnessCoroutine;
     
     // --- ★ここから追加 (タッチ判定連携) ---
