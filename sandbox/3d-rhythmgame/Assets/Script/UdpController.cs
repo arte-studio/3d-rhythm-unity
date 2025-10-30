@@ -29,6 +29,7 @@ public class UdpController : MonoBehaviour
     private const int NUM_DEVICES = 8;
     private const int NUM_TOUCH = 5;
     private const int NUM_PERF_LEDS = 480; // 演出用LED
+    private const int NUM_PREF_LEDS_7 = 240; // デバイス7用の演出LED
     private const int NUM_NOTE_LEDS = 470; // ノーツ用LED
 
     // --- タッチセンサー ---
@@ -288,16 +289,19 @@ public class UdpController : MonoBehaviour
                 // linetermからGetBytes2で配列を取得
                 int begin = deviceId * 4 + 30 * i;
                 int end = begin + 3;
+                if (deviceId == 7) end = begin + 1; // デバイス7は240個なので調整
                 byte[] ledData = term.GetBytes2(begin, end);
                 
                 // ★追加: ledDataが期待通りの長さかチェック (境界外エラー防止)
-                if (ledData.Length < NUM_PERF_LEDS * 3)
+                if ((ledData.Length < NUM_PERF_LEDS * 3 && deviceId != 7) || (deviceId == 7 && ledData.Length < NUM_PREF_LEDS_7 * 3))
                 {
-                    // Debug.LogWarning($"GetBytes2({begin}, {end}) が返したデータ長 ({ledData.Length}) が不足しています。スキップします。");
+                    Debug.LogWarning($"GetBytes2({begin}, {end}) が返したデータ長 ({ledData.Length}) が不足しています。スキップします。");
                     continue; // このパケットの処理をスキップ
                 }
 
-                for (int j = 0; j < NUM_PERF_LEDS; j++)
+                int numPerfLeds = NUM_PERF_LEDS;
+                if (deviceId == 7) numPerfLeds = NUM_PREF_LEDS_7;
+                for (int j = 0; j < numPerfLeds; j++)
                 {
                     perfPacket[2 + j * 3 + 1] = ledData[j * 3 + 0]; // todo キモいけどここ変えた
                     perfPacket[2 + j * 3 + 0] = ledData[j * 3 + 1];
