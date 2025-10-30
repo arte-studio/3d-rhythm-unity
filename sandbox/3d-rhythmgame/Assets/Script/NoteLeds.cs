@@ -8,7 +8,7 @@ public class NoteLeds : MonoBehaviour
     private const int NUM_MUGU = 40;
     private const int NUM_CON = 40;
     private const int NUM_DEVICES = 8;
-    private const int NUM_TOUTCH = 5; // ★typo修正: NUM_TOUCH
+    private const int NUM_TOUTCH = 5; // (※NUM_TOUCH の typo)
     
     // ★追加: 譜面レーン数 (0-16 と仮定)
     private const int NUM_LANES = 17; 
@@ -26,6 +26,12 @@ public class NoteLeds : MonoBehaviour
     private bool[] debugTouchStates = new bool[NUM_LANES];
     // 現在ループで光っているレーン(0-16)
     private int currentDebugLoopLane = -1;
+    
+    // --- ★ここから追加 (GC対策) ---
+    // WaitForSecondsをキャッシュして、newの回数を減らす
+    private WaitForSeconds waitHalfSecond = new WaitForSeconds(0.5f);
+    private WaitForSeconds waitOneSecond = new WaitForSeconds(1.0f);
+    private WaitForSeconds waitPointOneSecond = new WaitForSeconds(0.1f);
     // --- ★追加ここまで ---
 
 
@@ -115,9 +121,9 @@ public class NoteLeds : MonoBehaviour
         // 全レーンをタッチ扱いで点灯させる
         for(int i=0; i<NUM_LANES; i++) { debugTouchStates[i] = true; }
         // Update() が呼ばれて色が反映されるのを待つ
-        yield return new WaitForSeconds(0.1f); 
+        yield return waitPointOneSecond; // ★GC対策版
         // 1秒間待機
-        yield return new WaitForSeconds(1.0f);
+        yield return waitOneSecond; // ★GC対策版
         // 全レーンのタッチ状態をリセット
         for(int i=0; i<NUM_LANES; i++) { debugTouchStates[i] = false; }
         
@@ -135,19 +141,19 @@ public class NoteLeds : MonoBehaviour
                 // Debug.Log($"デバッグ: レーン {lane} 点灯");
                 
                 // 0.5秒待機
-                yield return new WaitForSeconds(0.5f);
+                yield return waitHalfSecond; // ★GC対策版
                 
                 // タッチされていなければ消灯 (Updateで処理される)
                 currentDebugLoopLane = -1;
             }
             
             // 1周したら少し待つ
-            yield return new WaitForSeconds(1.0f);
+            yield return waitOneSecond; // ★GC対策版
         }
         
         Debug.Log("--- デバッグモード 終了 ---");
     }
-    // --- ★追加ここまで ---
+    // --- ★デバッグモード用コード ここまで ---
 
 
     void SetMuguColor(int muguId, int raw, int cow, Color32 color)

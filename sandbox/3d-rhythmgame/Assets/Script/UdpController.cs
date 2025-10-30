@@ -78,7 +78,7 @@ public class UdpController : MonoBehaviour
 
     private lineterm term;
     private NoteLeds noteLedsComponent;
-    // private TouchNotes_Flag touchNotesFlagComponent; // GameManagerが処理するため不要
+    // private TouchNotes_Flag touchNotesFlagComponent; // ★削除: GameManagerが処理するため不要
 
     /// <summary>
     /// スクリプトが有効になった最初のフレームで呼ばれる初期化処理
@@ -100,8 +100,18 @@ public class UdpController : MonoBehaviour
             return;
         }
 
-        // TouchNotes_Flag の検索は不要
+        // ★削除: TouchNotes_Flag の検索は不要
+        /*
+        touchNotesFlagComponent = FindFirstObjectByType<TouchNotes_Flag>();
+        if (touchNotesFlagComponent == null)
+        {
+            Debug.LogError("TouchNotes_Flag コンポーネントが見つかりません。UdpController を無効化します。");
+            enabled = false;
+            return;
+        }
+        */
 
+        // ★修正: 不足していたコンポーネントの初期化を追加
         noteLedsComponent = FindFirstObjectByType<NoteLeds>();
         if (noteLedsComponent == null)
         {
@@ -139,7 +149,7 @@ public class UdpController : MonoBehaviour
             }
         }
         
-        // --- タッチONイベント処理 ---
+        // --- ★ここから追加 (タッチイベント処理) ---
         // キューにデータがなくなるまで、メインスレッドで安全に処理する
         while (touchEventQueue.TryDequeue(out var touchEvent))
         {
@@ -200,6 +210,8 @@ public class UdpController : MonoBehaviour
             return;
         }
 
+        // if (performanceLeds == null || performanceLeds.Length != NUM_DEVICES) performanceLeds = new Color32[NUM_DEVICES][];
+        // if (noteLeds == null || noteLeds.Length != NUM_DEVICES) noteLeds = new Color32[NUM_DEVICES][];
         if (touchStates == null || touchStates.Length != NUM_DEVICES) touchStates = new bool[NUM_DEVICES][];
         if (deviceRegistered == null || deviceRegistered.Length != NUM_DEVICES) deviceRegistered = new bool[NUM_DEVICES];
         if (deviceEndPoints == null || deviceEndPoints.Length != NUM_DEVICES) deviceEndPoints = new IPEndPoint[NUM_DEVICES];
@@ -324,6 +336,7 @@ public class UdpController : MonoBehaviour
             notePacket[1] = 3;
             for (int i = 0; i < NUM_NOTE_LEDS; i++)
             {
+                // ★エラーの可能性: noteLedsComponent が null の場合、ここでエラーになる
                 // (Startでチェック済みのため、基本的には安全)
                 Color32 noteLed = noteLedsComponent.GetLedColor(deviceId, i);
                 notePacket[2 + i * 3 + 0] = noteLed.r;
