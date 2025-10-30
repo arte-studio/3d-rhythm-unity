@@ -9,6 +9,7 @@ using System.Text; // StringBuilder のために必要
 
 /// <summary>
 /// ESP32デバイスとUDPブロードキャスト通信を行い、LEDとタッチセンサーを制御するクラス
+/// ★根本対策：UdpClient.Receive がGCを発生させるため、Socket.ReceiveFrom を使用
 /// </summary>
 public class UdpController : MonoBehaviour
 {
@@ -45,7 +46,10 @@ public class UdpController : MonoBehaviour
 
     // --- UDP関連 ---
     private UdpClient sendClient;      // 送信用のUDPクライアント
-    private UdpClient receiveClient; // 受信用のUDPクライアント
+    // private UdpClient receiveClient; // ★GC対策のため Socket に変更
+    private Socket receiveSocket;      // ★GC対策：受信用のソケット
+    private byte[] receiveBuffer = new byte[64]; // ★GC対策：受信バッファ (6バイトパケット等には十分)
+    
     private Thread receiveThread;      // 受信処理をバックグラウンドで行うためのスレッド
     private IPEndPoint sendEndPoint; // 送信先のエンドポイント
     
@@ -190,7 +194,8 @@ public class UdpController : MonoBehaviour
         // スレッドやクライアントを正しく閉じてリソースを解放する
         if (receiveThread != null && receiveThread.IsAlive) receiveThread.Abort();
         if (sendClient != null) sendClient.Close();
-        if (receiveClient != null) receiveClient.Close();
+        // if (receiveClient != null) receiveClient.Close(); // ★GC対策: 変更
+        if (receiveSocket != null) receiveSocket.Close(); // ★GC対策: 変更
     }
 
     /// <summary>
@@ -238,17 +243,21 @@ public class UdpController : MonoBehaviour
         sendEndPoint = new IPEndPoint(IPAddress.Parse(broadcastAddress), espPort);
         Debug.Log($"UDPパケットの送信先: {sendEndPoint}");
 
-        // 受信クライアントとスレッドのセットアップ
+        // --- ★GC対策: UdpClient の代わりに Socket を使用 ---
         try
         {
-            receiveClient = new UdpClient(unityPort);
+            // receiveClient = new UdpClient(unityPort); // ★GC対策: 削除
+            
+            receiveSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            receiveSocket.Bind(new IPEndPoint(IPAddress.Any, unityPort));
         }
         catch (Exception e)
         {
-            Debug.LogError($"ポート {unityPort} でのUDPクライアントの初期化に失敗しました．ポートが既に使用されている可能性があります．: {e.Message}");
+            Debug.LogError($"ポート {unityPort} でのUDPソケットの初期化に失敗しました．ポートが既に使用されている可能性があります．: {e.Message}");
             enabled = false;
             return;
         }
+        // --- ★GC対策ここまで ---
         
         receiveThread = new Thread(new ThreadStart(ReceiveData));
         receiveThread.IsBackground = true; // アプリ終了時にスレッドも自動で終了させる
@@ -329,7 +338,7 @@ public class UdpController : MonoBehaviour
                     {
                         Debug.LogWarning($"ConvertLinetermID({noteId}) が無効な値 -1 を返しました．");
                         destOffset += BYTES_PER_STRIP; // オフセットだけ進めておく (データはコピーされない)
-                        continue;
+                        continue; 
                     }
 
                     // コピー元のオフセット (finalLedData の当該ストリップの開始位置)
@@ -405,35 +414,46 @@ public class UdpController : MonoBehaviour
     /// </summary>
     private void ReceiveData()
     {
-        IPEndPoint anyIP = new IPEndPoint(IPAddress.Any, 0);
+        // IPEndPoint anyIP = new IPEndPoint(IPAddress.Any, 0); // ★GC対策: 変更
+        EndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0); // ★GC対策: 変更
+
         while (true)
         {
             try
             {
-                // データを受信するまでここで待機
-                byte[] data = receiveClient.Receive(ref anyIP);
+                // --- ★GC対策: Socket.ReceiveFrom を使用 ---
+                // byte[] data = receiveClient.Receive(ref anyIP); // ★GC対策: 削除
+                
+                // あらかじめ確保したバッファ(receiveBuffer)にデータを受信
+                int receivedBytes = receiveSocket.ReceiveFrom(receiveBuffer, ref remoteEP);
+                // --- ★GC対策ここまで ---
 
                 // 発見パケット [255][ID] の処理を追加
-                if (data.Length == 2 && data[0] == 255)
+                // ★GC対策: data.Length -> receivedBytes
+                // ★GC対策: data[i] -> receiveBuffer[i]
+                if (receivedBytes == 2 && receiveBuffer[0] == 255)
                 {
-                    int deviceId = data[1];
+                    int deviceId = receiveBuffer[1];
                     if (deviceId >= 0 && deviceId < NUM_DEVICES)
                     {
+                        // 送信元IPアドレスを取得
+                        IPAddress remoteAddress = ((IPEndPoint)remoteEP).Address;
+
                         // 新しいデバイス、またはIPアドレスが変わったデバイスを発見
                         if (!deviceRegistered[deviceId])
                         {
-                            Debug.Log($"Device {deviceId} 発見！ IP: {anyIP.Address}. ACKを送信します．");
+                            Debug.Log($"Device {deviceId} 発見！ IP: {remoteAddress}. ACKを送信します．");
                         }
-                        else if (deviceEndPoints[deviceId] == null || !deviceEndPoints[deviceId].Address.Equals(anyIP.Address))
+                        else if (deviceEndPoints[deviceId] == null || !deviceEndPoints[deviceId].Address.Equals(remoteAddress))
                         {
-                            Debug.Log($"Device {deviceId} IP更新！ IP: {anyIP.Address}. ACKを送信します．");
+                            Debug.Log($"Device {deviceId} IP更新！ IP: {remoteAddress}. ACKを送信します．");
                         }
                         else
                         {
                             // 頻繁にログが出すぎるためコメントアウト
-                            // Debug.Log($"Device {deviceId} 再発見！ IP: {anyIP.Address}. ACKを送信します．");
+                            // Debug.Log($"Device {deviceId} 再発見！ IP: {remoteAddress}. ACKを送信します．");
                         }
-                        deviceEndPoints[deviceId] = new IPEndPoint(anyIP.Address, espPort);
+                        deviceEndPoints[deviceId] = new IPEndPoint(remoteAddress, espPort);
                         deviceRegistered[deviceId] = true;
                         
                         // メインスレッドにデバイス発見を通知
@@ -445,15 +465,15 @@ public class UdpController : MonoBehaviour
                     }
                 }
                 // パケットの長さが期待通りかチェック (ID 1バイト + Touch NUM_TOUCHバイト)
-                else if (data.Length == NUM_TOUCH + 1)
+                else if (receivedBytes == NUM_TOUCH + 1)
                 {
-                    int deviceId = data[0];
+                    int deviceId = receiveBuffer[0];
                     if (deviceId >= 0 && deviceId < NUM_DEVICES)
                     {
                         for (int i = 0; i < NUM_TOUCH; i++)
                         {
                             // 受信した 1 or 0 を bool (true/false) に変換
-                            bool newState = (data[i + 1] == 1);
+                            bool newState = (receiveBuffer[i + 1] == 1); // ★GC対策: data[i+1] -> receiveBuffer[i+1]
                             
                             // 状態が ON になった瞬間だけをキューに入れる
                             if (newState == true && (touchStates[deviceId] == null || touchStates[deviceId][i] == false)) // 配列初期化中のエラー回避

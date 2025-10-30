@@ -89,6 +89,12 @@ public class newline : MonoBehaviour
             yield break;
         }
         cam.cullingMask = 1 << captureLayer; // captureLayerName のレイヤー「だけ」を描画
+        // カメラの描画負荷を極限まで下げる ---
+        cam.renderingPath = RenderingPath.VertexLit; // 最も軽量なレンダリングパス
+        cam.allowMSAA = false; // アンチエイリアスを無効化
+        // cam.allowHDR = false; // HDRを無効化
+        // cam.useOcclusionCulling = false; // オクルージョンカリングを無効化
+        // cam.shadows = LightShadows.None; // LEDキャプチャレイヤーのオブジェクトが Unlit (影なし) シェーダーなら，影の描画も不要
 
         // 2. カメラの背景をクリアする方法を設定
         //    (Nothingだとゴミが残る可能性、SolidColorで黒にするのが安全)
