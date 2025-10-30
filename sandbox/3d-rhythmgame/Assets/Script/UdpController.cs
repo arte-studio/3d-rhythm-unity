@@ -428,8 +428,6 @@ public class UdpController : MonoBehaviour
             }
         }
     }
-
-    // --- ★ここから追加 (ステータス表示メソッド) ---
     
     /// <summary>
     /// デバイスの接続状況と通信状況を StatusDisplay に表示する
@@ -462,29 +460,30 @@ public class UdpController : MonoBehaviour
                 statusBuilder.Append("[---] ");
             }
 
-            // 2. 初回発見 (First Contact) -> 最終発見 (Last Discovery) に変更
-            if (lastDiscoveryTime[i] > 0f)
+            // 2. 最終発見 (Last Discovery)
+            float lastDiscovery = lastDiscoveryTime[i];
+            if (lastDiscovery > 0f)
             {
-                // 最後に発見されてからの経過時間
-                // ★変更: ラベルを "First" -> "Discovery" に変更
-                statusBuilder.Append($"Discovery: {(currentTime - lastDiscoveryTime[i]):F1}s ago. ");
+                // ★変更: 経過時間ではなく、Time.time の絶対値を表示
+                statusBuilder.Append($"Discovery: {lastDiscovery:F1}. ");
             }
             else
             {
-                // ★変更: ラベルを "First" -> "Discovery" に変更
                 statusBuilder.Append("Discovery: N/A. ");
             }
 
             // 3. 最終タッチ通信 (Last Touch)
-            if (lastTouchTime[i] > 0f)
+            float lastTouch = lastTouchTime[i];
+            if (lastTouch > 0f)
             {
-                // 最後にタッチパケットを受信してからの経過時間
-                float elapsed = currentTime - lastTouchTime[i];
+                // 最後にタッチパケットを受信してからの経過時間 (色分け判定用)
+                float elapsed = currentTime - lastTouch;
                 
                 // 2秒以上途絶えたら警告 (赤色)
                 string colorTag = (elapsed > 2.0f) ? "<color=red>" : "<color=green>";
                 
-                statusBuilder.Append($"LastTouch: {colorTag}{elapsed:F1}s ago</color>");
+                // ★変更: 経過時間ではなく、Time.time の絶対値を表示
+                statusBuilder.Append($"LastTouch: {colorTag}{lastTouch:F1}</color>");
             }
             else
             {
@@ -498,7 +497,6 @@ public class UdpController : MonoBehaviour
         // 構築した文字列を StatusDisplay コンポーネントの public 変数に設定
         targetDisplay.statusText = statusBuilder.ToString();
     }
-    // --- ★追加ここまで ---
 
 
     /// <summary>

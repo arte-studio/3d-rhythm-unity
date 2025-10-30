@@ -526,6 +526,52 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5363980728854274262, guid: 22c6243bb9c8bcb47894798e7065cc16, type: 3}
   m_PrefabInstance: {fileID: 931353347}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &697855545
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 697855547}
+  - component: {fileID: 697855546}
+  m_Layer: 0
+  m_Name: StatusDisplay
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &697855546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 697855545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a810fcf287ac3194cb6733bf0d3a945e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  statusText: Initialized
+  showStatus: 1
+--- !u!4 &697855547
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 697855545}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.83890027, y: 0.71224666, z: -0.1685874}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &814545634
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -684,12 +730,12 @@ MonoBehaviour:
   isDebugMode: 0
   Tutorial_MusicSource: {fileID: 189738156}
   Game_MusicSource: {fileID: 189738156}
-  Tutorial_NotesData: Kokasai_NoteData_1026
-  Game_NotesData: Kokasai_NoteData_1026
+  Tutorial_NotesData: Kokasai_NoteData_mugyu
+  Game_NotesData: Kokasai_NoteData_mugyu
   targetTime: 0
-  perfectRange: 1.5
-  goodRange: 1.5
-  JudgeTimeRange: 2
+  perfectRange: 0.5
+  goodRange: 0.6
+  JudgeTimeRange: 0.8
   targetTime_start: 0
   targetTime_goal: 0
   notesignalTime: 3
@@ -1121,6 +1167,7 @@ MonoBehaviour:
   broadcastAddress: 192.168.0.255
   espPort: 8888
   unityPort: 9999
+  targetDisplay: {fileID: 697855546}
   deviceRegistered: 0000000000000000
 --- !u!4 &1538951493
 Transform:
@@ -1207,3 +1254,4 @@ SceneRoots:
   - {fileID: 1085471557}
   - {fileID: 931353347}
   - {fileID: 1803489310}
+  - {fileID: 697855547}
