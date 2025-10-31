@@ -6,6 +6,7 @@ using Unity.Collections;     // ★追加
 
 /// <summary>
 /// 複数のnewlineスクリプトからバイトデータを集約し、管理するクラス
+/// (★変更: 書き込み先を PerfLeds.perfLedData に変更)
 /// </summary>
 public class lineterm : MonoBehaviour
 {
@@ -13,35 +14,44 @@ public class lineterm : MonoBehaviour
     // public byte[][] bytes; // ★修正: 単一のバイト配列で管理
 
     /// <summary>
-    /// ★追加: 全LEDのデータを格納する単一のバイト配列
-    /// [strip 0 (120*3 bytes)][strip 1 (120*3 bytes)]...
+    /// ★削除: 全LEDのデータを格納する単一のバイト配列
+    /// (PerfLeds.perfLedData に書き込むため不要に)
     /// </summary>
-    public byte[] finalLedData;
+    // public byte[] finalLedData;
     
     /// <summary>
-    /// ★追加: 全カメラの描画結果をまとめる単一のRenderTexture (90x120)
+    /// 書き込み対象の PerfLeds コンポーネント
+    /// </summary>
+    private PerfLeds targetPerfLeds;
+    
+    /// <summary>
+    /// 全カメラの描画結果をまとめる単一のRenderTexture (90x120)
     /// </summary>
     [HideInInspector] // Inspectorには表示しない (Startで生成するため)
     public RenderTexture combinedRd;
 
-    // ★追加: LEDマトリクスの設定
+    // LEDマトリクスの設定
     private int ledStrips = 90; // ストリップ数
     private int ledsPerStrip = 120; // 1ストリップあたりのLED数
+    // 定数 (ProcessPixelData, GetBytes で使用)
+    private const int BYTES_PER_STRIP = 360; // (120 * 3)
+    private const int TOTAL_STRIPS = 90;
+
 
     // 初期化が完了し、データの受け入れ準備ができたことを示すフラグ
     public bool ready = false;
 
-    // ★追加:  GPU読み出しが進行中かを示すフラグ
+    //  GPU読み出しが進行中かを示すフラグ
     private bool readbackInProgress = false;
 
-    // ★追加: 読み出し頻度の設定 (10fps)
+    // 読み出し頻度の設定 (10fps)
     private float updateInterval = 1.0f / 10.0f; // 10fps
     private float timeSinceLastUpdate = 0.0f;
     
-    // ★追加: ストリップ反転の要否をキャッシュする配列
+    // ストリップ反転の要否をキャッシュする配列
     private bool[] reversedMap;
 
-    // ★追加: デバッグモード設定
+    // デバッグモード設定
     [Header("Debug Settings")]
     [Tooltip("デバッグ時にプレイヤーが見るメインカメラ")]
     [SerializeField] private Camera mainCamera;
@@ -56,17 +66,30 @@ public class lineterm : MonoBehaviour
         // 90個のバイト配列を格納できる領域を確保 (★削除)
         // bytes = new byte[90][];
 
-        // ★追加: 全カメラの描画をまとめるRenderTextureを生成
+        // 書き込み対象の PerfLeds コンポーネントをシーンから探す
+        targetPerfLeds = FindFirstObjectByType<PerfLeds>();
+        if (targetPerfLeds == null)
+        {
+            Debug.LogError("PerfLeds コンポーネントが見つかりません．lineterm を無効化します．");
+            enabled = false;
+            return;
+        }
+
+        // 全カメラの描画をまとめるRenderTextureを生成
         // (スクリプト実行順序の設定により、newline.Start() より先に実行される)
         
         // ★修正: ワーニング解消のため、深度バッファ(depth)を 0 から 16 (または 24) に変更
         combinedRd = new RenderTexture(ledStrips, ledsPerStrip, 16);
         combinedRd.Create();
         
-        // ★追加: 全LEDデータを格納する単一のバイト配列を確保
-        finalLedData = new byte[ledStrips * ledsPerStrip * 3];
+        // (RenderTextureSamplerが先に初期化している可能性もあるため)
+        if (targetPerfLeds.perfLedData == null || targetPerfLeds.perfLedData.Length != TOTAL_STRIPS * BYTES_PER_STRIP)
+        {
+            targetPerfLeds.perfLedData = new byte[TOTAL_STRIPS * BYTES_PER_STRIP];
+            Debug.Log($"lineterm が PerfLeds.perfLedData ({TOTAL_STRIPS * BYTES_PER_STRIP} bytes) を初期化しました．");
+        }
         
-        // ★追加: 反転マップの事前計算
+        // 反転マップの事前計算
         reversedMap = new bool[ledStrips];
         for (int i = 0; i < ledStrips; i++)
         {
@@ -74,7 +97,7 @@ public class lineterm : MonoBehaviour
             reversedMap[i] = (ConvertID(i) % 2 != 0);
         }
 
-        // ★追加: デバッグモードでないならメインカメラを無効化
+        // デバッグモードでないならメインカメラを無効化
         if (mainCamera != null)
         {
             mainCamera.gameObject.SetActive(isDebugMode);
@@ -91,14 +114,14 @@ public class lineterm : MonoBehaviour
         // Invoke("get1to4", 1f);
     }
     
-    // ★追加: newlineが初期化状態を確認するためのメソッド
+    // newlineが初期化状態を確認するためのメソッド
     // (スクリプト実行順序を設定すれば不要だが、念のため)
     public bool IsReady()
     {
         return ready;
     }
 
-    // ★追加: フレームごとの更新処理 (読み出しリクエスト)
+    // フレームごとの更新処理 (読み出しリクエスト)
     private void Update()
     {
         // ★修正: 読み出し頻度を間引くタイマー
@@ -107,25 +130,25 @@ public class lineterm : MonoBehaviour
         // 準備ができており、かつ読み出し中でなく、かつ指定時間が経過していたら
         if (ready && !readbackInProgress && timeSinceLastUpdate >= updateInterval)
         {
-            // ★追加: タイマーリセット
+            // タイマーリセット
             // (経過時間からIntervalを引く方がズレは少ないが、簡潔さを優先)
             timeSinceLastUpdate = 0.0f; 
             
             readbackInProgress = true;
             
-            // ★追加: 共有RenderTextureに対して1回だけ読み出しリクエスト
+            // 共有RenderTextureに対して1回だけ読み出しリクエスト
             AsyncGPUReadback.Request(combinedRd, 0, OnReadbackComplete);
         }
         
         /*
         // デバッグ用のUpdate処理 (★元の処理はコメントアウト)
         // (デバッグログは OnReadbackComplete の最後や
-        //  別のキー入力などで呼び出すことを推奨)
+        //  別のキー入力などで呼び出すことを推奨)
         */
     }
 
     /// <summary>
-    /// ★追加: GPUからのデータ読み出しが完了したときのコールバック
+    /// GPUからのデータ読み出しが完了したときのコールバック
     /// </summary>
     void OnReadbackComplete(AsyncGPUReadbackRequest request)
     {
@@ -138,6 +161,13 @@ public class lineterm : MonoBehaviour
             return;
         }
 
+        // targetPerfLeds が見つからない場合は処理中断
+        if (targetPerfLeds == null)
+        {
+            Debug.LogWarning("targetPerfLeds が null のため，OnReadbackComplete をスキップします．");
+            return;
+        }
+
         // データを NativeArray<Color32> として取得 (アロケーションなし)
         NativeArray<Color32> data = request.GetData<Color32>();
 
@@ -146,12 +176,14 @@ public class lineterm : MonoBehaviour
     }
     
     /// <summary>
-    /// ★追加: NativeArray<Color32> を finalLedData (byte[]) に変換する
+    /// NativeArray<Color32> を finalLedData (byte[]) に変換する
     /// </summary>
     /// <param name="data">GPUから読み出した90x120のピクセルデータ</param>
     void ProcessPixelData(NativeArray<Color32> data)
     {
         // dataは (y * width + x) の順で格納されている (width = ledStrips = 90)
+        byte[] ledData = targetPerfLeds.perfLedData;
+        if (ledData == null) return; // 安全装置
         
         for (int x = 0; x < ledStrips; x++) // x = ストリップID (0-89)
         {
@@ -181,14 +213,15 @@ public class lineterm : MonoBehaviour
                 // (ストリップID * 1ストリップのバイト長) + (ピクセル位置 * 3)
                 int baseByteIndex = (x * ledsPerStrip * 3) + (pixelIndexInColumn * 3);
 
-                finalLedData[baseByteIndex + 0] = color.r;
-                finalLedData[baseByteIndex + 1] = color.g;
-                finalLedData[baseByteIndex + 2] = color.b;
+                ledData[baseByteIndex + 0] = color.r;
+                ledData[baseByteIndex + 1] = color.g;
+                ledData[baseByteIndex + 2] = color.b;
             }
         }
         
         // (デバッグ用)
         // if (finalLedData.Length > 0) Debug.Log("R値[0]: " + finalLedData[0]);
+        // if (ledData.Length > 0) Debug.Log("R値[0]: " + ledData[0]);
     }
 
     /// <summary>
@@ -218,7 +251,7 @@ public class lineterm : MonoBehaviour
         int stripLengthInBytes = ledsPerStrip * 3;
         int totalBytesToCopy = numStrips * stripLengthInBytes;
         
-        if (finalLedData == null || finalLedData.Length < (endStrip + 1) * stripLengthInBytes)
+        if (targetPerfLeds == null || targetPerfLeds.perfLedData == null || targetPerfLeds.perfLedData.Length < (endStrip + 1) * stripLengthInBytes)
         {
             // ★修正: 準備できていない場合のログをWarningからLogに変更 (頻繁に出る可能性があるため)
             // Debug.LogWarning("finalLedData がまだ準備できていません。");
@@ -232,7 +265,7 @@ public class lineterm : MonoBehaviour
         int sourceOffset = beginStrip * stripLengthInBytes;
         
         // 3. 高速なブロックコピー
-        Array.Copy(finalLedData, sourceOffset, result, 0, totalBytesToCopy);
+        Array.Copy(targetPerfLeds.perfLedData, sourceOffset, result, 0, totalBytesToCopy);
 
         // デバッグ用: 結合後のバイト配列の長さをログに出力
         // Debug.Log("結合後のバイト配列の長さ: " + result.Length);
@@ -246,9 +279,7 @@ public class lineterm : MonoBehaviour
         */
     }
 
-    // ★追加: ConvertID を public に変更 (UdpControllerから参照される可能性を考慮)
-    // (もし UdpController で使わないなら private のままでも良い)
-    public int ConvertID(int i)
+    private int ConvertID(int i)
     {
         int n = i % 30 * 3;
         if ((int)i / 30 == 0) n += 0;
@@ -285,11 +316,11 @@ public class lineterm : MonoBehaviour
             int n = ConvertID(i); // ★修正: 元のロジックでの 'n' に合わせる
 
             // ★修正: finalLedData から読み出す
-            if (finalLedData != null && finalLedData.Length > (n * ledsPerStrip * 3))
+            if (targetPerfLeds != null && targetPerfLeds.perfLedData != null && targetPerfLeds.perfLedData.Length > (n * ledsPerStrip * 3))
             {
                 // (nは 0..89 の範囲外になる可能性があるため、チェックが必要かもしれない)
                 // (ConvertIDのロジックだと最大 29*3+2 = 89 なので大丈夫そう)
-                log += finalLedData[n * ledsPerStrip * 3] + " ";
+                log += targetPerfLeds.perfLedData[n * ledsPerStrip * 3] + " "; // ★変更
             }
             else
             {
