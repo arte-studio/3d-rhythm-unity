@@ -94,7 +94,20 @@ public class NoteLeds : MonoBehaviour
     public void StartDebugMode()
     {
         isDebugMode = true;
-        // デバッグループを開始
+
+        // 変換が正しいかをチェック
+        for (int lane = 0; lane < NUM_LANES; lane++)
+        {
+            int muguId = ConvertNoteIdToHard(lane);
+            int backLane = ConvertNoteIdToGame(muguId);
+            Debug.Log($"DebugMode: Lane {lane} -> MuguID {muguId} -> BackLane {backLane}");
+            if (lane != backLane)
+            {
+                Debug.LogError($"変換エラー: Lane {lane} が MuguID {muguId} を経由して BackLane {backLane} に変換されました！");
+            }
+        }
+
+        // デバッグループを開始        
         StartCoroutine(DebugLEDLoop());
     }
 

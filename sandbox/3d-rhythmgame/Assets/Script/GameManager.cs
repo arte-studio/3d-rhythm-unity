@@ -216,15 +216,6 @@ public class GameManager : MonoBehaviour
         udpController = FindFirstObjectByType<UdpController>(); // ★修正: GameObject.Findを避ける
         noteLeds = FindFirstObjectByType<NoteLeds>(); // ★修正: GameObject.Findを避ける
 
-        // --- ここから追加 (デバッグモード) ---
-        // デバッグモードが有効なら、NoteLedsに開始を指示
-        if (isDebugMode && noteLeds != null)
-        {
-            noteLeds.StartDebugMode();
-            Debug.Log("デバッグモードに入りました");
-        }
-        // --- 追加ここまで ---
-
         // GameFlow開始
         // 明るさ送信コルーチンを開始 (5秒ごと)
         if (brightnessCoroutine == null)
@@ -232,7 +223,18 @@ public class GameManager : MonoBehaviour
             brightnessCoroutine = StartCoroutine(BrightnessSenderCoroutine());
         }
 
-        StartCoroutine(GameFlow());
+        // デバッグモードが有効なら、NoteLedsに開始を指示
+        if (isDebugMode && noteLeds != null)
+        {
+            noteLeds.StartDebugMode();
+            Debug.Log("デバッグモードに入りました");
+        } 
+        else
+        {
+            // 通常モードで開始
+            StartCoroutine(GameFlow());
+            Debug.Log("通常モードで開始します");
+        }
     }
 
     //チュートリアルから本番までやる流れの全体の処理
