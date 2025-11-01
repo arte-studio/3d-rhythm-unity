@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 8466168481738725553}
   - component: {fileID: 8000223685727790413}
   - component: {fileID: 8645160161851689558}
+  - component: {fileID: 5349134061172097020}
   m_Layer: 0
   m_Name: Connect_module
   m_TagString: Untagged
@@ -122,3 +123,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ledSpherePrefab: {fileID: 6373879224163243674, guid: f155674f97ba838498f8840b05dfe8b1, type: 3}
+--- !u!114 &5349134061172097020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5874275566985760749}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a7c92392cb7e824dbb34c5b38837fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  connectGenerator: {fileID: 0}

@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using System.Collections;
+//using System.Drawing;
 using Unity.VisualScripting;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -33,7 +34,7 @@ public class ActiveNote
     //public NoteLeds noteLeds; // LED制御用コンポーネントへの参照
 
     // Connect ノーツ用の状態管理 (ConnectNotes_Judge.csから移植)
-    public bool Connect_DragStarted = false;
+    /*public bool Connect_DragStarted = false;
     public bool Connect_DragEnded = false;
     public bool Connect_CubeTouched = false;
     public float Connect_ElapsedTime = 0f;
@@ -41,7 +42,7 @@ public class ActiveNote
     public float Connect_RequiredTime = 3f; // 必要ドラッグ時間
     public float Connect_JudgeEndOffset = 1f; // 時間切れまでの許容時間
     public float Connect_JudgeEndTime;
-    public float Connect_MissAbsoluteTime;
+    public float Connect_MissAbsoluteTime;*/
 
     public ActiveNote(GameObject obj, NoteData data, int index)
     {
@@ -52,12 +53,13 @@ public class ActiveNote
         // Connectノーツの場合、TimeとJudgeTimeRangeから終了時間を設定
         if (data.type == "connect")
         {
-            Connect_JudgeEndTime = Connect_RequiredTime + Connect_JudgeEndOffset;
+            /*Connect_JudgeEndTime = Connect_RequiredTime + Connect_JudgeEndOffset;
             Connect_DragStarted = false;
             Connect_DragEnded = false;
             Connect_CubeTouched = false;
             Connect_ElapsedTime = 0f;
-            Connect_MissAbsoluteTime = data.time + Connect_RequiredTime + Connect_JudgeEndOffset;
+            Connect_MissAbsoluteTime = data.time + Connect_RequiredTime + Connect_JudgeEndOffset;*/
+            
         }
 
         //touchノーツの場合
@@ -82,19 +84,17 @@ public class GameManager : MonoBehaviour
 
     /* 音源ソース */
     [Header("MusicSource")]
-    public AudioSource Tutorial_MusicSource;  // チュートリアルの音源オブジェクトのAudioSourceをセット
     public AudioSource Game_MusicSource;      // 本番のゲームの音源オブジェクトのAudioSourceをセット
     public AudioSource perfectgood_EffectSource;      // 本番のゲームの音源オブジェクトのAudioSourceをセット
-    public AudioSource miss_EffectSource;      // 本番のゲームの音源オブジェクトのAudioSourceをセット
 
     /* 音楽の時間系 */
+    [HideInInspector]
     private double StartTime = 0; // 音楽再生開始時刻
     // UnityのAudioSourceは基本的にAudioSettings.dspTimeと連携して動作するため、ここは変更なし
     public double CurrentTime => AudioSettings.dspTime - StartTime; //現在の音楽の再生時間、他クラスから読み取り可能
 
     /* 譜面データ */
     [Header("NotesData_filename")]
-    public string Tutorial_NotesData; //チュートリアル用譜面データのファイル名
     public string Game_NotesData; //本番用譜面データのファイル名
 
     /* ノーツ判定処理系 */
@@ -107,16 +107,8 @@ public class GameManager : MonoBehaviour
     public double goodRange = 3.0f; //Goodの範囲内の時間
     public double missRange = 0.5f; //Missの範囲内の時間
 
-    //public ConnectNotes_Position notesPosition; // InspectorでConnectNotes_Positionを指定
-    //public GameObject ConnectNotes_prefab;         // InspectorでCubeプレハブを指定
-    //public GameObject ConnectNotes_JudgeResion_prefab;         // Inspectorで判定の範囲を指定
-    //private GameObject ConnectNote;
-    //private GameObject ConnectNotes_JudgeResion;
-
-    public float targetTime_start;  // スタートする時間
-    public float targetTime_goal;   // ゴールする時間
-    //private float targetTime_connect;          // “つなげる”を何秒でやるかを指定する
-    public float notesignalTime = 3f;      // スタートする時間の何秒前から合図を合図を出すか
+    [HideInInspector]
+    public float notesignalTime = 3f;      // スタートする時間の何秒前から合図を出すか
 
     /* ノーツの分類とか */
     [HideInInspector]
@@ -127,18 +119,29 @@ public class GameManager : MonoBehaviour
 
     /* 本番ゲームのスコア */
     private int Touch_score = 0; //“タッチ”によるスコア
-    //private int Connect_score = 0; //“つなげる”によるスコア
-    //private int Total_score = 0; //“タッチ”によるスコア
 
     /* 判定ごとのスコア */
     [Header("Judge Settings - Score")]
     public int Perfect_score = 5; //“Perfect”のときのスコア
     public int Good_score = 3; //“Good”のときのスコア
 
-    /* むぎゅモジュール演出用のインスタンス */
+    /* むぎゅとつながるノーツの演出用のインスタンス */
     private System.Collections.Generic.List<Mugyu_LEDPerformance> mugyu_LEDPerformance = new System.Collections.Generic.List<Mugyu_LEDPerformance>();
     private System.Collections.Generic.List<Connect_LEDPerformance> connect_LEDPerformance = new System.Collections.Generic.List<Connect_LEDPerformance>();
     UdpController udpController;
+
+    /* コネクトLED演出設定 */
+    [Header("Connect LED Performance")]
+    [Tooltip("H値(色相)の最小値 (0-360)")]
+    [UnityEngine.Range(0, 360)] public float connectHMin = 185f;
+    [Tooltip("H値(色相)の最大値 (0-360)")]
+    [UnityEngine.Range(0, 360)] public float connectHMax = 340f;
+    [Tooltip("S値(彩度) (0-1)")]
+    [UnityEngine.Range(0f, 1f)] public float connectSaturation = 1.0f;
+    [Tooltip("V値(明度) (0-1)")]
+    [UnityEngine.Range(0f, 1f)] public float connectValue = 1.0f; // B: Brightness / V: Value
+    [Tooltip("色相変化の速さ (大きいほど速い)")]
+    public float connectSpeed = 0.5f;
 
     //再生中かどうか
     bool isplaying = false;
@@ -155,14 +158,14 @@ public class GameManager : MonoBehaviour
     [UnityEngine.Range(0,255)] public int brightnessNotes = 10; // ノーツ用明るさ (0-255)
     private Coroutine brightnessCoroutine;
     
-    // --- ★ここから追加 (タッチ判定連携) ---
+    // --- ここから追加 (タッチ判定連携) ---
     [Header("Touch Input Settings")]
     [Tooltip("同じレーンへの連続タッチを防ぐクールダウン時間(秒)")]
     [SerializeField] private float touchInputCooldown = 0.1f; // 0.1秒
     
     // 各レーン (0-10) のクールダウンタイマー
     private float[] laneCooldowns;
-    // --- ★追加ここまで ---
+    // --- 追加ここまで ---
 
 
     //ゲームオブジェクトが生成された直後、Startより前に1回だけ呼ばれる
@@ -182,9 +185,9 @@ public class GameManager : MonoBehaviour
     {
         Touch_score = 0;
         
-        // ★修正: レーンクールダウン配列の初期化 (レーンが0-16の17個と仮定)
-        // ConvertNoteIdToHard/Game の実装に基づき 17 に変更
-        laneCooldowns = new float[17]; 
+        // 修正: レーンクールダウン配列の初期化 (レーンが0-14の15個と仮定)
+        // ConvertNoteIdToHard/Game の実装に基づき 15 に変更
+        laneCooldowns = new float[15]; 
         
         // ObjectRelocationの生成完了を待つ
         yield return new WaitForSeconds(0.1f);
@@ -203,20 +206,24 @@ public class GameManager : MonoBehaviour
                 if (mugyu_LEDPerformance[i] != null) mugyu_LEDPerformance[i].SetLEDGenerate();
 
                 connect_LEDPerformance.Add(Notes[i].GetComponent<Connect_LEDPerformance>());
-                if (connect_LEDPerformance[i] != null) connect_LEDPerformance[i].SetLEDGenerate();
+                if (connect_LEDPerformance[i] != null)
+                {
+                    connect_LEDPerformance[i].SetLEDGenerate();
+                    connect_LEDPerformance[i].SetAllLEDColor(Color.black);
+                }
             }
         }
         udpController = FindFirstObjectByType<UdpController>(); // ★修正: GameObject.Findを避ける
         noteLeds = FindFirstObjectByType<NoteLeds>(); // ★修正: GameObject.Findを避ける
 
-        // --- ★ここから追加 (デバッグモード) ---
+        // --- ここから追加 (デバッグモード) ---
         // デバッグモードが有効なら、NoteLedsに開始を指示
         if (isDebugMode && noteLeds != null)
         {
             noteLeds.StartDebugMode();
             Debug.Log("デバッグモードに入りました");
         }
-        // --- ★追加ここまで ---
+        // --- 追加ここまで ---
 
         // GameFlow開始
         // 明るさ送信コルーチンを開始 (5秒ごと)
@@ -239,13 +246,22 @@ public class GameManager : MonoBehaviour
     //実行
     private IEnumerator Game()
     {
-        LoadNotesFromJson(Tutorial_NotesData); //譜面データ読み込み
-        yield return StartCoroutine(MusicPlayer(Tutorial_MusicSource)); //音楽を再生する
+        
+        Coroutine connectLEDCoroutine = StartCoroutine(ConnectLEDPerform());　// Connectノーツの演出コルーチンの開始 
 
-        // チュートリアル音楽の再生終了を確認する
-        while (Tutorial_MusicSource.isPlaying)
+        LoadNotesFromJson(Game_NotesData); //譜面データ読み込み
+        yield return StartCoroutine(MusicPlayer(Game_MusicSource)); //音楽を再生する
+
+        // 音楽の再生終了を確認する
+        while (Game_MusicSource.isPlaying)
         {
             yield return null;
+        }
+
+        //演出コルーチンの停止
+        if (connectLEDCoroutine != null)
+        {
+            StopCoroutine(connectLEDCoroutine);
         }
         ScoreCalculate();
 
@@ -265,7 +281,7 @@ public class GameManager : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // ★追加: クールダウンタイマーの更新
+        // 追加: クールダウンタイマーの更新
         if (isplaying)
         {
             for (int i = 0; i < laneCooldowns.Length; i++)
@@ -277,7 +293,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // --- ★ここから追加 (デバッグモード) ---
+        // --- ここから追加 (デバッグモード) ---
         if (isDebugMode)
         {
             if (udpController != null && noteLeds != null)
@@ -305,13 +321,13 @@ public class GameManager : MonoBehaviour
             // デバッグモード中は通常のノーツ判定をスキップ
             return;
         }
-        // --- ★追加ここまで ---
+        // --- 追加ここまで ---
         
         if (isplaying) //ノーツがすべて終わっていなければ
         {
             TouchNotes_judge();
-            //ConnectNotes_judge();
         }
+
     }
 
     //MusicSourceを再生して、開始時刻を記録する
@@ -404,19 +420,28 @@ public class GameManager : MonoBehaviour
                 // Perfect判定
                 if (Mathf.Abs(diff) <= perfectRange && currentActiveNote.FlagComponent.TouchFlag)
                 {
-                    Touch_score += Perfect_score;
                     judged = true;
+
+                    Touch_score += Perfect_score;
+                    Debug.Log($"PERFECT! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
+
                     //色変化
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);//notenum ではなく lane を渡す
+                    //currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
+                    PerfectPerformance(currentActiveNote.NoteObject);
+                    //noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);//notenum ではなく lane を渡す
+
+
                     //音変化
                     EffectPlayer(perfectgood_EffectSource);
                 }
                 // Good判定
                 else if (Mathf.Abs(diff) <= goodRange && currentActiveNote.FlagComponent.TouchFlag)
                 {
-                    Touch_score += Good_score;
                     judged = true;
+
+                    Touch_score += Good_score;
+                    Debug.Log($"GOOD! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
+
                     //色変化
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
                     noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.white);// notenum ではなく lane を渡す
@@ -427,23 +452,17 @@ public class GameManager : MonoBehaviour
                 else if (CurrentTime > targetTime + missRange)
                 {
                     judged = true;
+
+                    Debug.Log($"MISS! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
+
                     //色変化
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
                     noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.cyan);// notenum ではなく lane を渡す
-                    //音変化
-                    EffectPlayer(miss_EffectSource);
                 }
 
                 //判定確定後
                 if (judged)
                 {
-                    if (Mathf.Abs(diff) <= perfectRange)
-                        Debug.Log($"PERFECT! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
-                    else if (Mathf.Abs(diff) <= goodRange)
-                        Debug.Log($"GOOD! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
-                    else if (CurrentTime > targetTime + missRange)
-                        Debug.Log($"MISS! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
-
                     currentActiveNote.IsUsed = true;
                     currentActiveNote.FlagComponent.ResetFlag();
 
@@ -485,7 +504,165 @@ public class GameManager : MonoBehaviour
             }
         }
     }
-    
+
+    // PERFECT時にMugyuモジュールのLED Matrixを虹色回転アニメーションで点灯させる演出
+    // <param name="noteObject">PERFECT判定となったノーツオブジェクト</param>
+    private void PerfectPerformance(GameObject noteObject)
+    {
+        if (noteObject == null) return;
+
+        var mugyuPerf = noteObject.GetComponent<Mugyu_LEDPerformance>();
+        var matrixGenerator = noteObject.GetComponentInChildren<LEDMatrixGenerator>();
+
+        if (mugyuPerf != null && matrixGenerator != null)
+        {
+            // 既存のコルーチンがあれば停止し、新しいアニメーションを開始
+            // 注意: 実行中のアニメーションを管理する辞書などがないため、ここでは単純に開始のみ。
+            //         もし連打でアニメーションが上書きされるのが問題なら、管理が必要です。
+
+            StartCoroutine(RunPerfectRainbowAnimation(mugyuPerf, matrixGenerator, 0.2f)); // 0.5秒間アニメーション
+        }
+    }
+
+
+
+    /// Mugyu LED Matrixを色相変化しながら回転させるコルーチン
+    private IEnumerator RunPerfectRainbowAnimation(Mugyu_LEDPerformance mugyuPerf, LEDMatrixGenerator matrixGenerator, float duration)
+    {
+        float startTime = Time.time;
+        GameObject[,] frontLEDs = matrixGenerator.GetFrontLEDs();
+
+        if (frontLEDs == null || frontLEDs.GetLength(0) == 0) yield break;
+
+        int rows = frontLEDs.GetLength(0);
+        int cols = frontLEDs.GetLength(1);
+
+        // HSB の S(彩度) と V(明度) は最大 (1.0) に設定
+        const float S = 1.0f;
+        const float V = 1.0f;
+
+        // Matrix の中心座標 (8x8 の場合、(3.5, 3.5))
+        float centerX = (cols - 1) / 2.0f;
+        float centerY = (rows - 1) / 2.0f;
+
+        while (Time.time < startTime + duration)
+        {
+            // 1. 時間経過に基づくH値の全体オフセット (色調の変化速度)
+            float timeOffset = (Time.time - startTime) * 0.8f; // 0.8f は回転速度
+
+            // 2. LED Matrixの走査と色設定
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    // LEDの位置 (中心からの相対座標)
+                    float x = c - centerX;
+                    float y = r - centerY;
+
+                    // 3. 角度と距離を計算 (秒針/回転アニメーションの基盤)
+                    // 角度 (θ): Math.Atan2(y, x) でラジアンを取得 (円運動)
+                    float angle = Mathf.Atan2(y, x);
+                    // 距離 (r): 中心からの距離
+                    float distance = Mathf.Sqrt(x * x + y * y);
+
+                    // 4. H値を計算
+                    // H値 = (角度に基づくグラデーション) + (時間経過による変化)
+                    // angleは -π から π なので、0〜1に正規化: (angle / (2 * Mathf.PI)) + 0.5f
+                    float angleNormalized = (angle / (2 * Mathf.PI)) + 0.5f;
+
+                    // H値の最終決定: 時間オフセットを加算し、0〜1の範囲にクランプ
+                    float hValue = (angleNormalized + timeOffset) % 1.0f;
+
+                    // 5. 色を設定
+                    Color rainbowColor = Color.HSVToRGB(hValue, S, V);
+                    mugyuPerf.SetLEDColor(r, c, rainbowColor);
+                    //noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);
+                }
+            }
+
+            yield return new WaitForSeconds(0.01f); // 1フレーム待機
+        }
+
+        // アニメーション終了後、黒に戻す
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                mugyuPerf.SetLEDColor(r, c, Color.black);
+            }
+        }
+    }
+
+    // コネクトノーツのLED色を曲中にH値で変化させ続ける演出コルーチン(1つのオブジェクト内で色変化し続ける)
+    private IEnumerator ConnectLEDPerform()
+    {
+        // Inspectorの設定値を取得し、0-1の範囲に正規化
+        float currentH = connectHMin / 360f;
+        float minH = connectHMin / 360f;
+        float maxH = connectHMax / 360f;
+        float speed = connectSpeed;
+
+        int direction = 1; // 1: 増加方向, -1: 減少方向
+
+        int currentLEDIndex = 0; // 現在色を変更するLEDのインデックス (0〜29)
+        int totalLEDs = 30; // ConnectLEDGenerator.cols の値に合わせる
+
+        // 音楽再生中のみ実行
+        while (Game_MusicSource.isPlaying)
+        {
+            // === H値の更新（全体の色の基調変化）===
+            currentH += Time.deltaTime * speed * direction;
+
+            // 範囲チェックと方向転換
+            if (currentH >= maxH)
+            {
+                currentH = maxH;
+                direction = -1;
+            }
+            else if (currentH <= minH)
+            {
+                currentH = minH;
+                direction = 1;
+            }
+
+            // 3. HSB (Hue, Saturation, Brightness) から Color に変換
+            // 明度と彩度には Inspector の設定値を使用
+            Color targetColor = Color.HSVToRGB(currentH, connectSaturation, connectValue);
+
+            // === 個々の LED への適用 ===
+
+            // 4. Connect オブジェクトの currentLEDIndex に新しい色を適用
+            foreach (var connectPerf in connect_LEDPerformance)
+            {
+                if (connectPerf != null)
+                {
+                    // Connect_LEDPerformance の SetLEDColor を使用し、
+                    // 現在のインデックスのLEDだけ色を更新
+                    connectPerf.SetLEDColor(0, currentLEDIndex, targetColor);
+                    //noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.yellow);
+                    noteLeds.SetConColor(0, currentLEDIndex, targetColor);
+                }
+            }
+
+            // 次の LED にインデックスを進める (30個なので 0〜29 をループ)
+            currentLEDIndex = (currentLEDIndex + 1) % totalLEDs;
+
+            
+            yield return null;
+        }
+
+        // 音楽が終了したら、全ての LED を黒に戻す（全LEDをループ処理）
+        for (int i = 0; i < totalLEDs; i++)
+        {
+            foreach (var connectPerf in connect_LEDPerformance)
+            {
+                connectPerf?.SetLEDColor(0, i, Color.black);
+            }
+        }
+        // 最後に一度、黒のデータを送信させるために少し待つ
+        yield return new WaitForSeconds(0.1f);
+    }
+
     /// <summary>
     /// 5秒ごとに明るさを送信するコルーチン
     /// </summary>

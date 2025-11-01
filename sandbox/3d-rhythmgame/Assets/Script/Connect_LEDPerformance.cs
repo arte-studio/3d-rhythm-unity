@@ -34,12 +34,12 @@ public class Connect_LEDPerformance : MonoBehaviour
         {
             foreach (var led in frontLEDs)
                 led.GetComponent<Renderer>().material.color = color;
-            // --- ‚±‚±‚ÅƒQ[ƒ€‚ÌƒƒWƒbƒN‚É‰‚¶‚ÄLED‚ÌF‚ğXV‚µ‚Ä‚­‚¾‚³‚¢ ---
-            // —á: performanceLeds[ƒfƒoƒCƒXID][LED”Ô†] = new Color32(255, 0, 0, 255);
-            // —á: noteLeds[ƒfƒoƒCƒXID][LED”Ô†] = Color.blue;
+            // --- ã“ã“ã§ã‚²ãƒ¼ãƒ ã®ãƒ­ã‚¸ãƒƒã‚¯ã«å¿œã˜ã¦LEDã®è‰²ã‚’æ›´æ–°ã—ã¦ãã ã•ã„ ---
+            // ä¾‹: performanceLeds[ãƒ‡ãƒã‚¤ã‚¹ID][LEDç•ªå·] = new Color32(255, 0, 0, 255);
+            // ä¾‹: noteLeds[ãƒ‡ãƒã‚¤ã‚¹ID][LEDç•ªå·] = Color.blue;
 
-            // ƒtƒŒ[ƒ€‚²‚Æ‚É‘SƒfƒoƒCƒX‚ÉLEDƒf[ƒ^‚ğ‘—M
-            if (udpController != null) udpController.SendAllLedData();
+            // ãƒ•ãƒ¬ãƒ¼ãƒ ã”ã¨ã«å…¨ãƒ‡ãƒã‚¤ã‚¹ã«LEDãƒ‡ãƒ¼ã‚¿ã‚’é€ä¿¡
+            //if (udpController != null) udpController.SendAllLedData(); ã“ã‚Œã¯UDPé€ä¿¡ã®ä¸Šæ›¸ãã—ã¦ã‚‹ã‚‰ã—ã„ã®ã§æ¶ˆã—ã¦ã„ã„ã‚‰ã—ã„
         }
 
     }

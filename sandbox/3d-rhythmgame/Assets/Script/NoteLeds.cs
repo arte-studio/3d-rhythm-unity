@@ -185,7 +185,7 @@ public class NoteLeds : MonoBehaviour
         }
     }
 
-    void SetConColor(int conId, int raw, Color32 color)
+    public void SetConColor(int conId, int raw, Color32 color)
     {
         int device_id = (int)conId / NUM_TOUTCH;
         int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * (conId % NUM_TOUTCH) + NUM_MUGU_LEDS + raw;
