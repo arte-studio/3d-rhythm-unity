@@ -8,7 +8,8 @@ public class NoteLeds : MonoBehaviour
     private const int NUM_MUGU = 40;
     private const int NUM_CON = 40;
     private const int NUM_DEVICES = 8;
-    private const int NUM_TOUTCH = 5; // (※NUM_TOUCH の typo)
+    // private const int NUM_TOUTCH = 5; // (※NUM_TOUCH の typo)
+    public const int NUM_TOUTCH = 5; // (※NUM_TOUCH の typo) - public にして HardId で参照可能に
     
     // ★追加: 譜面レーン数 (0-16 と仮定)
     private const int NUM_LANES = 17; 
@@ -78,13 +79,8 @@ public class NoteLeds : MonoBehaviour
                 targetColor = debugOffColor;
             }
             
-            // レーンID (0-16) を 物理MUGU ID (0-39) に変換
-            int muguId = ConvertNoteIdToHard(lane);
-            
-            if (muguId != -1) // -1 は無効なレーン
-            {
-                 SetAllMuguColors(muguId, targetColor);
-            }
+            // レーンID (0-16) を 物理MUGU ID (HardId) に変換
+            SetAllMuguColors(lane, targetColor);
         }
     }
 
@@ -98,12 +94,12 @@ public class NoteLeds : MonoBehaviour
         // 変換が正しいかをチェック
         for (int lane = 0; lane < NUM_LANES; lane++)
         {
-            int muguId = ConvertNoteIdToHard(lane);
+            HardId muguId = ConvertNoteIdToHard(lane);
             int backLane = ConvertNoteIdToGame(muguId);
-            Debug.Log($"DebugMode: Lane {lane} -> MuguID {muguId} -> BackLane {backLane}");
+            Debug.Log($"DebugMode: Lane {lane} -> MuguID device:{muguId.deviceId} inner:{muguId.innerId} -> BackLane {backLane}");
             if (lane != backLane)
             {
-                Debug.LogError($"変換エラー: Lane {lane} が MuguID {muguId} を経由して BackLane {backLane} に変換されました！");
+                Debug.LogError($"変換エラー: Lane {lane} が MuguID device:{muguId.deviceId} inner:{muguId.innerId} を経由して BackLane {backLane} に変換されました！");
             }
         }
 
@@ -168,6 +164,34 @@ public class NoteLeds : MonoBehaviour
     }
     // --- ★デバッグモード用コード ここまで ---
 
+    // --- ★ HardId 構造体サポート ---
+    /// <summary>
+    /// 物理ハードIDを deviceId + innerId の組として表現する構造体
+    /// </summary>
+    public struct HardId
+    {
+        public int deviceId; // 0～7
+        public int innerId;  // 0～4
+
+        public HardId(int deviceId, int innerId)
+        {
+            this.deviceId = deviceId;
+            this.innerId = innerId;
+        }
+
+        public int ToInt()
+        {
+            return deviceId * NUM_TOUTCH + innerId;
+        }
+
+        public static HardId FromInt(int val)
+        {
+            if (val < 0) return new HardId(-1, -1);
+            return new HardId(val / NUM_TOUTCH, val % NUM_TOUTCH);
+        }
+    }
+
+
 
     void SetMuguColor(int muguId, int raw, int cow, Color32 color)
     {
@@ -176,35 +200,61 @@ public class NoteLeds : MonoBehaviour
         ledColors[device_id, index] = color;
     }
 
-    // すべてのMUGUの色を設定する
+    /// <summary>
+    /// すべてのMUGUの色を設定する
+    /// </summary>
+    /// <param name="muguId">MUGUのID（譜面上のID）</param>
+    /// <param name="color">設定する色</param>
     public void SetAllMuguColors(int muguId, Color32 color)
     {
-        // ★追加: 無効なID(-1)が来たら何もしない
+        // 無効なID(-1)が来たら何もしない
         if (muguId < 0 || muguId >= NUM_MUGU)
         {
             // Debug.LogWarning($"SetAllMuguColors: 無効な muguId {muguId} が指定されました。");
             return;
         }
 
-        // デバッグ用
+        HardId hid = ConvertNoteIdToHard(muguId);
+
         //Debug.Log("muguId" + muguId);
-        int device_id = (int)muguId / NUM_TOUTCH;
         //Debug.Log("device_id" + device_id);
         for (int i = 0; i < NUM_MUGU_LEDS; i++)
         {
-            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * (muguId % NUM_TOUTCH) + i;
+            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS - 2) * hid.innerId + i;
             //Debug.Log("index" + index);
-           ledColors[device_id, index] = color;
+            ledColors[hid.deviceId, index] = color;
         }
     }
 
+    /// <summary>
+    /// 接続ノーツの色を設定する
+    /// </summary>
+    /// <param name="conId">接続ノーツのID（譜面上のID）</param>
+    /// <param name="raw">接続ノーツ内の行番号</param>
     public void SetConColor(int conId, int raw, Color32 color)
     {
-        int device_id = (int)conId / NUM_TOUTCH;
-        int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * (conId % NUM_TOUTCH) + NUM_MUGU_LEDS + raw;
+        HardId hid = ConvertNoteIdToHard(conId);
+        int index = (NUM_MUGU_LEDS + NUM_CON_LEDS - 2) * hid.innerId + NUM_MUGU_LEDS + raw;
         // LEDのマイコンが違うので、ここで反転させる
         Color32 reverseColor = new Color32(color.g, color.r, color.b, color.a);
-        ledColors[device_id, index] = reverseColor;
+        ledColors[hid.deviceId, index] = reverseColor;
+    }
+
+    /// <summary>
+    /// 接続ノーツのすべての色を設定する
+    /// </summary>
+    /// <param name="conId">接続ノーツのID（譜面上のID）</param>
+    /// <param name="color">設定する色</param>
+    public void SetAllConColors(int conId, Color32 color)
+    {
+        HardId hid = ConvertNoteIdToHard(conId);
+        for (int i = 0; i < NUM_CON_LEDS; i++)
+        {
+            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS - 2) * hid.innerId + NUM_MUGU_LEDS + i;
+            // LEDのマイコンが違うので、ここで反転させる
+            Color32 reverseColor = new Color32(color.g, color.r, color.b, color.a);
+            ledColors[hid.deviceId, index] = reverseColor;
+        }
     }
 
     public Color32[,] GetLedColors()
@@ -228,40 +278,72 @@ public class NoteLeds : MonoBehaviour
      * @param: id (譜面レーンID 0-16)
      * @返り値: 0～39（/5でデバイスID、%5で内部ID）
      */
-    public int ConvertNoteIdToHard(int id) {
+    // 既存の int 版は残す（互換性のため）
+    // ConvertNoteIdToHard を HardId を返すように変更しました。
+    public HardId ConvertNoteIdToHard(int id) {
         // ノーツIDからLEDインデックスへの変換ロジックを実装
         // (GameManager.cs の laneCooldowns[11] と矛盾するが、元のコードを尊重)
         // ★ 5<=id<=6 の範囲を修正 (25->30)
+        HardId muguId = new HardId();
         if (0 <= id && id <= 4) {
-            return id + 20; // 20-24
+            muguId = new HardId(4, id); // 20-24
         } else if (5 <= id && id <= 6) {
-            return id + 25; // 30-31 (元のコード +30 は 35,36 になり範囲外)
+            muguId = new HardId(7, id - 5); // 30-31 (元のコード +30 は 35,36 になり範囲外)
         } else if (7 <= id && id <= 11) {
-            return id - 7; // 0-4
+            muguId = new HardId(0, id - 7); // 0-4
         } else if (12 <= id && id <= 16) {
-            return id + 3; // 15-19
+            muguId = new HardId(3, id - 12); // 15-19
         } else {
-            return -1; // 無効なIDの場合 (-1 を返すように修正)
+            return HardId.FromInt(-1); // 無効なIDの場合
         }
+        return muguId;
+    }
+
+    // 互換用: int を返すラッパー。名前を変えて二重定義の衝突を避ける。
+    public int ConvertNoteIdToHardInt(int id)
+    {
+        HardId hid = ConvertNoteIdToHard(id);
+        return hid.ToInt();
     }
 
     /**
      * 物理的なLEDのインデックス(ハードID 0-39)を譜面のID(レーンID 0-16)に変換する
      */
-    public int ConvertNoteIdToGame(int id) {
-        // ★修正: ConvertNoteIdToHard の逆変換を実装
-        if (20 <= id && id <= 24) {
-            return id - 20; // 0-4
-        } else if (30 <= id && id <= 31) {
-            return id - 25; // 5-6
-        } else if (0 <= id && id <= 4) {
-            return id + 7; // 7-11
-        } else if (15 <= id && id <= 19) {
-            return id - 3; // 12-16
+    public int ConvertNoteIdToGame(HardId hid) {
+        if (hid.deviceId < 0 || hid.innerId < 0) return -1;
+        switch (hid.deviceId) {
+            case 0:
+                if (0 <= hid.innerId && hid.innerId <= 4) {
+                    return hid.innerId + 7; // 0-4 -> 7-11
+                }
+                break;
+            case 3:
+                if (0 <= hid.innerId && hid.innerId <= 4) {
+                    return hid.innerId + 12; // 15-19 -> 12-16
+                }
+                break;
+            case 4:
+                if (0 <= hid.innerId && hid.innerId <= 4) {
+                    return hid.innerId; // 20-24 -> 0-4
+                }
+                break;
+            case 7:
+                if (0 <= hid.innerId && hid.innerId <= 1) {
+                    return hid.innerId + 5; // 30-31 -> 5-6
+                }
+                break;
         }
         
         // 上記以外のハードID (5-14, 25-29, 32-39) はどのレーンにもマッピングされていない
         return -1; // 無効なIDの場合
+    }
+
+    /// <summary>
+    /// HardId から譜面レーンIDに変換するオーバーロード
+    /// </summary>
+    public int ConvertNoteIdToGame(int hid)
+    {
+        return ConvertNoteIdToGame(HardId.FromInt(hid));
     }
 }
 

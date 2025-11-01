@@ -306,9 +306,9 @@ public class GameManager : MonoBehaviour
                     if (udpController.touchStates[dev] == null) continue;
                     for (int sen = 0; sen < 5; sen++) // NUM_TOUCH
                     {
-                        // ハードID (0-39) を 譜面レーンID (0-16) に変換
-                        int hardId = dev * 5 + sen;
-                        int lane = noteLeds.ConvertNoteIdToGame(hardId);
+                        // ハードID (deviceId + innerId) を 譜面レーンID (0-16) に変換
+                        NoteLeds.HardId hard = new NoteLeds.HardId(dev, sen);
+                        int lane = noteLeds.ConvertNoteIdToGame(hard);
                         
                         if (lane != -1) // -1 は無効レーン
                         {
@@ -430,9 +430,8 @@ public class GameManager : MonoBehaviour
                     //色変化
                     //currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.magenta);
                     PerfectPerformance(currentActiveNote.NoteObject);
-                    //noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);//notenum ではなく lane を渡す
-
-
+                    //noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.magenta);//notenum ではなく lane を渡す
+                    noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.magenta);
                     //音変化
                     EffectPlayer(perfectgood_EffectSource);
                 }
@@ -446,7 +445,7 @@ public class GameManager : MonoBehaviour
 
                     //色変化
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.white);// notenum ではなく lane を渡す
+                    noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.white);// notenum ではなく lane を渡す
                     //音変化
                     EffectPlayer(perfectgood_EffectSource);
                 }
@@ -459,7 +458,7 @@ public class GameManager : MonoBehaviour
 
                     //色変化
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.cyan);// notenum ではなく lane を渡す
+                    noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.cyan);// notenum ではなく lane を渡す
                 }
 
                 //判定確定後
@@ -480,7 +479,7 @@ public class GameManager : MonoBehaviour
                 {
                     currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.yellow);
                     // 修正: notenum ではなく lane を渡す
-                    noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.yellow);
+                    noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.yellow);
                 }
             }
         }
@@ -578,7 +577,7 @@ public class GameManager : MonoBehaviour
                     // 5. 色を設定
                     Color rainbowColor = Color.HSVToRGB(hValue, S, V);
                     mugyuPerf.SetLEDColor(r, c, rainbowColor);
-                    //noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.magenta);
+                    //noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.magenta);
                 }
             }
 
@@ -641,7 +640,7 @@ public class GameManager : MonoBehaviour
                     // Connect_LEDPerformance の SetLEDColor を使用し、
                     // 現在のインデックスのLEDだけ色を更新
                     connectPerf.SetLEDColor(0, currentLEDIndex, targetColor);
-                    //noteLeds.SetAllMuguColors(noteLeds.ConvertNoteIdToHard(currentActiveNote.Data.lane), Color.yellow);
+                    //noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.yellow);
                     noteLeds.SetConColor(0, currentLEDIndex, targetColor);
                 }
             }
@@ -698,9 +697,9 @@ public class GameManager : MonoBehaviour
     public void HandleTouchInput(int deviceId, int sensorId)
     {
         // 1. デバイスIDとセンサーIDを、ゲーム内の「レーン番号」に変換
-        // ★修正: ConvertNoteIdToGame はハードID (0-39) を受け取る
-        int hardId = deviceId * 5 + sensorId;
-        int lane = noteLeds.ConvertNoteIdToGame(hardId);
+    // ★修正: ConvertNoteIdToGame はハードID (deviceId + innerId) を受け取る
+    NoteLeds.HardId hardId = new NoteLeds.HardId(deviceId, sensorId);
+    int lane = noteLeds.ConvertNoteIdToGame(hardId);
         
         if (lane == -1)
         {
