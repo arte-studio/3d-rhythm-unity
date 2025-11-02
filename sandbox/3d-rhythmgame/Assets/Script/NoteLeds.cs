@@ -58,11 +58,12 @@ public class NoteLeds : MonoBehaviour
         // デバッグモードでなければ何もしない
         if (!isDebugMode) return;
 
+        // /*
         // 0-16 の全レーンをチェック
         for (int lane = 0; lane < NUM_LANES; lane++)
         {
             Color32 targetColor;
-            
+
             // 1. タッチ状態を最優先
             if (debugTouchStates[lane])
             {
@@ -78,10 +79,43 @@ public class NoteLeds : MonoBehaviour
             {
                 targetColor = debugOffColor;
             }
-            
+
             // レーンID (0-16) を 物理MUGU ID (HardId) に変換
             SetAllMuguColors(lane, targetColor);
         }
+        //*/
+
+        /*
+        // ハードのIDでループ
+        for (int deviceId = 0; deviceId < NUM_DEVICES; deviceId++)
+        {
+            for (int innerId = 0; innerId < NUM_TOUTCH; innerId++)
+            {
+                HardId hid = new HardId(deviceId, innerId);
+
+                Color32 targetColor;
+
+                // 1. タッチ状態を最優先
+                if (lane >= 0 && lane < NUM_LANES && debugTouchStates[lane])
+                {
+                    targetColor = debugTouchColor;
+                }
+                // 2. ループ点灯
+                else if (lane == currentDebugLoopLane)
+                {
+                    targetColor = debugLoopColor;
+                }
+                // 3. 消灯
+                else
+                {
+                    targetColor = debugOffColor;
+                }
+
+                // 色を設定
+                SetAllMuguColors(hid, targetColor);
+            }
+        }
+        //*/
     }
 
     /// <summary>
@@ -226,6 +260,17 @@ public class NoteLeds : MonoBehaviour
         }
     }
 
+    /// 
+    public void SetAllMuguColors(HardId hid, Color32 color)
+    {
+        for (int i = 0; i < NUM_MUGU_LEDS; i++)
+        {
+            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS - 2) * hid.innerId + i;
+            //Debug.Log("index" + index);
+            ledColors[hid.deviceId, index] = color;
+        }
+    }
+
     /// <summary>
     /// 接続ノーツの色を設定する
     /// </summary>
@@ -256,6 +301,9 @@ public class NoteLeds : MonoBehaviour
             ledColors[hid.deviceId, index] = reverseColor;
         }
     }
+
+    /// 
+    // public void void SetAllConColors(HardId conId, Color32 color)
 
     public Color32[,] GetLedColors()
     {
