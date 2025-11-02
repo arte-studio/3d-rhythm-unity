@@ -861,8 +861,8 @@ MonoBehaviour:
   perfectgood_EffectSource: {fileID: 40429628}
   Game_NotesData: Kodaisai_NoteData_1101
   targetTime: 0
-  perfectRange: 1
-  goodRange: 2
+  perfectRange: 2
+  goodRange: 3
   missRange: 0.5
   notesignalTime: 3
   laneIndex: 0

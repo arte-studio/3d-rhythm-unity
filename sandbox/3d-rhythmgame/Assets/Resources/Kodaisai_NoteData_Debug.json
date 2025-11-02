@@ -1,0 +1,19 @@
+{
+  "notes": [
+    { "time": 1.00, "lane": 1, "type": "touch" },
+    { "time": 5.00, "lane": 2, "type": "touch" },
+    { "time": 10.00, "lane": 3, "type": "touch" },
+    { "time": 15.00, "lane": 4, "type": "touch" },
+    { "time": 20.00, "lane": 5, "type": "touch" },
+    { "time": 25.00, "lane": 6, "type": "touch" },
+    { "time": 30.00, "lane": 7, "type": "touch" },
+    { "time": 35.00, "lane": 8, "type": "touch" },
+    { "time": 40.00, "lane": 9, "type": "touch" },
+    { "time": 45.00, "lane": 10, "type": "touch" },
+    { "time": 50.00, "lane": 11, "type": "touch" },
+    { "time": 55.00, "lane": 12, "type": "touch" },
+    { "time": 60.00, "lane": 13, "type": "touch" },
+    { "time": 65.00, "lane": 14, "type": "touch" },
+    { "time": 70.00, "lane": 15, "type": "touch" }
+  ]
+}

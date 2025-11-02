@@ -359,7 +359,7 @@ public class GameManager : MonoBehaviour
             {
                 NoteData noteData = notes[lastSpawnedNoteIndex];
 
-                // ノーツオブジェクトをプールから取得・再利用
+                /* ノーツオブジェクトをプールから取得・再利用
                 GameObject noteObject = ObjectRelocation.Instance.GetNextAvailableNote(noteData.type);
 
 
@@ -373,6 +373,21 @@ public class GameManager : MonoBehaviour
                 else
                 {
                     Debug.LogError($"Note Object for type '{noteData.type}' not available in pool. Check ObjectRelocation's JSON and mapping.");
+                }*/
+
+
+                GameObject noteObject;
+                if (noteData.type == "touch")
+                {
+                    // ★修正ポイント: レーン番号を指定してオブジェクトを取得する ★
+                    // ObjectRelocation にこのメソッドを追加する必要があります
+                    noteObject = ObjectRelocation.Instance.GetNoteObjectByLane(noteData.lane);
+                }
+                else // connect ノーツなどの場合
+                {
+                    // connect ノーツも同様にレーン番号が必要であれば GetNoteObjectByLane を使う
+                    // 現状、Connect ノーツは演出のみならプールから順番で取得しても問題ない可能性もある
+                    noteObject = ObjectRelocation.Instance.GetNextAvailableNote(noteData.type);
                 }
 
                 lastSpawnedNoteIndex++;

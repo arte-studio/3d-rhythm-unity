@@ -5,95 +5,102 @@ using UnityEngine;
 
 public class ObjectRelocation : MonoBehaviour
 {
-    [Header("JSONƒtƒ@ƒCƒ‹–¼ (ResourcesƒtƒHƒ‹ƒ_“à)")]
+    [Header("JSONãƒ•ã‚¡ã‚¤ãƒ«å (Resourcesãƒ•ã‚©ãƒ«ãƒ€å†…)")]
     public string jsonFileName = "object_positions";
 
-    [Header("ƒvƒŒƒnƒuƒ}ƒbƒsƒ“ƒO")]
+    [Header("ãƒ—ãƒ¬ãƒãƒ–ãƒãƒƒãƒ”ãƒ³ã‚°")]
     public List<PrefabMapping> prefabMappings;
 
     [HideInInspector]
-    public Dictionary<string, int> prefabCounters = new Dictionary<string, int>(); //ƒvƒŒƒnƒu–¼‚²‚Æ‚ÉƒIƒuƒWƒFƒNƒg‚ÌŒÂ”‚ğŠÇ—‚·‚é‚½‚ß‚Ì«‘‚ğ—pˆÓ‚µ‚Ä‚¢‚é
-    //ƒvƒŒƒnƒu‚Ìí—Ş‚²‚Æ‚ÉAƒŒ[ƒ“”Ô†‚²‚Æ‚ÌƒIƒuƒWƒFƒNƒgƒŠƒXƒg,ƒL[‚ªƒvƒŒƒnƒu‚Ìí—Ş–¼(•¶š—ñ)A’l‚ªƒŒ[ƒ“”Ô†‚Æ‚»‚Ìí—ŞEƒŒ[ƒ“‚É‘®‚·‚éƒIƒuƒWƒFƒNƒg
+    public Dictionary<string, int> prefabCounters = new Dictionary<string, int>(); //ãƒ—ãƒ¬ãƒãƒ–åã”ã¨ã«ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®å€‹æ•°ã‚’ç®¡ç†ã™ã‚‹ãŸã‚ã®è¾æ›¸ã‚’ç”¨æ„ã—ã¦ã„ã‚‹
+    //ãƒ—ãƒ¬ãƒãƒ–ã®ç¨®é¡ã”ã¨ã«ã€ãƒ¬ãƒ¼ãƒ³ç•ªå·ã”ã¨ã®ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãƒªã‚¹ãƒˆ,ã‚­ãƒ¼ãŒãƒ—ãƒ¬ãƒãƒ–ã®ç¨®é¡å(æ–‡å­—åˆ—)ã€å€¤ãŒãƒ¬ãƒ¼ãƒ³ç•ªå·ã¨ãã®ç¨®é¡ãƒ»ãƒ¬ãƒ¼ãƒ³ã«å±ã™ã‚‹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ
     //public Dictionary<string, Dictionary<int, GameObject>> objectByTypeAndLane= new Dictionary<string, Dictionary<int, GameObject>>();
 
-    // ƒL[: noteType ("touch", "line")
-    // ’l: ‚»‚Ìƒ^ƒCƒv‚ÌƒvƒŒƒnƒu‚©‚ç¶¬‚³‚ê‚½‘S‚Ä‚Ì GameObject ‚ÌƒŠƒXƒg
+    // ã‚­ãƒ¼: noteType ("touch", "line")
+    // å€¤: ãã®ã‚¿ã‚¤ãƒ—ã®ãƒ—ãƒ¬ãƒãƒ–ã‹ã‚‰ç”Ÿæˆã•ã‚ŒãŸå…¨ã¦ã® GameObject ã®ãƒªã‚¹ãƒˆ
     [HideInInspector]
     public Dictionary<string, List<GameObject>> noteObjectPools = new Dictionary<string, List<GameObject>>();
 
-    // GameManager‚ª—˜—p‚·‚éAŸ‚Ég—p‰Â”\‚Èƒm[ƒcƒIƒuƒWƒFƒNƒg‚ÌƒCƒ“ƒfƒbƒNƒXiƒ^ƒCƒv‚²‚Æj
+    // GameManagerãŒåˆ©ç”¨ã™ã‚‹ã€æ¬¡ã«ä½¿ç”¨å¯èƒ½ãªãƒãƒ¼ãƒ„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ï¼ˆã‚¿ã‚¤ãƒ—ã”ã¨ï¼‰
     [HideInInspector]
     public Dictionary<string, int> nextAvailableNoteIndex = new Dictionary<string, int>();
 
-    public static ObjectRelocation Instance; // ƒVƒ“ƒOƒ‹ƒgƒ“ƒCƒ“ƒXƒ^ƒ“ƒX
+    public static ObjectRelocation Instance; // ã‚·ãƒ³ã‚°ãƒ«ãƒˆãƒ³ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹
 
     [HideInInspector]
-    public List<GameObject> spawnedNotes = new List<GameObject>(); //¶¬‚µ‚½ touch_notes ‚ğ•Û‚·‚éƒŠƒXƒg
+    public List<GameObject> spawnedNotes = new List<GameObject>(); //ç”Ÿæˆã—ãŸ touch_notes ã‚’ä¿æŒã™ã‚‹ãƒªã‚¹ãƒˆ
 
 
-    //ƒVƒ“ƒOƒ‹ƒgƒ“
+
+    // ä¾‹: ãƒ¬ãƒ¼ãƒ³ç•ªå·ã‚’ã‚­ãƒ¼ã«ã€ãƒãƒ¼ãƒ„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’æ ¼ç´ã™ã‚‹è¾æ›¸
+    // Note: å®Ÿéš›ã¯ touch/connect ã®ç¨®é¡ã§åˆ†ã‘ã‚‹å¿…è¦ãŒã‚ã‚‹ã‹ã‚‚ã—ã‚Œã¾ã›ã‚“
+    private Dictionary<int, GameObject> touchNoteByLane = new Dictionary<int, GameObject>();
+
+    //ã‚·ãƒ³ã‚°ãƒ«ãƒˆãƒ³
     void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
 
-    //Àsƒ{ƒ^ƒ“‰Ÿ‚µ‚½‚ç
+    //å®Ÿè¡Œãƒœã‚¿ãƒ³æŠ¼ã—ãŸã‚‰
     void Start()
     {
+
         LoadObjectsFromJson();
     }
 
-    //Jsonƒtƒ@ƒCƒ‹‚©‚ç“Ç‚İ‚ñ‚¾À•W‚ÆƒCƒ“ƒXƒyƒNƒ^ã‚Éw’è‚µ‚½ƒvƒŒƒnƒu‚ğ•¡»‚µ‚Ä”z’u‚·‚é
+
+    //Jsonãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰èª­ã¿è¾¼ã‚“ã åº§æ¨™ã¨ã‚¤ãƒ³ã‚¹ãƒšã‚¯ã‚¿ä¸Šã«æŒ‡å®šã—ãŸãƒ—ãƒ¬ãƒãƒ–ã‚’è¤‡è£½ã—ã¦é…ç½®ã™ã‚‹
     void LoadObjectsFromJson()
     {
-        // ƒv[ƒ‹‚ÆƒCƒ“ƒfƒbƒNƒX‚Ì‰Šú‰»
+        // ãƒ—ãƒ¼ãƒ«ã¨ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã®åˆæœŸåŒ–
         noteObjectPools.Clear();
         nextAvailableNoteIndex.Clear();
 
-        string path = Path.Combine(Application.dataPath, "Resources", jsonFileName + ".json"); //ƒpƒX‚Ì¶¬
-        if (!File.Exists(path)) //ƒpƒX‚ª¦‚·êŠ‚ÉJsonƒtƒ@ƒCƒ‹‚ª‚È‚¯‚ê‚Î
+        string path = Path.Combine(Application.dataPath, "Resources", jsonFileName + ".json"); //ãƒ‘ã‚¹ã®ç”Ÿæˆ
+        if (!File.Exists(path)) //ãƒ‘ã‚¹ãŒç¤ºã™å ´æ‰€ã«Jsonãƒ•ã‚¡ã‚¤ãƒ«ãŒãªã‘ã‚Œã°
         {
-            Debug.LogError($"JSONƒtƒ@ƒCƒ‹‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ: {path}");
+            Debug.LogError($"JSONãƒ•ã‚¡ã‚¤ãƒ«ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“: {path}");
             return;
         }
 
-        string json = File.ReadAllText(path); //ƒpƒX‚É‚ ‚éJsonƒtƒ@ƒCƒ‹‚ğ‚·‚×‚Ä“Ç‚İ‚ñ‚Å•¶š—ñ‚É•ÏŠ·
-        SavedObjectList data = JsonUtility.FromJson<SavedObjectList>(json); //•¶š—ñ‚©‚çUnity‚ÌƒIƒuƒWƒFƒNƒg‚É•ÏŠ·
+        string json = File.ReadAllText(path); //ãƒ‘ã‚¹ã«ã‚ã‚‹Jsonãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã™ã¹ã¦èª­ã¿è¾¼ã‚“ã§æ–‡å­—åˆ—ã«å¤‰æ›
+        SavedObjectList data = JsonUtility.FromJson<SavedObjectList>(json); //æ–‡å­—åˆ—ã‹ã‚‰Unityã®ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã«å¤‰æ›
 
-        //ƒvƒŒƒnƒu–¼‚ª‚ ‚èAƒ}ƒbƒsƒ“ƒO‚µ‚Ä‚ ‚éƒvƒŒƒnƒu‚ğ•¡»A”z’u‚·‚é
+        //ãƒ—ãƒ¬ãƒãƒ–åãŒã‚ã‚Šã€ãƒãƒƒãƒ”ãƒ³ã‚°ã—ã¦ã‚ã‚‹ãƒ—ãƒ¬ãƒãƒ–ã‚’è¤‡è£½ã€é…ç½®ã™ã‚‹
         foreach (var obj in data.objects)
         {
-            var mapping = GetMappedPrefab(obj.prefabName); // JSON‚ÌŒ³–¼‚É‘Î‰‚·‚éPrefab‚ğ’T‚·
+            var mapping = GetMappedPrefab(obj.prefabName); // JSONã®å…ƒåã«å¯¾å¿œã™ã‚‹Prefabã‚’æ¢ã™
             if (mapping == null)
             {
-                //Debug.LogWarning($"ƒ}ƒbƒsƒ“ƒO‚³‚ê‚Ä‚¢‚È‚¢ƒvƒŒƒnƒu–¼: {obj.prefabName}");
+                //Debug.LogWarning($"ãƒãƒƒãƒ”ãƒ³ã‚°ã•ã‚Œã¦ã„ãªã„ãƒ—ãƒ¬ãƒãƒ–å: {obj.prefabName}");
                 continue;
             }
 
-            // prefabCounters ‚Ì’l‚ğ index ‚Æ‚µ‚Äg‚¤
+            // prefabCounters ã®å€¤ã‚’ index ã¨ã—ã¦ä½¿ã†
             /*if (!prefabCounters.ContainsKey(mapping.originalName))
                 prefabCounters[mapping.originalName] = 0;
 
             int index = prefabCounters[mapping.originalName];
             string newName = $"{mapping.originalName}_{index}";*/
 
-            // Šù‘¶‚Ì”z’uƒR[ƒh: ƒIƒuƒWƒFƒNƒg‚ğŒÅ’èˆÊ’u‚É¶¬
+            // æ—¢å­˜ã®é…ç½®ã‚³ãƒ¼ãƒ‰: ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’å›ºå®šä½ç½®ã«ç”Ÿæˆ
             GameObject instance = Instantiate(mapping.newPrefab, new Vector3(obj.x, obj.y, obj.z), Quaternion.Euler(obj.rx, obj.ry, obj.rz));
             instance.name = $"{mapping.originalName}_{prefabCounters.GetValueOrDefault(mapping.originalName)}";
 
-            // instance.SetActive(false); // ƒm[ƒc‚ªŒÅ’èˆÊ’u‚É‚ ‚é‚½‚ßA‚±‚±‚Å‚Í”ñ•\¦‚É‚¹‚¸AF‚Å‘Ò‹@ó‘Ô‚ğ•\Œ»‚µ‚Ü‚·B
+            // instance.SetActive(false); // ãƒãƒ¼ãƒ„ãŒå›ºå®šä½ç½®ã«ã‚ã‚‹ãŸã‚ã€ã“ã“ã§ã¯éè¡¨ç¤ºã«ã›ãšã€è‰²ã§å¾…æ©ŸçŠ¶æ…‹ã‚’è¡¨ç¾ã—ã¾ã™ã€‚
 
-            // C³“_: objectByTypeAndLane ‚Ì‘ã‚í‚è‚É noteObjectPools ‚É“o˜^
+            // ä¿®æ­£ç‚¹: objectByTypeAndLane ã®ä»£ã‚ã‚Šã« noteObjectPools ã«ç™»éŒ²
             string type = mapping.noteType;
             if (!noteObjectPools.ContainsKey(type))
             {
                 noteObjectPools[type] = new List<GameObject>();
-                nextAvailableNoteIndex[type] = 0; // Ÿ‚Ég‚¤ƒCƒ“ƒfƒbƒNƒX‚ğ0‚É‰Šú‰»
+                nextAvailableNoteIndex[type] = 0; // æ¬¡ã«ä½¿ã†ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’0ã«åˆæœŸåŒ–
             }
             noteObjectPools[type].Add(instance);
 
-            // Šù‘¶‚ÌƒJƒEƒ“ƒ^[‚ÆƒŠƒXƒg‚ÌXViŒİŠ·«‚Ì‚½‚ß‚Éc‚·j
+            // æ—¢å­˜ã®ã‚«ã‚¦ãƒ³ã‚¿ãƒ¼ã¨ãƒªã‚¹ãƒˆã®æ›´æ–°ï¼ˆäº’æ›æ€§ã®ãŸã‚ã«æ®‹ã™ï¼‰
             prefabCounters[mapping.originalName] = prefabCounters.GetValueOrDefault(mapping.originalName) + 1;
             spawnedNotes.Add(instance);
 
@@ -111,7 +118,7 @@ public class ObjectRelocation : MonoBehaviour
         return null;
     }
 
-    //V‹Kƒƒ\ƒbƒh: Ÿ‚Ég—p‚·‚éƒm[ƒcƒIƒuƒWƒFƒNƒg‚ğæ“¾EÄ—˜—p
+    //æ–°è¦ãƒ¡ã‚½ãƒƒãƒ‰: æ¬¡ã«ä½¿ç”¨ã™ã‚‹ãƒãƒ¼ãƒ„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’å–å¾—ãƒ»å†åˆ©ç”¨
     public GameObject GetNextAvailableNote(string noteType)
     {
         if (!noteObjectPools.ContainsKey(noteType) || noteObjectPools[noteType].Count == 0)
@@ -125,9 +132,29 @@ public class ObjectRelocation : MonoBehaviour
 
         GameObject note = pool[currentIndex];
 
-        // Ÿ‚É—˜—p‚·‚éƒIƒuƒWƒFƒNƒg‚ÌƒCƒ“ƒfƒbƒNƒX‚ğXVizŠÂ‚³‚¹‚éj
+        // æ¬¡ã«åˆ©ç”¨ã™ã‚‹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’æ›´æ–°ï¼ˆå¾ªç’°ã•ã›ã‚‹ï¼‰
         nextAvailableNoteIndex[noteType] = (currentIndex + 1) % pool.Count;
 
         return note;
     }
+
+    public GameObject GetNoteObjectByLane(int laneIndex)
+    {
+        if (touchNoteByLane.ContainsKey(laneIndex))
+        {
+            GameObject note = touchNoteByLane[laneIndex];
+
+            // â˜…é‡è¦: ObjectRelocation å´ã§ãƒãƒ¼ãƒ„ã®çŠ¶æ…‹ã‚’ãƒªã‚»ãƒƒãƒˆï¼ˆãƒ—ãƒ¼ãƒ«ã‹ã‚‰å–ã‚Šå‡ºã™ï¼‰
+            // GetNextAvailableNote() ã®å†…éƒ¨ã§è¡Œã£ã¦ã„ãŸåˆæœŸåŒ–å‡¦ç†ã‚’ã“ã“ã§è¡Œã†
+            note.SetActive(true); // ã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã«ã™ã‚‹
+            // transform ã®è¨­å®šãªã©...
+
+            return note;
+        }
+        Debug.LogError($"Lane {laneIndex} ã«å¯¾å¿œã™ã‚‹ãƒãƒ¼ãƒ„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
+        return null;
+    }
+
+    // â˜…ãƒ’ãƒ³ãƒˆ: ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆç”Ÿæˆæ™‚ï¼ˆStartæ™‚ï¼‰ã« touchNoteByLane ã«æ ¼ç´ã™ã‚‹å‡¦ç†ãŒå¿…è¦ã§ã™ã€‚
+
 }
