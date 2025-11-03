@@ -97,6 +97,17 @@ public class UdpController : MonoBehaviour
     private float lastUdpSendTime = 0f;
 
     /// <summary>
+    /// 現在の実効 UDP 送信レートを返します（Inspector 設定に従った値）。
+    /// 1 / udpInterval と同等です。
+    /// </summary>
+    public float CurrentUdpFps => udpInterval > 0f ? 1f / udpInterval : 0f;
+
+    /// <summary>
+    /// 最終送信からの経過秒数を返します（メインスレッドの Time.time を参照）。
+    /// </summary>
+    public float TimeSinceLastSend => Time.time - lastUdpSendTime;
+
+    /// <summary>
     /// スクリプトが有効になった最初のフレームで呼ばれる初期化処理
     /// </summary>
     void Awake()
