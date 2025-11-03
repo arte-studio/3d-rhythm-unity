@@ -73,6 +73,8 @@ public class UdpController : MonoBehaviour
     private float[] lastDiscoveryTime = new float[NUM_DEVICES];
     // 最後にタッチパケットを受信した時刻 (Time.time)
     private float[] lastTouchTime = new float[NUM_DEVICES];
+    // 最後に各センサがタッチされた時刻 [deviceId][sensorId]
+    private float[][] lastTouchTimePerSensor;
     // StatusDisplay用の文字列を構築 (GC Alloc対策)
     private StringBuilder statusBuilder = new StringBuilder(); 
 
@@ -193,6 +195,20 @@ public class UdpController : MonoBehaviour
         // キューにデータがなくなるまで、メインスレッドで安全に処理する
         while (touchEventQueue.TryDequeue(out var touchEvent))
         {
+            // センサごとの最終タッチ時刻を更新
+            if (touchEvent.deviceId >= 0 && touchEvent.deviceId < NUM_DEVICES && touchEvent.sensorId >= 0 && touchEvent.sensorId < NUM_TOUCH)
+            {
+                if (lastTouchTimePerSensor == null)
+                {
+                    // 念のため初期化（通常は InitializeArrays() で初期化済み）
+                    lastTouchTimePerSensor = new float[NUM_DEVICES][];
+                    for (int d = 0; d < NUM_DEVICES; d++) lastTouchTimePerSensor[d] = new float[NUM_TOUCH];
+                }
+                lastTouchTimePerSensor[touchEvent.deviceId][touchEvent.sensorId] = Time.time;
+                // デバイス全体の最終タッチ時刻も更新
+                lastTouchTime[touchEvent.deviceId] = Time.time;
+            }
+
             if (GameManager.Instance != null)
             {
                 // GameManager にタッチイベントを通知
@@ -264,6 +280,10 @@ public class UdpController : MonoBehaviour
             // 時刻を 0f (未受信) で初期化
             lastDiscoveryTime[i] = 0f;
             lastTouchTime[i] = 0f;
+            // センサごとの最終タッチ時刻を初期化
+            if (lastTouchTimePerSensor == null) lastTouchTimePerSensor = new float[NUM_DEVICES][];
+            lastTouchTimePerSensor[i] = new float[NUM_TOUCH];
+            for (int j = 0; j < NUM_TOUCH; j++) lastTouchTimePerSensor[i][j] = 0f;
         }
 
         arraysInitialized = true;
@@ -640,6 +660,28 @@ public class UdpController : MonoBehaviour
             {
                 // まだ一度もタッチパケットを受信していない
                 statusBuilder.Append("LastTouch: N/A");
+            }
+
+            // センサごとの最終タッチ時刻を表示
+            statusBuilder.Append(" ");
+            statusBuilder.Append("Sensors:");
+            if (lastTouchTimePerSensor != null && lastTouchTimePerSensor.Length > i && lastTouchTimePerSensor[i] != null)
+            {
+                for (int s = 0; s < NUM_TOUCH; s++)
+                {
+                    float ts = lastTouchTimePerSensor[i][s];
+                    if (ts > 0f)
+                    {
+                        // 表示は絶対時刻 (Time.time)、色付けは経過時間で判定
+                        float elapsedSensor = currentTime - ts;
+                        string sensorColor = (elapsedSensor > 2.0f) ? "<color=red>" : "<color=green>";
+                        statusBuilder.Append($" S{s}:{sensorColor}{ts:F1}</color>");
+                    }
+                    else
+                    {
+                        statusBuilder.Append($" S{s}:N/A");
+                    }
+                }
             }
 
             statusBuilder.AppendLine(); // 次の行へ (改行)

@@ -28,10 +28,10 @@ public class StatusDisplay : MonoBehaviour
         // それらが収まるように、BoxとLabelのサイズを調整します。
         
         // 1行あたり約20ピクセルと仮定し、マージンを含めて高さを決定
-        float boxHeight = 210f; // 9行 * 20px + タイトル(20px) + 余白(10px)
+        float boxHeight = 250f; // 9行 * 20px + タイトル(20px) + 余白(10px)
         
         // 横幅も "First: ...s ago. LastTouch: ...s ago" が収まるように広げます
-        float boxWidth = 500f; 
+        float boxWidth = 800f; 
 
         // 画面の左上 (10, 10) の位置にボックスを描画
         GUI.Box(new Rect(10, 10, boxWidth, boxHeight), "Current Status");
