@@ -650,8 +650,11 @@ public class UdpController : MonoBehaviour
                 // 最後にタッチパケットを受信してからの経過時間 (色分け判定用)
                 float elapsed = currentTime - lastTouch;
                 
-                // 2秒以上途絶えたら警告 (赤色)
-                string colorTag = (elapsed > 2.0f) ? "<color=red>" : "<color=green>";
+                // 経過時間に応じて色分け (1s 以下: 緑, 1-2s: 黄, >2s: 赤)
+                string colorTag;
+                if (elapsed > 2.0f) colorTag = "<color=red>";
+                else if (elapsed > 0.5f) colorTag = "<color=yellow>";
+                else colorTag = "<color=green>";
                 
                 // 最終タッチ時刻を表示
                 statusBuilder.Append($"LastTouch: {colorTag}{lastTouch:F1}</color>");
@@ -674,7 +677,10 @@ public class UdpController : MonoBehaviour
                     {
                         // 表示は絶対時刻 (Time.time)、色付けは経過時間で判定
                         float elapsedSensor = currentTime - ts;
-                        string sensorColor = (elapsedSensor > 2.0f) ? "<color=red>" : "<color=green>";
+                        string sensorColor;
+                        if (elapsedSensor > 2.0f) sensorColor = "<color=red>";
+                        else if (elapsedSensor > 1.0f) sensorColor = "<color=yellow>";
+                        else sensorColor = "<color=green>";
                         statusBuilder.Append($" S{s}:{sensorColor}{ts:F1}</color>");
                     }
                     else
