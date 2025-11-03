@@ -83,7 +83,7 @@ public class UdpController : MonoBehaviour
     // ノーツ用LEDパケット (ID, Type, 470 * 3 bytes)
     private byte[] notePacket = new byte[2 + NUM_NOTE_LEDS * 3];
 
-    private lineterm term;
+    private PerfLeds perfLedsComponent;
     private NoteLeds noteLedsComponent;
     // private TouchNotes_Flag touchNotesFlagComponent; // 削除: GameManagerが処理するため不要
 
@@ -99,18 +99,18 @@ public class UdpController : MonoBehaviour
     {
         Application.targetFrameRate = 60; // 60fpsに設定
 
-        term = FindFirstObjectByType<lineterm>();
-        if (term == null)
+        perfLedsComponent = FindFirstObjectByType<PerfLeds>();
+        if (perfLedsComponent == null)
         {
-            Debug.LogError("lineterm コンポーネントが見つかりません．UdpController を無効化します．");
+            Debug.LogError("PerfLeds コンポーネントが見つかりません．UdpController を無効化します．");
             enabled = false;
             return;
         }
 
-        // lineterm の finalLedData が利用可能か確認
-        if (term.finalLedData == null)
+        // PerfLeds の perfLedData が利用可能か確認
+        if (perfLedsComponent.perfLedData == null)
         {
-            Debug.LogError("lineterm.finalLedData が参照できません．lineterm.cs側で public に設定されているか，または初期化が完了しているか確認してください．");
+            Debug.LogError("PerfLeds.perfLedData が参照できません．PerfLeds.cs側で public に設定されているか，または初期化が完了しているか確認してください．");
             enabled = false;
             return;
         }
@@ -266,10 +266,10 @@ public class UdpController : MonoBehaviour
     }
 
     /// <summary>
-    /// lineterm.cs の ConvertID と同じロジック．
-    /// 譜面ID (0-89) を lineterm の物理ストリップID (0-89) に変換する．
+    /// PerfLeds.cs の ConvertID と同じロジック．
+    /// 譜面ID (0-89) を PerfLeds の物理ストリップID (0-89) に変換する．
     /// </summary>
-    private int ConvertLinetermID(int i)
+    private int ConvertPerfLedsID(int i)
     {
         if (i < 0 || i >= 90) return -1; // 範囲外チェック
         int n = i % 30 * 3;
@@ -284,10 +284,10 @@ public class UdpController : MonoBehaviour
     /// </summary>
     public void SendAllLedData()
     {
-        // lineterm が準備完了しているかチェック
-        if (!arraysInitialized || sendClient == null || term.finalLedData == null || term.finalLedData.Length < (90 * BYTES_PER_STRIP))
+        // PerfLeds が準備完了しているかチェック
+        if (!arraysInitialized || sendClient == null || perfLedsComponent.perfLedData == null || perfLedsComponent.perfLedData.Length < (90 * BYTES_PER_STRIP))
         {
-            // lineterm がまだデータを生成していない (または初期化中)
+            // PerfLeds がまだデータを生成していない (または初期化中)
             return;
         }
         
@@ -312,7 +312,7 @@ public class UdpController : MonoBehaviour
                 perfPacket[1] = (byte)i;
                 
                 // --- 根本修正 (GC対策) ---
-                // byte[] ledData = term.GetBytes2(begin, end); // ★削除 (GCの原因)
+                // byte[] ledData = perfLedsComponent.GetBytes2(begin, end); // ★削除 (GCの原因)
 
                 // このパケットで送信するストリップ数 (通常4, デバイス7は2)
                 int numStripsThisPacket = (deviceId == 7) ? 2 : 4;
@@ -331,21 +331,21 @@ public class UdpController : MonoBehaviour
                     int noteId = beginNoteId + j; 
                     
                     // 物理ストリップID (0-89) に変換
-                    int physicalStripId = ConvertLinetermID(noteId); 
+                    int physicalStripId = ConvertPerfLedsID(noteId); 
 
                     // 物理IDが不正 (範囲外) の場合はスキップ
                     if (physicalStripId == -1)
                     {
-                        Debug.LogWarning($"ConvertLinetermID({noteId}) が無効な値 -1 を返しました．");
+                        Debug.LogWarning($"ConvertPerfLedsID({noteId}) が無効な値 -1 を返しました．");
                         destOffset += BYTES_PER_STRIP; // オフセットだけ進めておく (データはコピーされない)
                         continue; 
                     }
 
-                    // コピー元のオフセット (finalLedData の当該ストリップの開始位置)
+                    // コピー元のオフセット (perfLedData の当該ストリップの開始位置)
                     int sourceOffset = physicalStripId * BYTES_PER_STRIP;
 
                     // 境界チェック (安全のため)
-                    if (term.finalLedData.Length < sourceOffset + BYTES_PER_STRIP ||
+                    if (perfLedsComponent.perfLedData.Length < sourceOffset + BYTES_PER_STRIP ||
                         perfPacket.Length < destOffset + BYTES_PER_STRIP)
                     {
                         Debug.LogError($"[GC Fix] Array.Copy 境界外エラー．noteId={noteId}, physicalId={physicalStripId}");
@@ -353,8 +353,8 @@ public class UdpController : MonoBehaviour
                         continue; // このストリップのコピーをスキップ
                     }
 
-                    // lineterm の finalLedData から perfPacket に 1ストリップ分(360 bytes)コピー
-                    Array.Copy(term.finalLedData, sourceOffset, perfPacket, destOffset, BYTES_PER_STRIP);
+                    // PerfLeds の perfLedData から perfPacket に 1ストリップ分(360 bytes)コピー
+                    Array.Copy(perfLedsComponent.perfLedData, sourceOffset, perfPacket, destOffset, BYTES_PER_STRIP);
 
                     // 次のコピー先オフセット
                     destOffset += BYTES_PER_STRIP;
