@@ -64,5 +64,43 @@ public class StatusDisplay : MonoBehaviour
         // UdpController側で <color> タグを使用しているため、
         // デフォルトのGUIStyle (richText=true) で自動的に色付きで描画されます
         GUI.Label(new Rect(labelX, labelY, labelWidth, labelHeight), statusText + "\n\n" + fpsInfo + udpInfo);
+
+        // -----------------------------
+        // 画面中央下にゲーム操作ボタンとスコアを表示
+        // -----------------------------
+        var gm = GameManager.Instance;
+        string scoreText = "Score: N/A";
+        if (gm != null)
+        {
+            scoreText = $"Score: {gm.CurrentScore}";
+        }
+
+        // ボタンサイズと位置
+        int btnW = 120;
+        int btnH = 40;
+        int spacing = 12;
+        int totalW = btnW * 3 + spacing * 2;
+        float startX = (Screen.width - totalW) / 2f;
+        float startY = Screen.height - btnH - 20f;
+
+        // スコア表示（ボタンのすぐ上）
+        var scoreRect = new Rect(startX, startY - 30f, totalW, 24f);
+        GUI.Box(scoreRect, scoreText);
+
+        // Start / Pause / Reset ボタン
+        if (GUI.Button(new Rect(startX, startY, btnW, btnH), gm != null && gm.IsPlaying && !gm.IsPaused ? "Playing" : "Start"))
+        {
+            if (gm != null) gm.StartGame();
+        }
+
+        if (GUI.Button(new Rect(startX + btnW + spacing, startY, btnW, btnH), "Pause"))
+        {
+            if (gm != null) gm.PauseGame();
+        }
+
+        if (GUI.Button(new Rect(startX + (btnW + spacing) * 2, startY, btnW, btnH), "Reset"))
+        {
+            if (gm != null) gm.ResetGame();
+        }
     }
 }

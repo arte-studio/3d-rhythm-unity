@@ -7,6 +7,7 @@ using UnityEditor.Experimental.GraphView;
 #endif
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 
 [System.Serializable] //クラス・構造体をシリアライズ可能にする、データの保存・転送、Unityのインスペクタ表示
 public class NoteData
@@ -84,6 +85,12 @@ public class GameManager : MonoBehaviour
     public bool isDebugMode = false;
     // --- ★修正ここまで ---
 
+    [Header("Game Control")]
+    [Tooltip("自動でゲームを開始するか。Inspectorで切り替え可能。")]
+    public bool autoStart = false;
+    [Tooltip("Scene の VideoPlayer を参照 (任意)。未設定時は自動検索します)")]
+    public UnityEngine.Video.VideoPlayer videoPlayer;
+
     /* 音源ソース */
     [Header("MusicSource")]
     public AudioSource Game_MusicSource;      // 本番のゲームの音源オブジェクトのAudioSourceをセット
@@ -147,7 +154,124 @@ public class GameManager : MonoBehaviour
 
     //再生中かどうか
     bool isplaying = false;
+    // 一時停止フラグ
+    private bool isPaused = false;
+    // 一時停止時の DSP 時刻
+    private double pauseDspTime = 0.0;
 
+    public bool IsPlaying => isplaying;
+    public bool IsPaused => isPaused;
+    public int CurrentScore => Touch_score;
+
+    // ゲーム開始 (まだ開始していない場合)、一時停止中なら再開
+    public void StartGame()
+    {
+        Debug.Log("StartGame() called. isplaying=" + isplaying + " isPaused=" + isPaused);
+
+        if (isPaused)
+        {
+            Debug.Log("Resuming game from paused state.");
+            ResumeGame();
+            return;
+        }
+
+        // Visuals / LED が初期化されているかを念のため確認してから開始
+        try
+        {
+            if (mugyu_LEDPerformance != null)
+            {
+                foreach (var m in mugyu_LEDPerformance)
+                {
+                    if (m != null) m.SetLEDGenerate();
+                }
+            }
+            if (connect_LEDPerformance != null)
+            {
+                foreach (var c in connect_LEDPerformance)
+                {
+                    if (c != null) c.SetLEDGenerate();
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("Error while initializing LED visuals: " + ex.Message);
+        }
+
+        if (!isplaying)
+        {
+            if (Game_MusicSource == null)
+            {
+                Debug.LogError("Cannot start game: Game_MusicSource is not assigned in the inspector.");
+                return;
+            }
+
+            // 動画があれば再生を開始
+            if (videoPlayer == null)
+            {
+                videoPlayer = FindObjectOfType<UnityEngine.Video.VideoPlayer>();
+            }
+            if (videoPlayer != null)
+            {
+                try
+                {
+                    videoPlayer.Play();
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning("VideoPlayer Play failed: " + ex.Message);
+                }
+            }
+
+            Debug.Log("Starting GameFlow coroutine from StartGame().");
+            StartCoroutine(GameFlow());
+        }
+    }
+
+    // 一時停止
+    public void PauseGame()
+    {
+        if (!isplaying || isPaused) return;
+        // 音楽を一時停止し、DSP 時刻を保存
+        if (Game_MusicSource != null && Game_MusicSource.isPlaying)
+        {
+            Game_MusicSource.Pause();
+        }
+        pauseDspTime = AudioSettings.dspTime;
+        isPaused = true;
+    }
+
+    // 再開
+    public void ResumeGame()
+    {
+        if (!isPaused) return;
+        // 再開時には StartTime をシフトして、CurrentTime が途切れないようにする
+        double resumeDsp = AudioSettings.dspTime;
+        double pausedDuration = resumeDsp - pauseDspTime;
+        StartTime += pausedDuration;
+        if (Game_MusicSource != null)
+        {
+            Game_MusicSource.UnPause();
+        }
+        // 動画も再開
+        if (videoPlayer == null) videoPlayer = FindObjectOfType<UnityEngine.Video.VideoPlayer>();
+        if (videoPlayer != null)
+        {
+            try { videoPlayer.Play(); } catch { }
+        }
+        isPaused = false;
+    }
+
+    // リセット: シーンをリロードして初期化する（簡潔で安全な方法）
+    public void ResetGame()
+    {
+        // 動画が再生中なら停止しておく
+        if (videoPlayer != null)
+        {
+            try { videoPlayer.Stop(); } catch { }
+        }
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
     private NoteData[] notes;
     private ActiveNote[] activeNotes; //  譜面データ全てのActiveNoteを管理
     private int lastSpawnedNoteIndex = 0; // 最後にプールからオブジェクトを割り当てたノーツのJSONインデックス
@@ -230,12 +354,13 @@ public class GameManager : MonoBehaviour
         {
             noteLeds.StartDebugMode();
             Debug.Log("デバッグモードに入りました");
-        } 
-        else
+        }
+
+        // autoStart が true の場合のみ自動で GameFlow を開始する
+        if (autoStart && !isDebugMode)
         {
-            // 通常モードで開始
             StartCoroutine(GameFlow());
-            Debug.Log("通常モードで開始します");
+            Debug.Log("autoStart により自動開始します");
         }
     }
 
