@@ -408,7 +408,7 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < notes_isused.Length; i++) notes_isused[i] = false;
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
         // 追加: クールダウンタイマーの更新
         if (isplaying)
@@ -535,10 +535,12 @@ public class GameManager : MonoBehaviour
             float diff = (float)(CurrentTime - targetTime);
 
             // TouchNotes_judge() の for ループの先頭付近
+            /* 
             if (notenum < activeNotes.Length && activeNotes[notenum] != null)
             {
-                //Debug.Log($"Checking Note Index: {notenum}, IsUsed: {activeNotes[notenum].IsUsed}");
+                Debug.Log($"Checking Note Index: {notenum}, IsUsed: {activeNotes[notenum].IsUsed}");
             }
+            //*/
 
             // ノーツの判定時間かどうか
             if ((CurrentTime >= targetTime - goodRange)&&(CurrentTime <= targetTime + goodRange + missRange))
@@ -571,7 +573,7 @@ public class GameManager : MonoBehaviour
                     Debug.Log($"GOOD! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
 
                     //色変化
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
+                    //currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
                     noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.white);// notenum ではなく lane を渡す
                     //音変化
                     EffectPlayer(perfectgood_EffectSource);
@@ -584,7 +586,7 @@ public class GameManager : MonoBehaviour
                     Debug.Log($"MISS! lane {currentActiveNote.Data.lane} Time: {CurrentTime:F3}");
 
                     //色変化
-                    currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
+                    //currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
                     noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.cyan);// notenum ではなく lane を渡す
                 }
 
