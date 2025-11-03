@@ -13,6 +13,8 @@ public class StatusDisplay : MonoBehaviour
 
     // UdpController の参照をキャッシュ
     private UdpController udpController;
+    // フレームレート平滑化用 (指数移動平均)
+    private float fpsAverage = 0f;
 
     /// <summary>
     /// IMGUIを描画するためのメソッド (毎フレーム呼ばれる)
@@ -42,8 +44,14 @@ public class StatusDisplay : MonoBehaviour
         float labelWidth = boxWidth - 20; // Box幅 - 左右パディング(10*2)
         float labelHeight = boxHeight - 30; // Box高 - タイトル分(20) - 下部パディング(10)
 
-        // UDP 情報を付与
-        string udpInfo = "";
+    // FPS を更新 (unscaledDeltaTime を使って timeScale の影響を排除)
+    float currentFps = 1f / Mathf.Max(0.0001f, Time.unscaledDeltaTime);
+    if (fpsAverage <= 0f) fpsAverage = currentFps;
+    fpsAverage = Mathf.Lerp(fpsAverage, currentFps, 0.1f);
+
+    // UDP 情報を付与
+    string udpInfo = "";
+    string fpsInfo = string.Format("FPS: {0:F1}", fpsAverage);
         if (udpController == null)
             udpController = FindObjectOfType<UdpController>();
 
@@ -55,6 +63,6 @@ public class StatusDisplay : MonoBehaviour
         // ラベルを描画
         // UdpController側で <color> タグを使用しているため、
         // デフォルトのGUIStyle (richText=true) で自動的に色付きで描画されます
-        GUI.Label(new Rect(labelX, labelY, labelWidth, labelHeight), statusText + udpInfo);
+        GUI.Label(new Rect(labelX, labelY, labelWidth, labelHeight), statusText + "\n\n" + fpsInfo + udpInfo);
     }
 }
