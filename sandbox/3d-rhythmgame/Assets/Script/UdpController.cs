@@ -87,12 +87,28 @@ public class UdpController : MonoBehaviour
     private NoteLeds noteLedsComponent;
     // private TouchNotes_Flag touchNotesFlagComponent; // 削除: GameManagerが処理するため不要
 
+    [Header("UDP Settings")]
+    [Tooltip("UDP送信の更新頻度（FPS）。1〜120の範囲で指定してください。")]
+    [UnityEngine.Range(1, 120)]
+    public int udpFps = 60;
+
+    // 内部用：送信間隔（秒）と最終送信時刻
+    private float udpInterval = 1f / 60f;
+    private float lastUdpSendTime = 0f;
+
     /// <summary>
     /// スクリプトが有効になった最初のフレームで呼ばれる初期化処理
     /// </summary>
     void Awake()
     {
         InitializeArrays();
+    }
+
+    // Inspector上でudpFpsを変更したときに即時反映する (Editor実行時およびインスペクタ編集時)
+    void OnValidate()
+    {
+        udpFps = Mathf.Clamp(udpFps, 1, 120);
+        udpInterval = 1f / (float)udpFps;
     }
 
     void Start()
@@ -129,6 +145,11 @@ public class UdpController : MonoBehaviour
 
         // テスト用にLEDデータを初期化（不要な場合はコメントアウトしてください）
         InitializeTestData();
+
+        // UDP 送信間隔の初期化
+        udpFps = Mathf.Clamp(udpFps, 1, 120);
+        udpInterval = 1f / (float)udpFps;
+        lastUdpSendTime = Time.time - udpInterval; // 起動直後にすぐ送信されるように
     }
 
     /// <summary>
@@ -140,8 +161,12 @@ public class UdpController : MonoBehaviour
         {
             return;
         }
-        // フレームごとに全デバイスにLEDデータを送信
-        SendAllLedData();
+        // Inspectorで設定したFPSに合わせて送信
+        if (Time.time - lastUdpSendTime >= udpInterval)
+        {
+            SendAllLedData();
+            lastUdpSendTime = Time.time;
+        }
 
         // デバッグ用に、Spaceキーが押されたらタッチ状態をコンソールに表示
         if (Input.GetKeyDown(KeyCode.Space))
