@@ -1142,8 +1142,8 @@ MonoBehaviour:
   perfectgood_EffectSource: {fileID: 40429628}
   Game_NotesData: Kodaisai_NoteData_1101
   targetTime: 0
-  perfectRange: 1
-  goodRange: 2
+  perfectRange: 2
+  goodRange: 3
   missRange: 0.5
   notesignalTime: 3
   laneIndex: 0
@@ -1154,8 +1154,8 @@ MonoBehaviour:
   connectSaturation: 1
   connectValue: 1
   connectSpeed: 0.5
-  brightnessPerformance: 5
-  brightnessNotes: 0
+  brightnessPerformance: 50
+  brightnessNotes: 50
   touchInputCooldown: 0.1
 --- !u!114 &849797065
 MonoBehaviour:
