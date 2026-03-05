@@ -1,0 +1,50 @@
+# ---- バイナリ・メディアファイル（テキストでないので除外） ----
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+*.7z
+*.exe
+*.dll
+
+# ---- Git・IDE 関連 ----
+**/.git/
+**/.vscode/
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+
+# ---- ビルド成果物 ----
+**/build/
+**/dist/
+**/.pio/
+
+; 学習用プロジェクトや，不要なプロジェクトを除外
+gamemusic/
+gamemusic_1017/
+gamemusic_1024/
+samplemusic/
+; sandbox/3d-rhythmgame/
+sandbox/connect_note_sample/
+sandbox/game_sisaku
+sandbox/kimura_pro
+sandbox/LED_haiti
+sandbox/LED_simulate
+sandbox/led_sim_2
+sandbox/MagicalTouch_Make-main
+sandbox/module_simulate
+sandbox/Mugyu_arrangementEditor
+sandbox/NoteEditor
+sandbox/NoteEditor-master
+sandbox/performance_test
+sandbox/performance_test_2
+sandbox/serial_test
+sandbox/TapeLED_Simulation
+sandbox/udp_broadcast_test
+sandbox/udp_test

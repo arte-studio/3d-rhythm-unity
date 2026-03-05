@@ -1,0 +1,17 @@
+[
+  {
+    "key": "ctrl+i",
+    "command": "inlineChat.start",
+    "when": "editorLangId == markdown"
+  },
+  {
+    "key": "ctrl+shift+i",
+    "command": "inlineChat.start",
+    "when": "editorLangId == markdown"
+  },
+  // {
+  //   "key": "ctrl+i",
+  //   "command": "-markdown.extension.editing.toggleItalic",
+  //   "when": "editorTextFocus && !editorReadonly && editorLangId == 'markdown'"
+  // }
+]

@@ -1,0 +1,61 @@
+{
+  "mcpServers": {
+    "obsidian": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "obsidian-mcp-server"
+      ],
+      "env": {
+        "OBSIDIAN_API_KEY": "e8b6bb9593f83cdf428e027589790fce3a2a664d65a0ed40f2a5493762e41bf4",
+        "OBSIDIAN_API_URL": "https://localhost:27124"
+      }
+    },
+    // "homeassistant": {
+    //   "command": "uvx",
+    //   "args": ["hass-mcp"],
+    //   "env": {
+    //     "HA_URL": "https://ha.wakkycloud.com:8123",
+    //     "HA_TOKEN": "YOUR_LONG_LIVED_ACCESS_TOKEN"
+    //   },
+    //   "description": "DeskMini上のHome Assistantを操作する"
+    // },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE_PATH": "c:\\user_file\\AlcedoApp\\ai-workspace\\core\\memories\\mcp-memory.json"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_TOKEN"
+      }
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "YOUR_BRAVE_API_KEY"
+      }
+    },
+    "markitdown": {
+      "command": "uvx",
+      "args": ["markitdown-mcp"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "c:\\user_file"
+      ]
+    }
+  }
+}

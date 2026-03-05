@@ -1,0 +1,75 @@
+{
+    "servers": {
+        "sequential-thinking": {
+            "command": "npx",
+            "args": [
+                "-y", 
+                "@modelcontextprotocol/server-sequential-thinking"
+            ],
+            "description": "複雑な推論やMECEな分析を行うための思考ツール"
+        },
+        "memory": {
+            "command": "npx",
+            "args": [
+                "-y", 
+                "@modelcontextprotocol/server-memory"
+            ],
+            "description": "会話の文脈を保持し、過去のやり取りを参照するためのツール"
+        },
+        // "tavily": {
+        //     "command": "npx",
+        //     "args": ["-y", "@tavily/mcp-server"],
+        //     "env": {
+        //         "TAVILY_API_KEY": "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"
+        //     },
+        //     "description": "AI駆動開発に特化した最新技術情報の高精度検索"
+        // },
+        "brave-search": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+            "env": {
+                "BRAVE_API_KEY": "BSAXLoVjFKBN9oeZcGdn9pkhV26t2z9"
+            },
+            "description": "広範なWeb検索が必要な際のバックアップ"
+        },
+        "filesystem": {
+            "command": "npx",
+            "args": [
+                "-y", "@modelcontextprotocol/server-filesystem", 
+                "c:\\user_file\\AlcedoApp\\ai-workspace"
+            ],
+            "description": "プロジェクト内のファイルを直接操作・検索するためのツール"
+        },
+		"serena": {
+			"command": "uvx",
+			"args": [
+				"--from",
+				"git+https://github.com/oraios/serena",
+				"serena",
+				"start-mcp-server",
+				"--context",
+				"ide-assistant"
+			]
+		},
+        "ripgrep": {
+            "command": "npx",
+            "args": ["-y", "mcp-ripgrep@latest"]
+        },
+        "github": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-github"],
+            "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_PAT"
+            },
+            "description": "Issue，PR，リポジトリ管理の完全自動化"
+        },
+        "git": {
+            "command": "uvx",
+            "args": ["mcp-server-git"]
+        },
+        "unityMCP": {
+            "url": "http://127.0.0.1:8080/mcp"
+        }
+
+    }
+}
