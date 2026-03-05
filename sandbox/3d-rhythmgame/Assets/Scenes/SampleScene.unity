@@ -1757,9 +1757,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07d2a868fa5f20b478be2b2ec50361a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sourceRenderTexture: {fileID: 0}
-  targetPerfLeds: {fileID: 0}
-  sourceVideoPlayer: {fileID: 0}
+  sourceRenderTexture: {fileID: 8400000, guid: 3303869d23accd3499ca035caf3dac5e, type: 2}
+  targetPerfLeds: {fileID: 1913507874}
+  sourceVideoPlayer: {fileID: 79728332}
   totalStrips: 90
   ledsPerStrip: 120
 --- !u!114 &1913507874
