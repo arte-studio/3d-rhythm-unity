@@ -334,49 +334,39 @@ public class NoteLeds : MonoBehaviour
     // 既存の int 版は残す（互換性のため）
     // ConvertNoteIdToHard を HardId を返すように変更しました。
     public HardId ConvertNoteIdToHard(int id) {
-        // ノーツIDからLEDインデックスへの変換ロジックを実装
-        // (GameManager.cs の laneCooldowns[11] と矛盾するが、元のコードを尊重)
-        // ★ 5<=id<=6 の範囲を修正 (25->30)
+        // ゲーム内ID(0-9)からハードID(deviceId, innerId)への変換
         HardId muguId = new HardId();
-        // if (0 <= id && id <= 4) {
-        //     muguId = new HardId(4, id); // 20-24
-        // } else if (5 <= id && id <= 6) {
-        //     muguId = new HardId(7, id - 5); // 30-31 (元のコード +30 は 35,36 になり範囲外)
-        // } else if (7 <= id && id <= 11) {
-        //     muguId = new HardId(0, id - 7); // 0-4
-        // } else if (12 <= id && id <= 16) {
-        //     muguId = new HardId(3, id - 12); // 15-19
-        // } else {
-        //     return HardId.FromInt(-1); // 無効なIDの場合
-        // }
         switch (id)
         {
-            case 1:
-                muguId = new HardId(5, 0);
-                break;
-            case 2:
-                muguId = new HardId(4, 0);
-                break;
-            case 3:
-                muguId = new HardId(6, 0);
-                break;
-            case 5:
-                muguId = new HardId(7, 0);
-                break;
-            case 7:
-                muguId = new HardId(7, 1);
-                break;
-            case 9:
+            case 0:
                 muguId = new HardId(0, 0);
                 break;
-            case 11:
+            case 1:
+                muguId = new HardId(0, 1);
+                break;
+            case 2:
+                muguId = new HardId(0, 2);
+                break;
+            case 3:
                 muguId = new HardId(3, 0);
                 break;
-            case 13:
+            case 4:
                 muguId = new HardId(3, 1);
                 break;
-            case 15:
+            case 5:
                 muguId = new HardId(3, 2);
+                break;
+            case 6:
+                muguId = new HardId(5, 0);
+                break;
+            case 7:
+                muguId = new HardId(5, 1);
+                break;
+            case 8:
+                muguId = new HardId(7, 0);
+                break;
+            case 9:
+                muguId = new HardId(7, 1);
                 break;
             default:
                 return HardId.FromInt(-1); // 無効なIDの場合
@@ -397,56 +387,32 @@ public class NoteLeds : MonoBehaviour
      */
     public int ConvertNoteIdToGame(HardId hid) {
         if (hid.deviceId < 0 || hid.innerId < 0) return -1;
-        // switch (hid.deviceId) {
-        //     case 0:
-        //         if (0 <= hid.innerId && hid.innerId <= 4) {
-        //             return hid.innerId + 7; // 0-4 -> 7-11
-        //         }
-        //         break;
-        //     case 3:
-        //         if (0 <= hid.innerId && hid.innerId <= 4) {
-        //             return hid.innerId + 12; // 15-19 -> 12-16
-        //         }
-        //         break;
-        //     case 4:
-        //         if (0 <= hid.innerId && hid.innerId <= 4) {
-        //             return hid.innerId; // 20-24 -> 0-4
-        //         }
-        //         break;
-        //     case 7:
-        //         if (0 <= hid.innerId && hid.innerId <= 1) {
-        //             return hid.innerId + 5; // 30-31 -> 5-6
-        //         }
-        //         break;
-        // }
+        // ハードID(deviceId, innerId)からゲーム内ID(0-9)への変換
         switch (hid.deviceId)
         {
-            case 4:
-                if (hid.innerId == 0) return 2;
-                break;
-            case 5:
-                if (hid.innerId == 0) return 1;
-                break;
-            case 6:
-                if (hid.innerId == 0) return 3;
-                break;
-            case 7:
-                if (hid.innerId == 0) return 5;
-                if (hid.innerId == 1) return 7;
-                break;
             case 0:
-                if (hid.innerId == 0) return 9;
+                if (hid.innerId == 0) return 0;
+                if (hid.innerId == 1) return 1;
+                if (hid.innerId == 2) return 2;
                 break;
             case 3:
-                if (hid.innerId == 0) return 11;
-                if (hid.innerId == 1) return 13;
-                if (hid.innerId == 2) return 15;
+                if (hid.innerId == 0) return 3;
+                if (hid.innerId == 1) return 4;
+                if (hid.innerId == 2) return 5;
+                break;
+            case 5:
+                if (hid.innerId == 0) return 6;
+                if (hid.innerId == 1) return 7;
+                break;
+            case 7:
+                if (hid.innerId == 0) return 8;
+                if (hid.innerId == 1) return 9;
                 break;
             default:
                 break;
         }
         
-        // 上記以外のハードID (5-14, 25-29, 32-39) はどのレーンにもマッピングされていない
+        // 上記以外のハードIDはどのレーンにもマッピングされていない
         return -1; // 無効なIDの場合
     }
 
