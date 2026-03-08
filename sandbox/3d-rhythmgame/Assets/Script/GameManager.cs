@@ -798,20 +798,45 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private IEnumerator BrightnessSenderCoroutine()
     {
-        // 初回は即送信し、その後Waitで5秒ごと
-        while (true)
+        // 初回は即送信
+        if (udpController != null)
         {
+            try
+            {
+                udpController.SendBrightness((byte)brightnessPerformance, (byte)brightnessNotes);
+                Debug.Log($"[BrightnessSender] 初回送信完了: Perf={brightnessPerformance}, Notes={brightnessNotes}");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"BrightnessSenderCoroutine (初回) error: {e.Message}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[BrightnessSender] udpController が null です（初回）");
+        }
+        
+        // その後5秒ごとに送信
+        while (true)
+        {            
             if (udpController != null)
             {
                 try
                 {
                     udpController.SendBrightness((byte)brightnessPerformance, (byte)brightnessNotes);
+                    Debug.Log($"[BrightnessSender] 定期送信完了: Perf={brightnessPerformance}, Notes={brightnessNotes}");
                 }
                 catch (System.Exception e)
                 {
                     Debug.LogError($"BrightnessSenderCoroutine error: {e.Message}");
                 }
             }
+            else
+            {
+                Debug.LogWarning("[BrightnessSender] udpController が null です");
+            }
+
+            // 5秒待機
             yield return new WaitForSeconds(5f);
         }
     }
