@@ -693,6 +693,65 @@ public class UdpController : MonoBehaviour
             statusBuilder.AppendLine(); // 次の行へ (改行)
         }
         
+        // --- ノーツ状態の表示を追加 ---
+        statusBuilder.AppendLine(); // 空行を挿入
+        statusBuilder.AppendLine("--- Active Notes Status ---");
+        
+        var gameManager = GameManager.Instance;
+        if (gameManager != null && gameManager.ActiveNotes != null)
+        {
+            int totalNotes = gameManager.ActiveNotes.Length;
+            int activeCount = 0;
+            int usedCount = 0;
+            int touchCount = 0;
+            int connectCount = 0;
+            
+            // ノーツの統計を集計
+            foreach (var note in gameManager.ActiveNotes)
+            {
+                if (note != null)
+                {
+                    activeCount++;
+                    if (note.IsUsed) usedCount++;
+                    if (note.Data.type == "touch") touchCount++;
+                    else if (note.Data.type == "connect") connectCount++;
+                }
+            }
+            
+            // サマリー表示
+            statusBuilder.AppendLine($"Total: {totalNotes}, Active: {activeCount}, Used: {usedCount}");
+            statusBuilder.AppendLine($"Touch: {touchCount}, Connect: {connectCount}");
+            statusBuilder.AppendLine($"Spawned Index: {gameManager.LastSpawnedNoteIndex} / {totalNotes}");
+            
+            // 現在アクティブなノーツの詳細（最大10件まで表示）
+            int displayCount = 0;
+            const int maxDisplay = 10;
+            statusBuilder.AppendLine("Recent Notes:");
+            
+            for (int i = 0; i < gameManager.ActiveNotes.Length && displayCount < maxDisplay; i++)
+            {
+                var note = gameManager.ActiveNotes[i];
+                if (note != null && !note.IsUsed && note.NoteObject != null && note.NoteObject.activeSelf)
+                {
+                    string stateColor = note.IsUsed ? "<color=grey>" : "<color=cyan>";
+                    string typeInfo = note.Data.type == "touch" ? "T" : "C";
+                    statusBuilder.Append($"  {stateColor}[{i:D3}] {typeInfo} Lane:{note.Data.lane} Time:{note.Data.time:F2}</color>");
+                    statusBuilder.AppendLine();
+                    displayCount++;
+                }
+            }
+            
+            if (displayCount == 0)
+            {
+                statusBuilder.AppendLine("  (No active notes)");
+            }
+        }
+        else
+        {
+            statusBuilder.AppendLine("GameManager not initialized");
+        }
+        // --- ノーツ状態の表示ここまで ---
+        
         // 構築した文字列を StatusDisplay コンポーネントの public 変数に設定
         targetDisplay.statusText = statusBuilder.ToString();
     }

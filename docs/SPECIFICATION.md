@@ -1173,12 +1173,37 @@ UdpController.InitializeTestData();
 
 #### ステータス表示
 
+リアルタイムでシステム状態を画面左上に表示します。
+
+**デバイス通信状態**
 ```
-デバイス [ID]: [登録状態]
-  最終発見: [X]秒前
-  タッチ通信: [Y]秒前
-  センサー状態: [0][1][2][3][4]
+--- Device Status (Time.time) ---
+Dev [ID]: [登録状態]
+  Discovery: [Time.time]s
+  LastTouch: [Time.time]s (色付き: 緑=正常, 黄=遅延, 赤=通信途絶)
+  Sensors: S0:[Time.time]s S1:... S2:... S3:... S4:...
 ```
+
+**ノーツ状態**
+```
+--- Active Notes Status ---
+Total: [総ノーツ数], Active: [アクティブ数], Used: [判定済み数]
+Touch: [タッチノーツ数], Connect: [コネクトノーツ数]
+Spawned Index: [現在生成インデックス] / [総ノーツ数]
+Recent Notes:
+  [インデックス] T/C Lane:[レーン] Time:[時刻]
+  ...（最大10件まで表示）
+```
+
+**表示内容の説明**
+- **Total**: 譜面に含まれる全ノーツ数
+- **Active**: 現在メモリに存在するノーツ数
+- **Used**: 既に判定済みのノーツ数
+- **Touch / Connect**: タイプ別のノーツ数
+- **Spawned Index**: 現在までに生成されたノーツのインデックス
+- **Recent Notes**: 現在アクティブで未判定のノーツの詳細（最大10件）
+  - `T`: Touchノーツ, `C`: Connectノーツ
+  - 色付き表示: シアン=未判定, グレー=判定済み
 
 ---
 
