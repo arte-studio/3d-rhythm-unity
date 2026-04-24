@@ -314,9 +314,8 @@ public class GameManager : MonoBehaviour
     {
         Touch_score = 0;
         
-        // 修正: レーンクールダウン配列の初期化 (レーンが0-14の15個と仮定)
-        // ConvertNoteIdToHard/Game の実装に基づき 15 に変更
-        laneCooldowns = new float[15]; 
+        // 修正: レーンクールダウン配列の初期化 (レーン 0-10)
+        laneCooldowns = new float[NoteLeds.NUM_GAME_LANES]; 
         
         // ObjectRelocationの生成完了を待つ
         yield return new WaitForSeconds(0.1f);
@@ -436,7 +435,7 @@ public class GameManager : MonoBehaviour
                     if (udpController.touchStates[dev] == null) continue;
                     for (int sen = 0; sen < 5; sen++) // NUM_TOUCH
                     {
-                        // ハードID (deviceId + innerId) を 譜面レーンID (0-16) に変換
+                        // ハードID (deviceId + innerId) を 譜面レーンID (0-10) に変換
                         NoteLeds.HardId hard = new NoteLeds.HardId(dev, sen);
                         int lane = noteLeds.ConvertNoteIdToGame(hard);
                         
@@ -915,7 +914,7 @@ public class GameManager : MonoBehaviour
 
     /// <summary>
     /// (仮実装) デバイスIDとセンサーIDを、譜面データのレーン番号(0-10)に変換する
-    /// ★★★ ここのマッピングは、実際のハードウェア仕様に合わせて必ず修正してください ★★★
+    /// ★★★ 現在は NoteLeds.ConvertNoteIdToGame に統一済み ★★★
     /// </summary>
     /// <returns>対応するレーン番号 (0-10)。見つからない場合は -1。</returns>
     private int ConvertDeviceAndSensorToLane(int deviceId, int sensorId)

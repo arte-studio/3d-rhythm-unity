@@ -11,8 +11,8 @@ public class NoteLeds : MonoBehaviour
     // private const int NUM_TOUTCH = 5; // (※NUM_TOUCH の typo)
     public const int NUM_TOUTCH = 5; // (※NUM_TOUCH の typo) - public にして HardId で参照可能に
     
-    // ★追加: 譜面レーン数 (0-16 と仮定)
-    private const int NUM_LANES = 17; 
+    // ★追加: ハード入力として扱うゲーム内レーン数 (0-10)
+    public const int NUM_GAME_LANES = 11;
 
     private Color32[,] ledColors;
 
@@ -23,9 +23,9 @@ public class NoteLeds : MonoBehaviour
     private Color32 debugOffColor = Color.black;   // 消灯
     // private Color32 debugAllOnColor = Color.white; // 全点灯の色 (現在未使用)
 
-    // 各レーン(0-16)のタッチ状態
-    private bool[] debugTouchStates = new bool[NUM_LANES];
-    // 現在ループで光っているレーン(0-16)
+    // 各レーン(0-10)のタッチ状態
+    private bool[] debugTouchStates = new bool[NUM_GAME_LANES];
+    // 現在ループで光っているレーン(0-10)
     private int currentDebugLoopLane = -1;
     
     // --- ★ここから追加 (GC対策) ---
@@ -43,7 +43,7 @@ public class NoteLeds : MonoBehaviour
         ledColors = new Color32[NUM_DEVICES, (NUM_MUGU_LEDS + NUM_CON_LEDS) * 5];
         
         // ★追加: デバッグ用配列の初期化
-        for (int i = 0; i < NUM_LANES; i++)
+        for (int i = 0; i < NUM_GAME_LANES; i++)
         {
             debugTouchStates[i] = false;
         }
@@ -59,8 +59,8 @@ public class NoteLeds : MonoBehaviour
         if (!isDebugMode) return;
 
         // /*
-        // 0-16 の全レーンをチェック
-        for (int lane = 0; lane < NUM_LANES; lane++)
+        // 0-10 の全レーンをチェック
+        for (int lane = 0; lane < NUM_GAME_LANES; lane++)
         {
             Color32 targetColor;
 
@@ -80,7 +80,7 @@ public class NoteLeds : MonoBehaviour
                 targetColor = debugOffColor;
             }
 
-            // レーンID (0-16) を 物理MUGU ID (HardId) に変換
+            // レーンID (0-10) を 物理MUGU ID (HardId) に変換
             SetAllMuguColors(lane, targetColor);
         }
         //*/
@@ -96,7 +96,7 @@ public class NoteLeds : MonoBehaviour
                 Color32 targetColor;
 
                 // 1. タッチ状態を最優先
-                if (lane >= 0 && lane < NUM_LANES && debugTouchStates[lane])
+                if (lane >= 0 && lane < NUM_GAME_LANES && debugTouchStates[lane])
                 {
                     targetColor = debugTouchColor;
                 }
@@ -126,7 +126,7 @@ public class NoteLeds : MonoBehaviour
         isDebugMode = true;
 
         // 変換が正しいかをチェック
-        for (int lane = 0; lane < NUM_LANES; lane++)
+        for (int lane = 0; lane < NUM_GAME_LANES; lane++)
         {
             HardId muguId = ConvertNoteIdToHard(lane);
             int backLane = ConvertNoteIdToGame(muguId);
@@ -146,7 +146,7 @@ public class NoteLeds : MonoBehaviour
     /// </summary>
     public void SetDebugTouchState(int lane, bool isTouching)
     {
-        if (lane >= 0 && lane < NUM_LANES)
+        if (lane >= 0 && lane < NUM_GAME_LANES)
         {
             debugTouchStates[lane] = isTouching;
         }
@@ -162,21 +162,21 @@ public class NoteLeds : MonoBehaviour
         // 1. まず全レーンを点灯
         currentDebugLoopLane = -1; // ループ点灯はなし
         // 全レーンをタッチ扱いで点灯させる
-        for(int i=0; i<NUM_LANES; i++) { debugTouchStates[i] = true; }
+        for(int i=0; i<NUM_GAME_LANES; i++) { debugTouchStates[i] = true; }
         // Update() が呼ばれて色が反映されるのを待つ
         yield return waitPointOneSecond; // ★GC対策版
         // 1秒間待機
         yield return waitOneSecond; // ★GC対策版
         // 全レーンのタッチ状態をリセット
-        for(int i=0; i<NUM_LANES; i++) { debugTouchStates[i] = false; }
+        for(int i=0; i<NUM_GAME_LANES; i++) { debugTouchStates[i] = false; }
         
         Debug.Log("デバッグ: 全点灯 終了");
 
         // 2. ループ点灯開始
         while (isDebugMode)
         {
-            // 0 から 16 まで順番に
-            for (int lane = 0; lane < NUM_LANES; lane++)
+            // 0 から 10 まで順番に
+            for (int lane = 0; lane < NUM_GAME_LANES; lane++)
             {
                 if (!isDebugMode) yield break; // モードが終了したら抜ける
                 
@@ -327,14 +327,14 @@ public class NoteLeds : MonoBehaviour
     }
 
     /**
-     * 譜面上のLEDのID(レーンID 0-16)を、物理的なLEDのインデックス(MUGU ID 0-39)に変換する
-     * @param: id (譜面レーンID 0-16)
-     * @返り値: 0～39（/5でデバイスID、%5で内部ID）
+    * 譜面上のLEDのID(レーンID 0-10)を、物理的なLEDのインデックス(MUGU ID)に変換する
+    * @param: id (譜面レーンID 0-10)
+    * @返り値: ハード入力に対応する HardId
      */
     // 既存の int 版は残す（互換性のため）
     // ConvertNoteIdToHard を HardId を返すように変更しました。
     public HardId ConvertNoteIdToHard(int id) {
-        // ゲーム内ID(0-9)からハードID(deviceId, innerId)への変換
+        // ゲーム内ID(0-10)からハードID(deviceId, innerId)への変換
         HardId muguId = new HardId();
         switch (id)
         {
@@ -357,15 +357,18 @@ public class NoteLeds : MonoBehaviour
                 muguId = new HardId(3, 2);
                 break;
             case 6:
-                muguId = new HardId(5, 0);
+                muguId = new HardId(3, 3);
                 break;
             case 7:
-                muguId = new HardId(5, 1);
+                muguId = new HardId(3, 4);
                 break;
             case 8:
-                muguId = new HardId(7, 0);
+                muguId = new HardId(5, 1);
                 break;
             case 9:
+                muguId = new HardId(7, 0);
+                break;
+            case 10:
                 muguId = new HardId(7, 1);
                 break;
             default:
@@ -383,11 +386,11 @@ public class NoteLeds : MonoBehaviour
     }
 
     /**
-     * 物理的なLEDのインデックス(ハードID 0-39)を譜面のID(レーンID 0-16)に変換する
+     * 物理的なLEDのインデックス(ハードID)を譜面のID(レーンID 0-10)に変換する
      */
     public int ConvertNoteIdToGame(HardId hid) {
         if (hid.deviceId < 0 || hid.innerId < 0) return -1;
-        // ハードID(deviceId, innerId)からゲーム内ID(0-9)への変換
+        // ハードID(deviceId, innerId)からゲーム内ID(0-10)への変換
         switch (hid.deviceId)
         {
             case 0:
@@ -399,14 +402,15 @@ public class NoteLeds : MonoBehaviour
                 if (hid.innerId == 0) return 3;
                 if (hid.innerId == 1) return 4;
                 if (hid.innerId == 2) return 5;
+                if (hid.innerId == 3) return 6;
+                if (hid.innerId == 4) return 7;
                 break;
             case 5:
-                if (hid.innerId == 0) return 6;
-                if (hid.innerId == 1) return 7;
+                if (hid.innerId == 1) return 8;
                 break;
             case 7:
-                if (hid.innerId == 0) return 8;
-                if (hid.innerId == 1) return 9;
+                if (hid.innerId == 0) return 9;
+                if (hid.innerId == 1) return 10;
                 break;
             default:
                 break;
