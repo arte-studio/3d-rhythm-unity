@@ -29,8 +29,10 @@ public class StatusDisplay : MonoBehaviour
         // UdpController が 8台 + ヘッダー1行 = 9行 のテキストを生成します。
         // それらが収まるように、BoxとLabelのサイズを調整します。
         
+        // ノーツ情報の追加により、さらに表示行数が増えるため高さを拡大
+        // デバイス情報: 9行 + ノーツ情報: 約15行 = 24行
         // 1行あたり約20ピクセルと仮定し、マージンを含めて高さを決定
-        float boxHeight = 250f; // 9行 * 20px + タイトル(20px) + 余白(10px)
+        float boxHeight = 550f; // 24行 * 20px + タイトル(20px) + 余白(10px)
         
         // 横幅も "First: ...s ago. LastTouch: ...s ago" が収まるように広げます
         float boxWidth = 800f; 

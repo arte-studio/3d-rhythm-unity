@@ -162,6 +162,9 @@ public class GameManager : MonoBehaviour
     public bool IsPlaying => isplaying;
     public bool IsPaused => isPaused;
     public int CurrentScore => Touch_score;
+    // ノーツ情報へのアクセサ (StatusDisplay用)
+    public ActiveNote[] ActiveNotes => activeNotes;
+    public int LastSpawnedNoteIndex => lastSpawnedNoteIndex;
 
     // ゲーム開始 (まだ開始していない場合)、一時停止中なら再開
     public void StartGame()
