@@ -4,7 +4,7 @@ using System.Collections; // ★追加: コルーチンのために必要
 public class NoteLeds : MonoBehaviour
 {
     private const int NUM_MUGU_LEDS = 64;
-    private const int NUM_CON_LEDS = 32;
+    private const int NUM_CON_LEDS = 30;
     private const int NUM_MUGU = 40;
     private const int NUM_CON = 40;
     private const int NUM_DEVICES = 8;
@@ -40,7 +40,7 @@ public class NoteLeds : MonoBehaviour
     void Start()
     {
         // Initialize the ledColors array
-        ledColors = new Color32[NUM_DEVICES, (NUM_MUGU_LEDS + NUM_CON_LEDS) * 5];
+        ledColors = new Color32[NUM_DEVICES, (NUM_MUGU_LEDS + NUM_CON_LEDS) * NUM_TOUTCH];
         
         // ★追加: デバッグ用配列の初期化
         for (int i = 0; i < NUM_GAME_LANES; i++)
@@ -259,7 +259,7 @@ public class NoteLeds : MonoBehaviour
         //Debug.Log("device_id" + device_id);
         for (int i = 0; i < NUM_MUGU_LEDS; i++)
         {
-            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS - 2) * hid.innerId + i;
+            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * hid.innerId + i;
             //Debug.Log("index" + index);
             ledColors[hid.deviceId, index] = color;
         }
@@ -270,7 +270,7 @@ public class NoteLeds : MonoBehaviour
     {
         for (int i = 0; i < NUM_MUGU_LEDS; i++)
         {
-            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS - 2) * hid.innerId + i;
+            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * hid.innerId + i;
             //Debug.Log("index" + index);
             ledColors[hid.deviceId, index] = color;
         }
@@ -284,7 +284,7 @@ public class NoteLeds : MonoBehaviour
     public void SetConColor(int conId, int raw, Color32 color)
     {
         HardId hid = ConvertNoteIdToHard(conId);
-        int index = (NUM_MUGU_LEDS + NUM_CON_LEDS - 2) * hid.innerId + NUM_MUGU_LEDS + raw;
+        int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * hid.innerId + NUM_MUGU_LEDS + raw;
         // LEDのマイコンが違うので、ここで反転させる
         Color32 reverseColor = new Color32(color.g, color.r, color.b, color.a);
         ledColors[hid.deviceId, index] = reverseColor;
@@ -300,7 +300,7 @@ public class NoteLeds : MonoBehaviour
         HardId hid = ConvertNoteIdToHard(conId);
         for (int i = 0; i < NUM_CON_LEDS; i++)
         {
-            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS - 2) * hid.innerId + NUM_MUGU_LEDS + i;
+            int index = (NUM_MUGU_LEDS + NUM_CON_LEDS) * hid.innerId + NUM_MUGU_LEDS + i;
             // LEDのマイコンが違うので、ここで反転させる
             Color32 reverseColor = new Color32(color.g, color.r, color.b, color.a);
             ledColors[hid.deviceId, index] = reverseColor;

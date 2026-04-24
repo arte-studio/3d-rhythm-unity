@@ -188,7 +188,7 @@ GameManager (シングルトン)
 | 項目 | 数量 | 用途 |
 |------|------|------|
 | MUGU LED (Touchノーツ) | 64個/ノーツ | タッチノーツの状態表示 |
-| CON LED (Connectノーツ) | 32個/ノーツ | コネクトノーツの状態表示 |
+| CON LED (Connectノーツ) | 30個/ノーツ | コネクトノーツの状態表示 |
 | 総MUGU配置数 | 40個所 | ゲームフィールド内配置 |
 | 総CON配置数 | 40個所 | ゲームフィールド内配置 |
 | **合計ノーツLED** | **470個** | |
@@ -390,7 +390,7 @@ public byte[] perfLedData;
 
 ```csharp
 private const int NUM_MUGU_LEDS = 64;  // Touchノーツ LED数
-private const int NUM_CON_LEDS = 32;   // Connectノーツ LED数
+private const int NUM_CON_LEDS = 30;   // Connectノーツ LED数
 private const int NUM_DEVICES = 8;     // デバイス数
 private const int NUM_TOUTCH = 5;      // センサー/デバイス
 

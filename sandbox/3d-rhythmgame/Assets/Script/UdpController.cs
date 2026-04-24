@@ -31,7 +31,7 @@ public class UdpController : MonoBehaviour
     private const int NUM_TOUCH = 5;
     private const int NUM_PERF_LEDS = 480; // 演出用LED (4ストリップ * 120 LED)
     private const int NUM_PREF_LEDS_7 = 240; // デバイス7用の演出LED (2ストリップ * 120 LED)
-    private const int NUM_NOTE_LEDS = 470; // ノーツ用LED
+    private const int NUM_NOTE_LEDS = 470; // ノーツ用LED（(64+30)*5 = 470）
     
     // 1ストリップあたりのバイト長 (120 LED * 3 バイト)
     private const int BYTES_PER_STRIP = 360; 
