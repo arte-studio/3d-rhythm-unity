@@ -291,9 +291,19 @@ public class GameManager : MonoBehaviour
     [Header("Touch Input Settings")]
     [Tooltip("同じレーンへの連続タッチを防ぐクールダウン時間(秒)")]
     [SerializeField] private float touchInputCooldown = 0.1f; // 0.1秒
+
+    [Header("Touch Judge Trail Settings")]
+    [Tooltip("判定後に流れるノーツ演出の継続時間(秒)")]
+    [SerializeField] private float touchTrailDuration = 3.0f;
+    [Tooltip("流れるノーツの移動速度(LED/秒)")]
+    [SerializeField] private float touchTrailSpeedLedsPerSec = 18.0f;
+    [Tooltip("流れるノーツの幅(LED単位の標準偏差)")]
+    [SerializeField] private float touchTrailSigmaLeds = 4.0f;
     
     // 各レーン (0-10) のクールダウンタイマー
     private float[] laneCooldowns;
+    // 各レーンごとの流れるノーツ演出コルーチン
+    private Coroutine[] touchTrailCoroutines;
     // --- 追加ここまで ---
 
 
@@ -316,6 +326,7 @@ public class GameManager : MonoBehaviour
         
         // 修正: レーンクールダウン配列の初期化 (レーン 0-10)
         laneCooldowns = new float[NoteLeds.NUM_GAME_LANES]; 
+        touchTrailCoroutines = new Coroutine[NoteLeds.NUM_GAME_LANES];
         
         // ObjectRelocationの生成完了を待つ
         yield return new WaitForSeconds(0.1f);
@@ -563,6 +574,7 @@ public class GameManager : MonoBehaviour
                     PerfectPerformance(currentActiveNote.NoteObject);
                     //noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.magenta);//notenum ではなく lane を渡す
                     noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.magenta);
+                    TriggerTouchJudgeTrail(currentActiveNote.Data.lane, Color.magenta);
                     //音変化
                     EffectPlayer(perfectgood_EffectSource);
                 }
@@ -577,6 +589,7 @@ public class GameManager : MonoBehaviour
                     //色変化
                     //currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.white);
                     noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.white);// notenum ではなく lane を渡す
+                    TriggerTouchJudgeTrail(currentActiveNote.Data.lane, Color.white);
                     //音変化
                     EffectPlayer(perfectgood_EffectSource);
                 }
@@ -590,6 +603,7 @@ public class GameManager : MonoBehaviour
                     //色変化
                     //currentActiveNote.NoteObject.GetComponent<Mugyu_LEDPerformance>()?.SetAllLEDColor(Color.cyan);
                     noteLeds.SetAllMuguColors(currentActiveNote.Data.lane, Color.cyan);// notenum ではなく lane を渡す
+                    TriggerTouchJudgeTrail(currentActiveNote.Data.lane, Color.cyan);
                 }
 
                 //判定確定後
@@ -634,6 +648,66 @@ public class GameManager : MonoBehaviour
                 // 必要に応じてノーツオブジェクトをプールに戻す処理などを追加できます。
                 // noteObject.SetActive(false);
             }
+        }
+    }
+
+    /// <summary>
+    /// 判定色で流れるノーツ演出を開始する（同一レーンは常に最新で上書き）。
+    /// </summary>
+    /// <param name="lane">対象レーン(0-10)</param>
+    /// <param name="judgeColor">判定色(Perfect/Good/Miss)</param>
+    private void TriggerTouchJudgeTrail(int lane, Color judgeColor)
+    {
+        if (noteLeds == null) return;
+        if (lane < 0 || lane >= NoteLeds.NUM_GAME_LANES) return;
+
+        if (touchTrailCoroutines != null && touchTrailCoroutines[lane] != null)
+        {
+            StopCoroutine(touchTrailCoroutines[lane]);
+            touchTrailCoroutines[lane] = null;
+        }
+
+        touchTrailCoroutines[lane] = StartCoroutine(RunTouchJudgeTrail(lane, judgeColor));
+    }
+
+    /// <summary>
+    /// 参考実装のトレイル挙動を元に、CON 30LED に判定色のノーツを流す。
+    /// </summary>
+    private IEnumerator RunTouchJudgeTrail(int lane, Color judgeColor)
+    {
+        float startTime = Time.time;
+        const int conLedsPerLane = 30;
+
+        while (Time.time < startTime + touchTrailDuration)
+        {
+            float elapsed = Time.time - startTime;
+            float fadeOut = 1.0f - Mathf.Clamp01(elapsed / touchTrailDuration);
+            float headPos = Mathf.Repeat(elapsed * touchTrailSpeedLedsPerSec, conLedsPerLane);
+
+            for (int i = 0; i < conLedsPerLane; i++)
+            {
+                float distance = Mathf.Abs(i - headPos);
+                distance = Mathf.Min(distance, conLedsPerLane - distance);
+                float spatial = Mathf.Exp(-(distance * distance) / (2.0f * touchTrailSigmaLeds * touchTrailSigmaLeds));
+                float intensity = fadeOut * spatial;
+
+                Color flowColor = judgeColor * intensity;
+                flowColor.a = 1.0f;
+                noteLeds.SetConColor(lane, i, flowColor);
+            }
+
+            yield return null;
+        }
+
+        // 演出終了後は対象レーンのCON LEDを消灯
+        for (int i = 0; i < conLedsPerLane; i++)
+        {
+            noteLeds.SetConColor(lane, i, Color.black);
+        }
+
+        if (touchTrailCoroutines != null && lane >= 0 && lane < touchTrailCoroutines.Length)
+        {
+            touchTrailCoroutines[lane] = null;
         }
     }
 
