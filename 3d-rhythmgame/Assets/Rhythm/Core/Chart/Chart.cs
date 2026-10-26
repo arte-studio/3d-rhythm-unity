@@ -11,7 +11,10 @@ namespace Arte.Rhythm.Charts
         Connect,
     }
 
-    /// <summary>譜面上の1ノーツ．Time は曲頭からの秒．</summary>
+    /// <summary>
+    /// 譜面上の1ノーツ．Time は曲頭からの秒．Lane は0始まり（設営プロファイルのレーン番号と同じ）．
+    /// 譜面制作の画面では1始まりで見せてよい（<see cref="Chart.LaneLabel"/>）．
+    /// </summary>
     public readonly struct ChartNote
     {
         public readonly double Time;
@@ -60,6 +63,9 @@ namespace Arte.Rhythm.Charts
                 if (n.Lane < 0) throw new ArgumentException($"レーン番号が負: {n}");
             }
         }
+
+        /// <summary>画面に出すレーン番号（1始まり）．内部の番号は常に0始まりで扱う．</summary>
+        public static int LaneLabel(int lane) => lane + 1;
 
         /// <summary>使われているレーン番号（昇順）．</summary>
         public IEnumerable<int> Lanes => Notes.Select(n => n.Lane).Distinct().OrderBy(l => l);

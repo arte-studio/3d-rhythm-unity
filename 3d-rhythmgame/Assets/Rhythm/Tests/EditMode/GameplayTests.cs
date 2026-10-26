@@ -244,7 +244,7 @@ namespace Arte.Rhythm.Tests
             var chart = LoadLegacy("Kodaisai_NoteData_1101.json");
             Assert.That(chart.Notes.Count, Is.EqualTo(186));
             Assert.That(chart.Warnings, Is.Empty);
-            Assert.That(chart.Lanes, Is.EqualTo(Enumerable.Range(1, 15)));
+            Assert.That(chart.Lanes, Is.EqualTo(Enumerable.Range(0, 15)), "旧譜面の1〜15は内部では0〜14");
         }
 
         [Test]

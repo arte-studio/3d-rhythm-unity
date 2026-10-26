@@ -8,6 +8,9 @@ namespace Arte.Rhythm.Charts
     /// 旧版の譜面 JSON（Assets/Resources/*_NoteData_*.json）を読む．
     /// 形式: { "notes": [ { "time": 2.26, "lane": 3, "type": "touch" }, ... ] }
     /// 新しい譜面形式（P3）へ移行するまでと，移行ツールの入力に使う．
+    ///
+    /// 旧譜面のレーン番号は1始まり（譜面作者の意図）なので，読み込み時に1を引いて内部の0始まりにそろえる．
+    /// 旧版のゲームはこの番号をそのまま0始まりのレーンとして使っていたため，本番ではレーンが1つずれていた．
     /// </summary>
     public static class LegacyChartJson
     {
@@ -39,7 +42,8 @@ namespace Arte.Rhythm.Charts
                     "connect" => NoteType.Connect,
                     _ => throw new FormatException($"未知のノーツ種別 \"{e.type}\"（time {e.time}）"),
                 };
-                notes.Add(new ChartNote(e.time, e.lane, type));
+                if (e.lane < 1) throw new FormatException($"旧譜面のレーン番号は1始まり: lane {e.lane}（time {e.time}）");
+                notes.Add(new ChartNote(e.time, e.lane - 1, type));
             }
             return new Chart(notes);
         }
