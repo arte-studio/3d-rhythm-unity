@@ -31,7 +31,7 @@
     "noteOutputPin": 3,
     "notePacketLeds": 480,
     "connectSwapRG": true,
-    "notes": "旧コード NoteLeds.cs の並び (64+30)*module に合わせている．ファーム main.cpp の touchLedRanges (0,96,192,320,416) とは一致しないので要確認．"
+    "notes": "旧コード NoteLeds.cs の並び (64+30)*module．C6 ファームの修正 (4be2d30) とも一致．S3 ファーム v1 のピンク表示の範囲 (0,96,192,320,416) は古い値で，v2 で直した．"
   },
   "output": {
     "channelLuminance": [1.0, 1.0, 1.0],

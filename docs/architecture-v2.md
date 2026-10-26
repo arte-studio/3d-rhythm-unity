@@ -39,7 +39,7 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 | P1 | ハード構成データ＋設営プロファイル，出力モデル，Core の asmdef とテスト | 作成済み（旧コードと一致をテストで保証） |
 | P2 | Core（判定・時刻管理）の書き直し，テスト，リプレイ入力 | 判定・曲時刻・リプレイ作成済み（旧版との一致をテストで保証）．Runtime への接続は P3 で |
 | P3 | 曲データ形式＋Timeline での譜面・演出編集環境＋音楽との同期 | song.json，予約再生と時刻補間，動画/Timeline 同期，譜面エディタ，確認用シーン（`docs/authoring/chart-editor.md`）．演出クリップは P5/P7 |
-| P4 | UDP v2＋ファーム v2（S3 に統一） | |
+| P4 | UDP v2＋ファーム v2（S3 に統一） | プロトコル v2，ファーム v2（ビルドとロジックのテストのみ．実機未確認），DeviceLink・接続モニタ・テスト表示 |
 | P5 | LED 描画の GPU 化（ノート PC で 60fps 固定） | |
 | P6 | Viewer（光の広がり，暗幕の部屋，内側からの視点，VR の準備） | |
 | P7 | 演出の制作環境とプレビュー書き出し，美大生向けテンプレート | |
@@ -86,3 +86,27 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 - 譜面の編集は Timeline ではなく専用の譜面エディタにした（拍のグリッド・スナップ・タップ入力のため）．
   演出は Timeline で作り，同じ曲時刻で再生する．
 - 古代祭の曲のテンポは未測定（自動推定の候補は 76 / 152 BPM 付近）．
+
+## P4: 実機との通信（プロトコル v2）
+
+仕様は `3d-rhythm-lowlayer-program/docs/protocol-v2.md`．要点:
+
+- タッチはデバイスが 1ms ごとに読み，変化した時刻（デバイス時刻）を付けて送る．PC は PING/PONG の時刻合わせで
+  `AudioClock.Realtime` に直して `GameSession.Touch` に渡す．旧版は 50ms ごとの状態を届いた時刻で判定していた．
+- LED はフレーム番号と「このフレームで送るピン」を付けて送り，デバイスは揃ったら表示する．
+  旧ファームは 4 系統揃うまで表示しなかったため，2 系統しか送られないデバイス 7 は表示が更新されていなかったと思われる（要実機確認）．
+- 表示の遅れ（送信 → show()）を PONG から実測できる．`SongConductor.outputLatencySec` を決める材料にする．
+- デバイス番号と Wi-Fi は基板の NVS に保存．番号未設定の基板は接続モニタ（F2）から割り当てられる．
+
+| ファイル | 役割 |
+|---|---|
+| `Core/Net/ArteProtocol.cs` | パケットの読み書き（ファームの ArteProtocol.h と同じバイト列をテストで照合） |
+| `Core/Net/ClockSync.cs`，`TouchEventTracker.cs` | 時刻合わせ，タッチの重複除去 |
+| `Core/Net/LinkHost.cs` | PC 側の通信本体（Unity 非依存．localhost の仮想デバイスとつないでテスト） |
+| `Core/Net/LedFrame.cs` | 送る RGB（デバイス × ピン，配線順）．設営から送るピンと長さを決める |
+| `Core/Net/VirtualDevice.cs` | PC 上の仮想デバイス（テスト用．P6 の Viewer でも使う） |
+| `Runtime/Net/DeviceLink.cs` | Unity 側の窓口．タッチ → レーン → 判定，Frame の送信 |
+| `Runtime/Net/DeviceMonitorHud.cs` | 接続状態（F2）．往復時間，表示 fps，欠けたフレーム，表示の遅れ，タッチ |
+| `Runtime/Net/LedTestPattern.cs` | 設営確認用の表示（配線の先頭，ジグザグと列の並び，ノーツモジュール） |
+
+旧版の `UdpController` とは同じポート（9999）を使うので，同じシーンに置かない．旧ファームとは通信できない（全台 v2 に書き換える）．
