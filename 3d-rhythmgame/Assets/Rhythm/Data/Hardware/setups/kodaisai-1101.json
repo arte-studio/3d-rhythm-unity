@@ -1,0 +1,25 @@
+{
+  "name": "kodaisai-1101",
+  "description": "Kodaisai_NoteData_1101 を使った設営．入口のため最後のデバイスのピン1・2を外し，ノーツモジュールは11個．旧コード(NoteLeds.ConvertNoteIdToHard, UdpController.SendAllLedData, シーンの明るさ設定)から起こした．",
+  "removedStrips": [
+    { "device": 7, "pin": 1, "slot": 0 },
+    { "device": 7, "pin": 1, "slot": 1 },
+    { "device": 7, "pin": 2, "slot": 0 },
+    { "device": 7, "pin": 2, "slot": 1 }
+  ],
+  "lanes": [
+    { "lane": 0,  "device": 0, "module": 0 },
+    { "lane": 1,  "device": 0, "module": 1 },
+    { "lane": 2,  "device": 0, "module": 2 },
+    { "lane": 3,  "device": 3, "module": 0 },
+    { "lane": 4,  "device": 3, "module": 1 },
+    { "lane": 5,  "device": 3, "module": 2 },
+    { "lane": 6,  "device": 3, "module": 3 },
+    { "lane": 7,  "device": 3, "module": 4 },
+    { "lane": 8,  "device": 5, "module": 1 },
+    { "lane": 9,  "device": 7, "module": 0 },
+    { "lane": 10, "device": 7, "module": 1 }
+  ],
+  "brightnessPerf": 50,
+  "brightnessNote": 50
+}

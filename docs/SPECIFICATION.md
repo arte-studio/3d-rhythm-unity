@@ -2,8 +2,8 @@
 
 **プロジェクト名**: 3d-rhythm-unity  
 **バージョン**: 1.0  
-**最終更新日**: 2026年3月6日  
-**Unity バージョン**: 2022.3 LTS  
+**最終更新日**: 2026年10月26日  
+**Unity バージョン**: 6000.0.55f1 (URP 17.0.4)  
 
 ---
 
@@ -48,15 +48,14 @@
   - リアルタイムセンサーフィードバック
 
 - **音楽再生**
-  - CRI ADX2対応
   - DSP時刻ベースの高精度タイミング制御
   - VideoPlayer連動による映像演出
 
 ### 1.3 技術スタック
 
-- **開発環境**: Unity 2022.3 LTS
+- **開発環境**: Unity 6000.0.55f1
 - **言語**: C# 
-- **音響ミドルウェア**: CRI ADX2
+- **音楽再生**: Unity AudioSource（CRI ADX2 は 2026-10 に削除．理由は docs/architecture-v2.md）
 - **通信**: UDP (ブロードキャスト)
 - **非同期処理**: AsyncGPUReadback, Threading
 - **外部ハードウェア**: ESP32 (Arduino)
@@ -88,7 +87,7 @@ graph TB
         
         UDP[UdpController<br/>通信制御]
         VP[VideoPlayer<br/>映像再生]
-        AUDIO[CRI ADX2<br/>音楽再生]
+        AUDIO[AudioSource<br/>音楽再生]
     end
     
     subgraph "外部ハードウェア"
@@ -151,7 +150,7 @@ GameManager (シングルトン)
 ├─ ObjectRelocation (ノーツプール管理)
 ├─ UdpController (通信統括)
 ├─ VideoPlayer (演出映像)
-└─ AudioSource (CRI ADX2)
+└─ AudioSource (BGM)
 
 各ノーツオブジェクト
 ├─ TouchNotes_Flag (タッチ判定)
@@ -170,6 +169,8 @@ GameManager (シングルトン)
 ---
 
 ## 3. ハードウェア仕様
+
+> 寸法・配線・レーン割り当ての正は `3d-rhythmgame/Assets/Rhythm/Data/Hardware/` の JSON（説明は docs/hardware/README.md）．この章の表は概要．
 
 ### 3.1 ESP32デバイス構成
 
@@ -1360,15 +1361,11 @@ ESP32デバイスが登録されない
 
 1. **Unity プロジェクト**
    ```
-   Unity 2022.3 LTS以上
+   Unity 6000.0.55f1
    Visual Studio 2022 (C# 開発用)
    ```
 
-2. **CRI ADX2 SDK**
-   - `Assets/CRIMW/` にSDK配置
-   - CriWare ランタイムとエディタツール
-
-3. **必須パッケージ**
+2. **必須パッケージ**
    - Unity Input System
    - Video Player
 
@@ -1456,7 +1453,6 @@ netstat -an | Select-String "9999"
 ```
 3d-rhythmgame/
 ├── Assets/
-│   ├── CRIMW/              # CRI ADX2 SDK
 │   ├── Scenes/
 │   │   └── SampleScene.unity
 │   ├── Script/
@@ -1499,7 +1495,6 @@ netstat -an | Select-String "9999"
 ### C. 参考リンク
 
 - [Unity AsyncGPUReadback](https://docs.unity3d.com/ScriptReference/Rendering.AsyncGPUReadback.html)
-- [CRI ADX2 SDK Documentation](https://game.criware.jp/)
 - [ESP32 UDP通信](https://docs.espressif.com/)
 
 ---

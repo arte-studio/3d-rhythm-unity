@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "devices": {
+    "count": 8,
+    "devicePort": 8888,
+    "hostPort": 9999
+  },
+  "perf": {
+    "ledsPerStrip": 120,
+    "stripLengthM": 2.0,
+    "bottomYM": 0.0,
+    "angleCount": 30,
+    "rings": [
+      { "name": "inner",  "radiusM": 0.91, "angleOffsetDeg": 0.0 },
+      { "name": "middle", "radiusM": 1.15, "angleOffsetDeg": 0.0 },
+      { "name": "outer",  "radiusM": 1.42, "angleOffsetDeg": 0.0 }
+    ],
+    "pinsPerDevice": 3,
+    "stripsPerPin": 4,
+    "ringOfPin": [0, 1, 2],
+    "canvasColumnOffsetOfPin": [0, 2, 1],
+    "topFirstParityOfPin": [0, 0, 1],
+    "notes": "ledsPerStrip/stripLengthM はユーザー確認済み(2m・60LED/m)．canvasColumnOffsetOfPin と topFirstParityOfPin は旧コード(UdpController.ConvertPerfLedsID と RenderTextureSampler のジグザグ補正)と同じ並びになる値．rings の半径は LEDテープs.prefab の支柱位置から読んだ値．ringOfPin・angleOffsetDeg・bottomYM は未確認(Unity で LEDテープs.prefab を実測して埋める)．"
+  },
+  "noteModules": {
+    "modulesPerDevice": 5,
+    "muguColumns": 8,
+    "muguRows": 8,
+    "connectLeds": 30,
+    "moduleStrideLeds": 94,
+    "noteOutputPin": 3,
+    "notePacketLeds": 480,
+    "connectSwapRG": true,
+    "notes": "旧コード NoteLeds.cs の並び (64+30)*module に合わせている．ファーム main.cpp の touchLedRanges (0,96,192,320,416) とは一致しないので要確認．"
+  },
+  "output": {
+    "channelLuminance": [1.0, 1.0, 1.0],
+    "firmwareGamma": 1.0,
+    "notes": "ファームは (c*(b+1))>>8 で明るさを掛けるだけでガンマ補正なし (tape_led_module_s3/src/main.cpp applyBrightnessScale)．channelLuminance は未計測．"
+  }
+}
