@@ -1,0 +1,10 @@
+Assets/LEDtape/LEDテープs.prefab: renderers=90
+  total bounds center=(0.000, 0.998, 0.000) size=(3.413, 2.000, 3.395)
+  テープLED - テープLED_テープ^テープLED-1: center=(1.199, 0.998, 0.000) size=(0.002, 2.000, 0.010)
+  テープLED - テープLED_テープ^テープLED-1.001: center=(1.705, 0.998, 0.000) size=(0.002, 2.000, 0.010)
+  テープLED - テープLED_テープ^テープLED-1.002: center=(1.432, 0.998, -0.150) size=(0.003, 2.000, 0.010)
+  テープLED - テープLED_テープ^テープLED-1: center=(1.173, 0.998, -0.249) size=(0.004, 2.000, 0.010)
+Assets/movie/tutu.prefab: renderers=2
+  total bounds center=(0.000, 1.000, 0.000) size=(3.598, 2.000, 3.600)
+  tutu: center=(0.000, 1.000, 0.000) size=(3.598, 2.000, 3.600)
+  tutu (1): center=(0.000, 1.000, 0.000) size=(2.518, 2.000, 2.520)

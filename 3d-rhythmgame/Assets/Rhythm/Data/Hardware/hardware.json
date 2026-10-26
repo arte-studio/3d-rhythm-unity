@@ -11,16 +11,16 @@
     "bottomYM": 0.0,
     "angleCount": 30,
     "rings": [
-      { "name": "inner",  "radiusM": 0.91, "angleOffsetDeg": 0.0 },
-      { "name": "middle", "radiusM": 1.15, "angleOffsetDeg": 0.0 },
-      { "name": "outer",  "radiusM": 1.42, "angleOffsetDeg": 0.0 }
+      { "name": "inner",  "radiusM": 1.1993, "angleOffsetDeg": 90.0 },
+      { "name": "middle", "radiusM": 1.4395, "angleOffsetDeg": 96.0 },
+      { "name": "outer",  "radiusM": 1.7053, "angleOffsetDeg": 90.0 }
     ],
     "pinsPerDevice": 3,
     "stripsPerPin": 4,
     "ringOfPin": [0, 1, 2],
     "canvasColumnOffsetOfPin": [0, 2, 1],
     "topFirstParityOfPin": [0, 0, 1],
-    "notes": "ledsPerStrip/stripLengthM はユーザー確認済み(2m・60LED/m)．canvasColumnOffsetOfPin と topFirstParityOfPin は旧コード(UdpController.ConvertPerfLedsID と RenderTextureSampler のジグザグ補正)と同じ並びになる値．rings の半径は LEDテープs.prefab の支柱位置から読んだ値．ringOfPin・angleOffsetDeg・bottomYM は未確認(Unity で LEDテープs.prefab を実測して埋める)．"
+    "notes": "ledsPerStrip/stripLengthM はユーザー確認済み(2m・60LED/m)．canvasColumnOffsetOfPin と topFirstParityOfPin は旧コード(UdpController.ConvertPerfLedsID と RenderTextureSampler のジグザグ補正)と同じ並びになる値．rings・ringOfPin・bottomYM は LEDテープs.prefab のテープメッシュの実測値(docs/hardware/derived/strips-from-prefab.csv)．旧方式の newline はキャンバス列 = ID で描くので，ID 3k が内側・3k+1 が外側・3k+2 が中間(6°ずれ)になる．実機の寸法とは未照合．"
   },
   "noteModules": {
     "modulesPerDevice": 5,
