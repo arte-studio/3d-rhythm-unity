@@ -60,7 +60,7 @@ namespace Arte.Rhythm.Net
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("テスト表示", GUILayout.Width(80));
-                foreach (LedTestPattern.Mode m in System.Enum.GetValues(typeof(LedTestPattern.Mode)))
+                foreach (TestPatterns.Mode m in System.Enum.GetValues(typeof(TestPatterns.Mode)))
                     if (GUILayout.Toggle(testPattern.mode == m, m.ToString(), GUI.skin.button)) testPattern.mode = m;
                 GUILayout.EndHorizontal();
             }
