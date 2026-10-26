@@ -2,7 +2,9 @@
     "name": "Arte.Rhythm.Runtime",
     "rootNamespace": "Arte.Rhythm",
     "references": [
-        "Arte.Rhythm.Core"
+        "Arte.Rhythm.Core",
+        "Unity.Timeline",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

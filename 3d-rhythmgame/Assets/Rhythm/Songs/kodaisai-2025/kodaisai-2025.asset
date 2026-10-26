@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42506df9503232146b6444276f90db20, type: 3}
+  m_Name: kodaisai-2025
+  m_EditorClassIdentifier: 
+  songJson: {fileID: 4900000, guid: 9f0da0481cba124439aae3edd486db41, type: 3}
+  audio: {fileID: 8300000, guid: 974ac941e5572f74a991e6b2a6f890ae, type: 3}
+  video: {fileID: 32900000, guid: c5addd324ece13240b2f65b7e843b641, type: 3}
+  timeline: {fileID: 0}

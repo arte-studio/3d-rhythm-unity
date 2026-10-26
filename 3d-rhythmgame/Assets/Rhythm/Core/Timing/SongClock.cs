@@ -36,6 +36,14 @@ namespace Arte.Rhythm.Timing
             pausedTotal = 0;
         }
 
+        /// <summary>開始前の状態に戻す．</summary>
+        public void Reset()
+        {
+            startSource = double.NaN;
+            pausedAtSource = double.NaN;
+            pausedTotal = 0;
+        }
+
         public void Pause(double source)
         {
             if (!IsStarted || IsPaused) return;
