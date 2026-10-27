@@ -73,6 +73,7 @@ namespace Arte.Rhythm.Net
         readonly byte[] rx = new byte[ArteProtocol.MaxPacket + 1];
         readonly byte[] tx = new byte[ArteProtocol.MaxPacket];
         readonly byte[][] working, shown;
+        readonly byte[] decoded;
         readonly List<TouchEvent> log = new List<TouchEvent>();
         EndPoint remote = new IPEndPoint(IPAddress.Any, 0);
         IPEndPoint host;
@@ -83,6 +84,8 @@ namespace Arte.Rhythm.Net
 
         public byte Id { get; }
         public MacAddress Mac { get; }
+        /// <summary>HELLO で名乗るファームの版（0x0201 未満にすると PC は差分も PackBits も使わない）．</summary>
+        public ushort Firmware { get; set; } = ArteProtocol.FirmwarePackBits;
         public bool Registered => host != null;
         public uint Session { get; private set; }
         public DeviceConfig Config { get; private set; }
@@ -105,18 +108,22 @@ namespace Arte.Rhythm.Net
                 working[i] = new byte[ledsPerPin * 3];
                 shown[i] = new byte[ledsPerPin * 3];
             }
+            decoded = new byte[ledsPerPin * 3];
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp) { EnableBroadcast = true, Blocking = false };
             socket.Bind(new IPEndPoint(IPAddress.Any, port));
         }
 
         public void Dispose() => socket.Close();
 
-        /// <summary>表示中の RGB（ブライトネス適用前）．</summary>
+        /// <summary>
+        /// 表示中の RGB（ブライトネス適用前）．PC は明るさで同じ出力になる値をそろえて送るので，
+        /// 実際の光り方と比べるときは PixelCodec.Scale を掛けてから比べる．
+        /// </summary>
         public ReadOnlySpan<byte> ShownPin(int pin) => shown[pin];
 
         public void SendHello()
         {
-            var h = new Hello { Device = Id, Firmware = 0x0200, Mac = Mac, Pins = 4, LedsPerPin = (ushort)(working[0].Length / 3), TouchCount = 5, Session = Session };
+            var h = new Hello { Device = Id, Firmware = Firmware, Mac = Mac, Pins = 4, LedsPerPin = (ushort)(working[0].Length / 3), TouchCount = 5, Session = Session };
             Send(ArteProtocol.WriteHello(tx, h), hostHelloTarget);
         }
 
@@ -169,13 +176,21 @@ namespace Arte.Rhythm.Net
                 case PacketType.Config when ArteProtocol.TryReadConfig(p, out var c):
                     if (c.Target == ArteProtocol.AllDevices || c.Target == Id) Config = c;
                     break;
-                case PacketType.Pixels when host != null && ArteProtocol.TryReadPixels(p, out var h, out var rgb):
+                case PacketType.Pixels when host != null && ArteProtocol.TryReadPixels(p, out var h, out var payload):
+                {
                     if (h.Device != Id || h.Pin >= LedFrame.PinsPerDevice || (h.Start + h.Count) * 3 > working[h.Pin].Length) break;
+                    var rgb = payload;
+                    if (h.Encoding == ArteProtocol.EncodingPackBits)
+                    {
+                        if (!PixelCodec.DecodePackBits(payload, decoded, h.Count)) break;
+                        rgb = decoded.AsSpan(0, h.Count * 3);
+                    }
                     var r = Frames.OnPart(h.Frame, h.Pin, h.ExpectMask, nowUs);
                     if (r == FrameAssembler.Result.Ignore) break;
                     rgb.CopyTo(working[h.Pin].AsSpan(h.Start * 3));
                     if (r == FrameAssembler.Result.Complete) Show(nowUs, false);
                     break;
+                }
             }
         }
 

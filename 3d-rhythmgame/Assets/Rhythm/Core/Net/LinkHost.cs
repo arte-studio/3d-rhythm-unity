@@ -17,8 +17,21 @@ namespace Arte.Rhythm.Net
             BrightnessPerf = 50, BrightnessNote = 50, Flags = ArteProtocol.FlagTouchFeedback,
             DebounceMs = 5, HeartbeatMs = 50, HoldMs = 50,
         };
+        /// <summary>時刻合わせに使う（AdaptiveRate のときは混み具合を見るため 0.05 秒以下にする）．</summary>
         public double PingIntervalSec = 0.25;
         public double ConfigIntervalSec = 1.0;
+        /// <summary>差分と PackBits で通信量を減らす（v2.1 以降のファームだけ．古いファームには常にそのまま送る）．</summary>
+        public bool Compact = true;
+        /// <summary>
+        /// 混み具合を見て台ごとに送る頻度を下げる．Wi-Fi が詰まるとルーターに数秒分たまって遅れるので，
+        /// 往復時間が CongestionRttMs を超えるか PING の返事が PingTimeoutMs 来なければ頻度を下げ，空いていれば少しずつ戻す．
+        /// 本番は強いルーターを使うので既定では切っておく（家庭用ルーターで試すとき用）．
+        /// </summary>
+        public bool AdaptiveRate = false;
+        public double MaxSendFps = 60;
+        public double MinSendFps = 5;
+        public double CongestionRttMs = 50;
+        public double PingTimeoutMs = 200;
         /// <summary>この間何も届かなければ切断とみなす．</summary>
         public double DeviceTimeoutSec = 3.0;
     }
@@ -64,6 +77,14 @@ namespace Arte.Rhythm.Net
         public double DisplayLatencyMs = double.NaN;
         /// <summary>同じ番号の別の基板が見つかった．</summary>
         public bool IdConflict;
+        /// <summary>今このデバイスに送ってよい頻度（AdaptiveRate でなければ NaN）．</summary>
+        public double SendFps;
+        /// <summary>直近 1 秒に送ったピクセルデータ（kbit/s）．</summary>
+        public double SentKbps;
+        /// <summary>送ったバイト数 ÷ 毎回全ピンをそのまま送った場合のバイト数（これまでの合計）．</summary>
+        public double CompressionRatio = double.NaN;
+        /// <summary>混んでいると判断して頻度を下げた回数．</summary>
+        public int CongestionCount;
     }
 
     /// <summary>
@@ -84,6 +105,8 @@ namespace Arte.Rhythm.Net
         readonly byte[] replyBuf = new byte[ArteProtocol.MaxPacket];
         readonly ushort[] sentFrame = new ushort[SendTimeRing];
         readonly ulong[] sentUs = new ulong[SendTimeRing];
+        readonly byte[][] packets = new byte[LedFrame.PinsPerDevice][];
+        readonly int[] packetLengths = new int[LedFrame.PinsPerDevice];
 
         Socket socket;
         Thread thread;
@@ -117,6 +140,22 @@ namespace Arte.Rhythm.Net
             public byte TouchState;
             public double LatencyEmaUs = double.NaN;
             public bool IdConflict;
+
+            // 送信（メインスレッドだけが触る）
+            public readonly FrameEncoder Encoder = new FrameEncoder();
+            public ulong LastSendUs;
+            public byte SentBrightnessPerf, SentBrightnessNote;
+            public ulong RateWindowUs;
+            public long RateWindowBytes;
+            public double SentKbps;
+
+            // 混み具合など（gate の中で触る）
+            public bool NeedsFullFrame = true;
+            public double AllowedFps;
+            public ulong LastCutUs;
+            public uint PendingPingSeq;
+            public ulong PendingPingUs;
+            public int CongestionCount;
         }
 
         public LinkHost(LinkOptions options, Func<ulong> clockUs)
@@ -124,6 +163,7 @@ namespace Arte.Rhythm.Net
             this.options = options;
             this.clockUs = clockUs;
             devices = new Device[options.DeviceCount];
+            for (int i = 0; i < packets.Length; i++) packets[i] = new byte[ArteProtocol.MaxPacket];
             Session = (uint)new Random().Next(1, int.MaxValue);
         }
 
@@ -156,15 +196,34 @@ namespace Arte.Rhythm.Net
         public void Update()
         {
             ulong now = clockUs();
-            if (now - lastPingUs >= (ulong)(options.PingIntervalSec * 1e6))
+            double pingInterval = options.AdaptiveRate ? Math.Min(options.PingIntervalSec, 0.05) : options.PingIntervalSec;
+            if (now - lastPingUs >= (ulong)(pingInterval * 1e6))
             {
                 lastPingUs = now;
                 pingSeq++;
-                ForEachConnected(now, ep =>
+                for (int id = 0; id < devices.Length; id++)
                 {
+                    IPEndPoint ep;
+                    lock (gate)
+                    {
+                        var d = devices[id];
+                        if (!IsConnected(d, now)) continue;
+                        ep = d.EndPoint;
+                        // 返事の来ていない一番古い PING が期限を過ぎたら混んでいるとみなす
+                        if (options.AdaptiveRate && d.PendingPingUs != 0 && now - d.PendingPingUs >= (ulong)(options.PingTimeoutMs * 1000))
+                        {
+                            Congested(d, now);
+                            d.PendingPingUs = 0;
+                        }
+                        if (d.PendingPingUs == 0)
+                        {
+                            d.PendingPingUs = now;
+                            d.PendingPingSeq = pingSeq;
+                        }
+                    }
                     int n = ArteProtocol.WritePing(sendBuf, pingSeq, clockUs());
                     SendTo(sendBuf, n, ep);
-                });
+                }
             }
             if (now - lastConfigUs >= (ulong)(options.ConfigIntervalSec * 1e6))
             {
@@ -176,27 +235,66 @@ namespace Arte.Rhythm.Net
             }
         }
 
-        /// <summary>1 フレーム分を，つながっている全デバイスに送る．</summary>
+        /// <summary>
+        /// 1 フレーム分を，つながっている全デバイスに送る．AdaptiveRate のときは，混んでいるデバイスには
+        /// 間引いて送る（間引いたフレームは送らないだけで，次に送るときは最新の内容になる）．
+        /// </summary>
         public void SendFrame(LedFrame ledFrame)
         {
             frame++;
             ulong now = clockUs();
             sentFrame[frame % SendTimeRing] = frame;
             sentUs[frame % SendTimeRing] = now;
+            var config = options.Config;
             for (int id = 0; id < devices.Length && id < ledFrame.DeviceCount; id++)
             {
+                var d = devices[id];
                 IPEndPoint ep;
+                bool compact, full;
+                double fps;
                 lock (gate)
                 {
-                    if (!IsConnected(devices[id], now)) continue;
-                    ep = devices[id].EndPoint;
+                    if (!IsConnected(d, now)) continue;
+                    ep = d.EndPoint;
+                    compact = options.Compact && d.Firmware >= ArteProtocol.FirmwarePackBits;
+                    if (d.AllowedFps <= 0) d.AllowedFps = options.MaxSendFps;
+                    fps = options.AdaptiveRate ? d.AllowedFps : double.PositiveInfinity;
+                    full = d.NeedsFullFrame;
+                    d.NeedsFullFrame = false;
                 }
+                // 間隔の 1/4 の余裕を持たせる（呼び出し側の周期と少しずれても上限どおりに送れるように）
+                if (!full && d.LastSendUs != 0 && now - d.LastSendUs < (ulong)(0.75e6 / fps)) continue;
+                if (full || d.SentBrightnessPerf != config.BrightnessPerf || d.SentBrightnessNote != config.BrightnessNote)
+                {
+                    d.Encoder.Invalidate();
+                    d.SentBrightnessPerf = config.BrightnessPerf;
+                    d.SentBrightnessNote = config.BrightnessNote;
+                }
+                d.LastSendUs = now;
+                d.Encoder.Encode(ledFrame, id, frame, config, compact, now, packets, packetLengths);
                 for (int pin = 0; pin < LedFrame.PinsPerDevice; pin++)
                 {
-                    int n = ledFrame.WritePacket(sendBuf, id, pin, frame);
-                    if (n > 0) SendTo(sendBuf, n, ep);
+                    if (packetLengths[pin] == 0) continue;
+                    SendTo(packets[pin], packetLengths[pin], ep);
+                    d.RateWindowBytes += packetLengths[pin];
+                }
+                if (now - d.RateWindowUs >= 1_000_000)
+                {
+                    if (d.RateWindowUs != 0) d.SentKbps = d.RateWindowBytes * 8 / ((now - d.RateWindowUs) / 1e3);
+                    d.RateWindowUs = now;
+                    d.RateWindowBytes = 0;
                 }
             }
+        }
+
+        // gate の中で呼ぶ
+        void Congested(Device d, ulong now)
+        {
+            // 下げた効果が往復時間に出るまでは続けて下げない
+            if (now - d.LastCutUs < 200_000) return;
+            d.LastCutUs = now;
+            d.CongestionCount++;
+            d.AllowedFps = Math.Max(options.MinSendFps, (d.AllowedFps > 0 ? d.AllowedFps : options.MaxSendFps) * 0.6);
         }
 
         /// <summary>MAC で指定した基板の番号を変える（基板は保存して再起動する）．</summary>
@@ -234,6 +332,9 @@ namespace Arte.Rhythm.Net
                         HasStatus = d.HasStatus, Status = d.Status, TouchState = d.TouchState,
                         Synced = d.Clock.IsSynced, ClockOffsetUs = d.Clock.OffsetUs, RttUs = d.Clock.RttUs,
                         LastRttUs = d.Clock.LastRttUs, DisplayLatencyMs = d.LatencyEmaUs / 1000.0, IdConflict = d.IdConflict,
+                        SendFps = options.AdaptiveRate ? (d.AllowedFps > 0 ? d.AllowedFps : options.MaxSendFps) : double.NaN,
+                        SentKbps = d.SentKbps, CongestionCount = d.CongestionCount,
+                        CompressionRatio = d.Encoder.BytesRaw > 0 ? (double)d.Encoder.BytesSent / d.Encoder.BytesRaw : double.NaN,
                     });
                 }
                 foreach (var (info, seenUs) in unassigned.Values)
@@ -346,6 +447,7 @@ namespace Arte.Rhythm.Net
                 d.LastSeenUs = now;
                 d.Clock.Reset();
                 d.Tracker.Reset();
+                d.NeedsFullFrame = true;
             }
             if (log != null) Log?.Invoke(log);
             int n = ArteProtocol.WriteWelcome(replyBuf, Session);
@@ -364,6 +466,14 @@ namespace Arte.Rhythm.Net
                 if (d == null) return;
                 d.LastSeenUs = now;
                 d.Clock.AddSample(m.HostTimeUs, m.DeviceTimeUs, now);
+                if (d.PendingPingUs != 0 && (int)(m.Seq - d.PendingPingSeq) >= 0) d.PendingPingUs = 0;
+                if (options.AdaptiveRate)
+                {
+                    if (now - m.HostTimeUs > (ulong)(options.CongestionRttMs * 1000)) Congested(d, now);
+                    else if (d.AllowedFps > 0 && now - d.LastCutUs > 500_000)
+                        // 空いていれば PONG ごとに少しずつ戻す（20 回/秒 × 0.5 = 10fps/秒）
+                        d.AllowedFps = Math.Min(options.MaxSendFps, d.AllowedFps + 0.5);
+                }
                 int slot = m.LastFrame % SendTimeRing;
                 if (m.LastShowUs != 0 && sentFrame[slot] == m.LastFrame)
                 {

@@ -41,7 +41,7 @@ namespace Arte.Rhythm.Net
                 return;
             }
             GUILayout.Label($"実機（F2 で隠す）  設営 {link.Setup?.name}  フレーム {link.Host.LastFrame}");
-            GUILayout.Label("ID  接続   RSSI  表示fps  欠け/捨て  往復ms  遅れms  タッチ  ファーム  IP");
+            GUILayout.Label("ID  接続   RSSI  表示fps  欠け/捨て  送信kbps  往復ms  遅れms  タッチ  ファーム  IP");
             foreach (var d in snapshot)
             {
                 if (d.Id >= link.Hardware.devices.count) continue;
@@ -90,6 +90,8 @@ namespace Arte.Rhythm.Net
                 sb.Append($"{s.Rssi,4}  {f,6:F1}  {s.FramesForced,5}/{s.FramesDropped,-5} ");
             }
             else sb.Append("   -       -         -     ");
+            // 変わらないピンは送らないので，止まった絵なら表示 fps も送信量も下がる（異常ではない）
+            sb.Append($"{d.SentKbps,7:F0}  ");
             sb.Append(d.Synced ? $"{d.LastRttUs / 1000.0,6:F1}  " : "     -  ");
             sb.Append(double.IsNaN(d.DisplayLatencyMs) ? "    -   " : $"{d.DisplayLatencyMs,6:F1}  ");
             for (int i = 0; i < 5; i++) sb.Append((d.TouchState & (1 << i)) != 0 ? '■' : '□');

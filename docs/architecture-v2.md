@@ -39,8 +39,8 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 | P1 | ハード構成データ＋設営プロファイル，出力モデル，Core の asmdef とテスト | 作成済み（旧コードと一致をテストで保証） |
 | P2 | Core（判定・時刻管理）の書き直し，テスト，リプレイ入力 | 判定・曲時刻・リプレイ作成済み（旧版との一致をテストで保証）．Runtime への接続は P3 で |
 | P3 | 曲データ形式＋Timeline での譜面・演出編集環境＋音楽との同期 | song.json，予約再生と時刻補間，動画/Timeline 同期，譜面エディタ，確認用シーン（`docs/authoring/chart-editor.md`）．演出クリップは P5/P7 |
-| P4 | UDP v2＋ファーム v2（S3 に統一） | プロトコル v2，ファーム v2（ビルドとロジックのテストのみ．実機未確認），DeviceLink・接続モニタ・テスト表示 |
-| P5 | LED 描画の GPU 化（ノート PC で 60fps 固定） | |
+| P4 | UDP v2＋ファーム v2（S3 に統一） | プロトコル v2，ファーム v2.1，DeviceLink・接続モニタ・テスト表示，LinkTool~．実機 1 台で接続・時刻合わせ・表示を確認（タッチは未接続） |
+| P5 | LED 描画の GPU 化（ノート PC で 60fps 固定） | 送信の圧縮（PackBits・変わっていないピンを送らない）を先に実装 |
 | P6 | Viewer（光の広がり，暗幕の部屋，内側からの視点，VR の準備） | |
 | P7 | 演出の制作環境とプレビュー書き出し，美大生向けテンプレート | |
 | P8 | 既存演出の移行，仕様書の更新 | |
@@ -104,9 +104,15 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 | `Core/Net/ClockSync.cs`，`TouchEventTracker.cs` | 時刻合わせ，タッチの重複除去 |
 | `Core/Net/LinkHost.cs` | PC 側の通信本体（Unity 非依存．localhost の仮想デバイスとつないでテスト） |
 | `Core/Net/LedFrame.cs` | 送る RGB（デバイス × ピン，配線順）．設営から送るピンと長さを決める |
+| `Core/Net/FrameEncoder.cs`，`PixelCodec.cs` | 送信量を減らす（変わっていないピンを送らない，PackBits，明るさで同じ出力になる値をそろえる．v2.1 のファームだけ） |
 | `Core/Net/VirtualDevice.cs` | PC 上の仮想デバイス（テスト用．P6 の Viewer でも使う） |
 | `Runtime/Net/DeviceLink.cs` | Unity 側の窓口．タッチ → レーン → 判定，Frame の送信 |
 | `Runtime/Net/DeviceMonitorHud.cs` | 接続状態（F2）．往復時間，表示 fps，欠けたフレーム，表示の遅れ，タッチ |
 | `Runtime/Net/LedTestPattern.cs` | 設営確認用の表示（配線の先頭，ジグザグと列の並び，ノーツモジュール） |
+
+実機での通信の様子（家庭用ルーター，2.4GHz，1 台）: 圧縮なしの 60fps（約 2.8Mbps）ではルーターに詰まって往復 1〜4 秒の遅れが出た．
+圧縮で止まった絵や一部だけ動く絵の送信量は大きく減るが，全 LED が毎フレーム変わる絵は 6 割程度までしか減らない．
+本番は強いルーターを用意するので，混み具合で送る頻度を下げる仕組み（`LinkOptions.AdaptiveRate`）は既定では切ってある．
+`dotnet run --project 3d-rhythmgame/LinkTool~ -- rainbow 30 [--raw] [--adaptive]` で比べられる．
 
 旧版の `UdpController` とは同じポート（9999）を使うので，同じシーンに置かない．旧ファームとは通信できない（全台 v2 に書き換える）．

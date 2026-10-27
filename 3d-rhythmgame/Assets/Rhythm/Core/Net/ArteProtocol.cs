@@ -23,6 +23,12 @@ namespace Arte.Rhythm.Net
         public const byte FlagTouchFeedback = 0x01;
         public const byte FlagSelfTest = 0x02;
 
+        /// <summary>PIXELS の encoding．0 = RGB そのまま，1 = PackBits（PixelCodec）．</summary>
+        public const byte EncodingRaw = 0;
+        public const byte EncodingPackBits = 1;
+        /// <summary>PackBits を読めるファームの版（v2.1）．</summary>
+        public const ushort FirmwarePackBits = 0x0201;
+
         public const int WelcomeSize = HeaderSize + 4;
         public const int PingSize = HeaderSize + 12;
         public const int PixelsHeaderSize = HeaderSize + 10;
@@ -65,7 +71,7 @@ namespace Arte.Rhythm.Net
             return PingSize;
         }
 
-        /// <summary>ピクセルパケットのヘッダを書く．RGB は続く count*3 バイトに呼び出し側が書く．</summary>
+        /// <summary>ピクセルパケットのヘッダを書く．中身（encoding 0 なら count*3 バイトの RGB）は続けて呼び出し側が書く．</summary>
         public static int WritePixelsHeader(Span<byte> p, in PixelsHeader h)
         {
             WriteHeader(p, PacketType.Pixels);
@@ -73,7 +79,7 @@ namespace Arte.Rhythm.Net
             p[5] = h.Pin;
             BinaryPrimitives.WriteUInt16LittleEndian(p.Slice(6), h.Frame);
             p[8] = h.ExpectMask;
-            p[9] = 0;
+            p[9] = h.Encoding;
             BinaryPrimitives.WriteUInt16LittleEndian(p.Slice(10), h.Start);
             BinaryPrimitives.WriteUInt16LittleEndian(p.Slice(12), h.Count);
             return PixelsHeaderSize;
@@ -100,16 +106,26 @@ namespace Arte.Rhythm.Net
             return SetIdSize;
         }
 
-        public static bool TryReadPixels(ReadOnlySpan<byte> p, out PixelsHeader h, out ReadOnlySpan<byte> rgb)
+        /// <summary>payload は encoding 0 なら count*3 バイトの RGB，1 なら残り全部（PixelCodec.DecodePackBits で戻す）．</summary>
+        public static bool TryReadPixels(ReadOnlySpan<byte> p, out PixelsHeader h, out ReadOnlySpan<byte> payload)
         {
             h = default;
-            rgb = default;
+            payload = default;
             if (TypeOf(p) != PacketType.Pixels || p.Length < PixelsHeaderSize) return false;
             h = new PixelsHeader(p[4], p[5], BinaryPrimitives.ReadUInt16LittleEndian(p.Slice(6)), p[8],
-                BinaryPrimitives.ReadUInt16LittleEndian(p.Slice(10)), BinaryPrimitives.ReadUInt16LittleEndian(p.Slice(12)));
-            if (p[9] != 0 || p.Length < PixelsHeaderSize + h.Count * 3) return false;
-            rgb = p.Slice(PixelsHeaderSize, h.Count * 3);
-            return true;
+                BinaryPrimitives.ReadUInt16LittleEndian(p.Slice(10)), BinaryPrimitives.ReadUInt16LittleEndian(p.Slice(12)), p[9]);
+            switch (h.Encoding)
+            {
+                case EncodingRaw:
+                    if (p.Length < PixelsHeaderSize + h.Count * 3) return false;
+                    payload = p.Slice(PixelsHeaderSize, h.Count * 3);
+                    return true;
+                case EncodingPackBits:
+                    payload = p.Slice(PixelsHeaderSize);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         public static bool TryReadConfig(ReadOnlySpan<byte> p, out DeviceConfig c)
@@ -270,9 +286,12 @@ namespace Arte.Rhythm.Net
         /// <summary>このフレームで送るピンのビット集合．デバイスは揃ったら表示する．</summary>
         public readonly byte ExpectMask;
         public readonly ushort Start;
+        /// <summary>LED 数（PackBits でも戻したあとの数）．</summary>
         public readonly ushort Count;
+        /// <summary>ArteProtocol.EncodingRaw / EncodingPackBits．</summary>
+        public readonly byte Encoding;
 
-        public PixelsHeader(byte device, byte pin, ushort frame, byte expectMask, ushort start, ushort count)
+        public PixelsHeader(byte device, byte pin, ushort frame, byte expectMask, ushort start, ushort count, byte encoding = ArteProtocol.EncodingRaw)
         {
             Device = device;
             Pin = pin;
@@ -280,6 +299,7 @@ namespace Arte.Rhythm.Net
             ExpectMask = expectMask;
             Start = start;
             Count = count;
+            Encoding = encoding;
         }
     }
 

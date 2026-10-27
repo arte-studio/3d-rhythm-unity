@@ -8,9 +8,11 @@ using Arte.Rhythm.Net;
 
 // 実機（ファーム v2）とつないで，テスト表示を送りながら状態を表示する．
 //
-//   dotnet run --project 3d-rhythmgame/LinkTool~ -- <表示> [秒数] [--setup 名前] [--assign MAC 番号] [--brightness 演出 ノーツ] [--fps 送信fps] [--leds 1パケットのLED数]
+//   dotnet run --project 3d-rhythmgame/LinkTool~ -- <表示> [秒数] [--setup 名前] [--assign MAC 番号] [--brightness 演出 ノーツ] [--fps 送信fps] [--leds 1パケットのLED数] [--raw] [--adaptive]
 //     表示: off | heads | canvas | notes | rainbow（既定 heads）
 //     秒数: 0 なら Ctrl+C まで（既定 0）
+//     --raw: 圧縮しない（毎回全ピンをそのまま送る．比較用）
+//     --adaptive: 混み具合を見て送る頻度を下げる（LinkOptions.AdaptiveRate）
 //   例: dotnet run --project 3d-rhythmgame/LinkTool~ -- canvas 30
 //       dotnet run --project 3d-rhythmgame/LinkTool~ -- heads 10 --assign 1C:DB:D4:5B:65:28 5
 static class Program
@@ -25,6 +27,7 @@ static class Program
         int? brightPerf = null, brightNote = null;
         double fps = 60;
         int maxLeds = 0;
+        bool raw = false, adaptive = false;
         var positional = 0;
         for (int i = 0; i < args.Length; i++)
         {
@@ -35,6 +38,8 @@ static class Program
                 case "--brightness": brightPerf = int.Parse(args[++i]); brightNote = int.Parse(args[++i]); break;
                 case "--fps": fps = double.Parse(args[++i]); break;
                 case "--leds": maxLeds = int.Parse(args[++i]); break;
+                case "--raw": raw = true; break;
+                case "--adaptive": adaptive = true; break;
                 default:
                     if (positional++ == 0) mode = ParseMode(args[i]);
                     else seconds = double.Parse(args[i]);
@@ -60,7 +65,10 @@ static class Program
 
         var watch = Stopwatch.StartNew();
         ulong NowUs() => (ulong)(watch.Elapsed.Ticks / 10) + 1;
-        var options = new LinkOptions { HostPort = config.devices.hostPort, DeviceCount = config.devices.count };
+        var options = new LinkOptions
+        {
+            HostPort = config.devices.hostPort, DeviceCount = config.devices.count, Compact = !raw, AdaptiveRate = adaptive, MaxSendFps = fps,
+        };
         options.Config.BrightnessPerf = (byte)(brightPerf ?? setup.brightnessPerf);
         options.Config.BrightnessNote = (byte)(brightNote ?? setup.brightnessNote);
         using var host = new LinkHost(options, NowUs);
@@ -74,7 +82,8 @@ static class Program
                               $"レーン {(lane >= 0 ? (lane + 1).ToString() : "-")}  時刻 {t.HostTimeUs / 1e6:F4}（{(t.Synced ? "時刻合わせ済" : "未")}）");
         };
         host.Start();
-        Console.WriteLine($"ポート {host.LocalPort} で待受．表示 {mode}，設営 {setup.name}，明るさ {options.Config.BrightnessPerf}/{options.Config.BrightnessNote}．Ctrl+C で終了");
+        Console.WriteLine($"ポート {host.LocalPort} で待受．表示 {mode}，設営 {setup.name}，明るさ {options.Config.BrightnessPerf}/{options.Config.BrightnessNote}，" +
+                          $"{(raw ? "圧縮なし" : "圧縮あり")}{(adaptive ? "，頻度の自動調整あり" : "")}．Ctrl+C で終了");
 
         bool stop = false;
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; stop = true; };
@@ -137,7 +146,7 @@ static class Program
             if (!d.HasStatus) continue;
             var s = d.Status;
             Console.WriteLine($"device {d.Id}: 表示 {s.FramesShown}，揃わず表示 {s.FramesForced}，捨て {s.FramesDropped}，受信 {s.PacketsRx}，不正 {s.PacketsBad}，" +
-                              $"送ったフレーム {host.LastFrame}");
+                              $"送ったフレーム {host.LastFrame}，送信量 そのままの {d.CompressionRatio * 100:F1}%，頻度を下げた回数 {d.CongestionCount}");
         }
         if (rtts.Count == 0) return;
         rtts.Sort();
@@ -166,6 +175,8 @@ static class Program
                 line += $"  表示 {fps}fps（揃わず {s.FramesForced}，捨て {s.FramesDropped}）  RSSI {s.Rssi}  show {s.ShowUs}us  空き {s.FreeHeap / 1024}KB  明るさ {s.BrightnessPerf}/{s.BrightnessNote}";
             }
             if (d.Synced && d.Connected) rtts.Add(d.LastRttUs / 1000.0);
+            line += $"  送信 {d.SentKbps:F0}kbps";
+            if (!double.IsNaN(d.SendFps)) line += $"（上限 {d.SendFps:F0}fps）";
             if (d.Synced) line += $"  往復 {d.LastRttUs / 1000.0:F1}ms（最短 {d.RttUs / 1000.0:F1}）";
             if (!double.IsNaN(d.DisplayLatencyMs)) line += $"  表示遅れ {d.DisplayLatencyMs:F1}ms";
             Console.WriteLine(line);
