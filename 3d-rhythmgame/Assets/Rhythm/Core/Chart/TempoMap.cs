@@ -96,6 +96,32 @@ namespace Arte.Rhythm.Charts
             return (barAt[i] + bar + 1, local - bar * bpb + 1);
         }
 
+        /// <summary>「小節.拍」（どちらも1始まり，拍は小数可）→ 秒．BarBeatOf の逆．</summary>
+        public double TimeOfBarBeat(int bar, double beat)
+        {
+            int b0 = bar - 1;
+            int i = points.Length - 1;
+            while (i > 0 && b0 < barAt[i]) i--;
+            var p = points[i];
+            double beats = (b0 - barAt[i]) * (double)p.BeatsPerBar + (beat - 1);
+            return p.TimeSec + beats * 60.0 / p.Bpm;
+        }
+
+        /// <summary>
+        /// テンポを直したとき，from で sec にあったものを，同じ「小節.拍」の to での秒に移す．
+        /// 例: 12 小節目の 3 拍目にあった演出は，テンポや 1 小節目を直しても 12 小節目の 3 拍目のまま．
+        /// </summary>
+        public static double Retime(double sec, TempoMap from, TempoMap to)
+        {
+            var (bar, beat) = from.BarBeatOf(sec);
+            return to.TimeOfBarBeat(bar, beat);
+        }
+
+        /// <summary>同じテンポか（点の時刻・BPM・拍子がすべて同じ）．</summary>
+        public bool SameAs(TempoMap other) =>
+            other != null && points.Length == other.points.Length &&
+            points.Zip(other.points, (a, b) => Math.Abs(a.TimeSec - b.TimeSec) < 1e-9 && Math.Abs(a.Bpm - b.Bpm) < 1e-9 && a.BeatsPerBar == b.BeatsPerBar).All(x => x);
+
         /// <summary>[fromSec, toSec] にある拍（division 等分）の線を列挙する．isBarHead は小節の頭．</summary>
         public IEnumerable<(double sec, bool isBeat, bool isBarHead)> GridLines(double fromSec, double toSec, int division)
         {

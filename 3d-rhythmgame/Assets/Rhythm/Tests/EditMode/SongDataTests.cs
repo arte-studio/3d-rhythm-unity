@@ -66,6 +66,36 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void TimeOfBarBeat_IsInverseOfBarBeatOf()
+        {
+            var map = new TempoMap(new[]
+            {
+                new TempoPoint { TimeSec = 1.759, Bpm = 151.96, BeatsPerBar = 4 },
+                new TempoPoint { TimeSec = 40.0, Bpm = 120, BeatsPerBar = 3 },
+            });
+            foreach (double t in new[] { 0.3, 1.759, 10.0, 39.9, 40.0, 41.234, 80.0 })
+            {
+                var (bar, beat) = map.BarBeatOf(t);
+                Assert.AreEqual(t, map.TimeOfBarBeat(bar, beat), 1e-9, $"{t} 秒 = {bar} 小節 {beat} 拍");
+            }
+            Assert.AreEqual(1.759, map.TimeOfBarBeat(1, 1), 1e-9);
+        }
+
+        [Test]
+        public void Retime_KeepsBarAndBeat()
+        {
+            var oldMap = new TempoMap(new[] { new TempoPoint { TimeSec = 1.759, Bpm = 151.96, BeatsPerBar = 4 } });
+            var newMap = new TempoMap(new[] { new TempoPoint { TimeSec = 2.154, Bpm = 152.5, BeatsPerBar = 4 } });
+            double t = oldMap.TimeOfBarBeat(12, 3);
+            double moved = TempoMap.Retime(t, oldMap, newMap);
+            var (bar, beat) = newMap.BarBeatOf(moved);
+            Assert.AreEqual(12, bar);
+            Assert.AreEqual(3, beat, 1e-9);
+            Assert.IsTrue(oldMap.SameAs(new TempoMap(new[] { new TempoPoint { TimeSec = 1.759, Bpm = 151.96, BeatsPerBar = 4 } })));
+            Assert.IsFalse(oldMap.SameAs(newMap));
+        }
+
+        [Test]
         public void Sections_RoundTripAndLookup()
         {
             var song = new SongData();
