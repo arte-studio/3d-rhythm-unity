@@ -51,6 +51,41 @@ namespace Arte.Rhythm.Editor
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>目印が song.json と食い違っている曲だけ作り直す（song.json を外で書き換えたとき用）．作り直した数を返す．</summary>
+        public static int SyncStale()
+        {
+            int n = 0;
+            foreach (var guid in AssetDatabase.FindAssets("t:SongAsset"))
+            {
+                var s = AssetDatabase.LoadAssetAtPath<SongAsset>(AssetDatabase.GUIDToAssetPath(guid));
+                if (s == null || s.timeline == null || s.Data == null || !IsStale(s.timeline, s.Data, s.LengthSec)) continue;
+                Sync(s.timeline, s.Data, s.LengthSec);
+                Debug.Log($"[SongTimelineSync] {s.name}: 曲の小節と区切りの目印を作り直した");
+                n++;
+            }
+            if (n > 0) AssetDatabase.SaveAssets();
+            return n;
+        }
+
+        static bool IsStale(TimelineAsset timeline, SongData data, double lengthSec)
+        {
+            var track = timeline.GetOutputTracks().OfType<SongGridTrack>().FirstOrDefault();
+            if (track == null) return true;
+            var tempo = data.TempoMap();
+            var want = tempo.GridLines(0, EndOf(data, lengthSec), 1).Where(g => g.isBarHead).Select(g => g.sec)
+                .Concat(data.Sections.Select(s => s.Time)).OrderBy(t => t).ToList();
+            var have = track.GetMarkers().Select(m => m.time).OrderBy(t => t).ToList();
+            if (want.Count != have.Count) return true;
+            for (int i = 0; i < want.Count; i++)
+                if (System.Math.Abs(want[i] - have[i]) > 1e-3) return true;
+            // 区切りの名前
+            var names = track.GetMarkers().OfType<SongSectionMarker>().Select(m => m.sectionName).OrderBy(x => x);
+            return !names.SequenceEqual(data.Sections.Select(s => s.Name).OrderBy(x => x));
+        }
+
+        static double EndOf(SongData data, double lengthSec) =>
+            lengthSec > 0 ? lengthSec : Mathf.Max(60, (float)(data.Notes.Count > 0 ? data.Notes.Max(n => n.Time) + 5 : 60));
+
         /// <summary>小節の頭と区切りの目印を作り直す．</summary>
         public static void Sync(TimelineAsset timeline, SongData data, double lengthSec)
         {
@@ -74,10 +109,10 @@ namespace Arte.Rhythm.Editor
             }
             track.locked = false; // 以前はロックしていた（「Locked」の表示が区切りの名前に重なるのでやめた）
             foreach (var m in track.GetMarkers().ToList()) track.DeleteMarker(m);
+            RemoveMissingMarkers(track);
 
             var tempo = data.TempoMap();
-            double end = lengthSec > 0 ? lengthSec : Mathf.Max(60, (float)(data.Notes.Count > 0 ? data.Notes.Max(n => n.Time) + 5 : 60));
-            foreach (var (sec, _, isBar) in tempo.GridLines(0, end, 1))
+            foreach (var (sec, _, isBar) in tempo.GridLines(0, EndOf(data, lengthSec), 1))
             {
                 if (!isBar) continue;
                 var m = track.CreateMarker<BarMarker>(sec);
@@ -90,6 +125,21 @@ namespace Arte.Rhythm.Editor
             }
             EditorUtility.SetDirty(timeline);
             TimelineEditor.Refresh(RefreshReason.ContentsAddedOrRemoved);
+        }
+
+        /// <summary>
+        /// 目印の一覧に残った「消えた目印」への参照を取り除く（エディタを閉じるときに目印だけ消えて一覧が残ることがあった．
+        /// 残ると読み込むたびに Broken PPtr の警告が出る）．Timeline に公開の手段が無いのでリフレクションで触る．
+        /// </summary>
+        static void RemoveMissingMarkers(TrackAsset track)
+        {
+            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var markerList = typeof(TrackAsset).GetField("m_Markers", F)?.GetValue(track);
+            if (markerList?.GetType().GetField("m_Objects", F)?.GetValue(markerList) is List<ScriptableObject> objects)
+            {
+                int removed = objects.RemoveAll(o => o == null);
+                if (removed > 0) Debug.Log($"[SongTimelineSync] 消えた目印への参照を {removed} 個取り除いた");
+            }
         }
 
         /// <summary>演出のクリップ（とフェードの長さ）を「小節.拍」を保ったまま新しいテンポに移す．動かしたクリップの数を返す．</summary>
@@ -123,6 +173,22 @@ namespace Arte.Rhythm.Editor
             EditorUtility.SetDirty(timeline);
             TimelineEditor.Refresh(RefreshReason.ContentsModified);
             return n;
+        }
+    }
+
+    /// <summary>
+    /// song.json を Unity の外で書き換えても目印が古いままにならないように，
+    /// エディタの起動・スクリプトの再読み込み・song.json の読み込みのたびに食い違いを確かめて作り直す．
+    /// </summary>
+    [InitializeOnLoad]
+    sealed class SongTimelineAutoSync : AssetPostprocessor
+    {
+        static SongTimelineAutoSync() => EditorApplication.delayCall += () => SongTimelineSync.SyncStale();
+
+        static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
+        {
+            if (imported.Any(p => p.EndsWith("song.json")))
+                EditorApplication.delayCall += () => SongTimelineSync.SyncStale();
         }
     }
 
