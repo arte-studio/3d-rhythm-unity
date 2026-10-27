@@ -6,6 +6,7 @@ namespace Arte.Rhythm.Gameplay
     /// <summary>
     /// 実機が無いときの入力．キーボードの 1〜0 がレーン 1〜10（内部 0〜9），Q〜P がレーン 11〜20（内部 10〜19）．
     /// 画面に出すレーン番号（1始まり）とキーの数字がそろうようにしている．
+    /// マウスの右ボタンを押している間は Viewer のカメラ操作（WASD など）に使うので受け付けない．
     /// </summary>
     public sealed class KeyboardTouchInput : MonoBehaviour
     {
@@ -21,6 +22,7 @@ namespace Arte.Rhythm.Gameplay
         {
             var kb = Keyboard.current;
             if (kb == null || session == null) return;
+            if (Mouse.current != null && Mouse.current.rightButton.isPressed) return;
             for (int lane = 0; lane < Keys.Length; lane++)
                 if (kb[Keys[lane]].wasPressedThisFrame) session.Touch(lane);
         }

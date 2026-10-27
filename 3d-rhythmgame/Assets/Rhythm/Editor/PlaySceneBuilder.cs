@@ -20,6 +20,7 @@ namespace Arte.Rhythm.Editor
     public static class PlaySceneBuilder
     {
         const string ScenePath = "Assets/Rhythm/Scenes/Play.unity";
+        const string ViewerScenePath = "Assets/Rhythm/Scenes/Viewer.unity";
         const string RenderDir = "Assets/Rhythm/Runtime/Render";
         const string DefaultSong = "Assets/Rhythm/Songs/kodaisai-2025/kodaisai-2025.asset";
         const string HardwareJson = "Assets/Rhythm/Data/Hardware/hardware.json";
@@ -63,41 +64,74 @@ namespace Arte.Rhythm.Editor
             effect.conductor = conductor;
             effect.material = MaterialAsset("Arte/LedCanvas/Sweep", "CanvasSweep");
 
-            // 暗幕の部屋で，リングの中心に立った観客の目の高さから見る
-            var view = new GameObject("LedPreview");
-            var preview = view.AddComponent<LedPreview>();
+            var preview = new GameObject("LedPreview").AddComponent<LedPreview>();
+            preview.source = LedPreview.Source.Local;
             preview.link = link;
-            preview.material = MaterialAsset("Arte/LedPreview/Point", "LedPoint");
-            var light = Object.FindFirstObjectByType<Light>();
-            if (light != null) Object.DestroyImmediate(light.gameObject);
-            RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = Color.black;
-            RenderSettings.skybox = null;
-            var cam = Camera.main;
-            cam.transform.SetPositionAndRotation(new Vector3(0, 1.5f, 0), Quaternion.Euler(-10, 0, 0));
-            cam.fieldOfView = 90;
-            cam.nearClipPlane = 0.05f;
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = Color.black;
-            cam.allowHDR = true;
-            cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
-            var volume = new GameObject("PostProcess").AddComponent<Volume>();
-            volume.isGlobal = true;
-            volume.sharedProfile = VolumeProfileAsset();
+            AddViewer(preview);
 
             System.IO.Directory.CreateDirectory("Assets/Rhythm/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);
             Debug.Log($"[PlaySceneBuilder] {ScenePath}");
         }
 
+        /// <summary>
+        /// 別の PC で本番の LED を見るためのシーン（Assets/Rhythm/Scenes/Viewer.unity）．送る側は DeviceLink.mirrorTo か
+        /// 起動引数 -mirror にこの PC の IP を入れる．ゲームは動かさず，受け取った LED を描くだけ．
+        /// </summary>
+        [MenuItem("Tools/Arte Rhythm/Create Viewer Scene")]
+        public static void BuildViewerScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var preview = new GameObject("LedPreview").AddComponent<LedPreview>();
+            preview.source = LedPreview.Source.Mirror;
+            preview.hardwareJson = AssetDatabase.LoadAssetAtPath<TextAsset>(HardwareJson);
+            preview.setupJson = AssetDatabase.LoadAssetAtPath<TextAsset>(DefaultSetup);
+            AddViewer(preview);
+            preview.gameObject.AddComponent<ViewerHud>().preview = preview;
+            System.IO.Directory.CreateDirectory("Assets/Rhythm/Scenes");
+            EditorSceneManager.SaveScene(scene, ViewerScenePath);
+            Debug.Log($"[PlaySceneBuilder] {ViewerScenePath}");
+        }
+
+        // 暗幕の部屋（床・暗幕・テープ本体を LED の光で照らす）と，リングの中心に立った観客の目の高さから見るカメラ
+        static void AddViewer(LedPreview preview)
+        {
+            preview.material = MaterialAsset("Arte/LedPreview/Point", "LedPoint");
+            var room = preview.gameObject.AddComponent<ViewerRoom>();
+            room.preview = preview;
+            room.litMaterial = MaterialAsset("Arte/Viewer/LitByLeds", "LitByLeds");
+            var light = Object.FindFirstObjectByType<Light>();
+            if (light != null) Object.DestroyImmediate(light.gameObject);
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = Color.black;
+            RenderSettings.skybox = null;
+            var cam = Camera.main;
+            cam.fieldOfView = 90;
+            cam.nearClipPlane = 0.05f;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Color.black;
+            cam.allowHDR = true;
+            cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+            cam.gameObject.AddComponent<ViewerCamera>();
+            var volume = new GameObject("PostProcess").AddComponent<Volume>();
+            volume.isGlobal = true;
+            volume.sharedProfile = VolumeProfileAsset();
+        }
+
+        /// <summary>Viewer シーンだけのビルド（Builds/Viewer/Viewer.exe）．</summary>
+        [MenuItem("Tools/Arte Rhythm/Build Viewer Player")]
+        public static void BuildViewerPlayer() => Build(ViewerScenePath, "Builds/Viewer/Viewer.exe");
+
         /// <summary>Play シーンだけのビルド（Builds/Play/Play.exe）．速度の計測（-probe）と見た目の確認（-screenshot）に使う．</summary>
         [MenuItem("Tools/Arte Rhythm/Build Play Player")]
-        public static void BuildPlayer()
+        public static void BuildPlayer() => Build(ScenePath, "Builds/Play/Play.exe");
+
+        static void Build(string scenePath, string exe)
         {
             var report = UnityEditor.BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
-                scenes = new[] { ScenePath },
-                locationPathName = "Builds/Play/Play.exe",
+                scenes = new[] { scenePath },
+                locationPathName = exe,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None,
             });

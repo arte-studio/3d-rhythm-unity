@@ -37,6 +37,10 @@ namespace Arte.Rhythm.Net
         [Range(10, 500), Tooltip("フレームのパケットが揃わないとき，今あるデータで表示するまでの待ち（ms）")]
         public int holdMs = 50;
 
+        [Header("Viewer")]
+        [Tooltip("LED のデータを別の PC の Viewer にも送る（\"IP\" か \"IP:ポート\"．ポートの既定は 8899）．起動引数 -mirror でも足せる")]
+        public string[] mirrorTo = System.Array.Empty<string>();
+
         readonly ConcurrentQueue<DeviceTouch> touchQueue = new ConcurrentQueue<DeviceTouch>();
         readonly ConcurrentQueue<string> logQueue = new ConcurrentQueue<string>();
         double nextSendTime;
@@ -106,6 +110,11 @@ namespace Arte.Rhythm.Net
             if (touchFeedback) flags |= ArteProtocol.FlagTouchFeedback;
             if (selfTestWhenIdle) flags |= ArteProtocol.FlagSelfTest;
             options.Curve = LedOutputModel.ParseCurve(Setup.outputCurve);
+            options.MirrorTargets.Clear();
+            foreach (string s in mirrorTo) AddMirror(options, s);
+            var args = Environment.GetCommandLineArgs();
+            for (int i = 0; i + 1 < args.Length; i++)
+                if (args[i] == "-mirror") AddMirror(options, args[i + 1]);
             options.Config = new DeviceConfig
             {
                 BrightnessPerf = (byte)Mathf.Clamp(Setup.brightnessPerf, 0, 255),
@@ -115,6 +124,12 @@ namespace Arte.Rhythm.Net
                 HeartbeatMs = 50,
                 HoldMs = (ushort)holdMs,
             };
+        }
+
+        static void AddMirror(LinkOptions options, string s)
+        {
+            if (MirrorReceiver.TryParseTarget(s, out var ep)) options.MirrorTargets.Add(ep);
+            else if (!string.IsNullOrWhiteSpace(s)) Debug.LogWarning($"[DeviceLink] Viewer の送り先 {s} が読めない（IP か IP:ポート）");
         }
 
         // 受信スレッド

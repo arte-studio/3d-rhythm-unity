@@ -34,6 +34,11 @@ namespace Arte.Rhythm.Net
         public double MinSendFps = 5;
         public double CongestionRttMs = 50;
         public double PingTimeoutMs = 200;
+        /// <summary>
+        /// 実機に送るのと同じ PIXELS を，つながっていないデバイスの分も含めて送る先（別の PC の Viewer．MirrorReceiver）．
+        /// 実機が無くても Viewer で見られる．
+        /// </summary>
+        public List<IPEndPoint> MirrorTargets = new List<IPEndPoint>();
         /// <summary>この間何も届かなければ切断とみなす．</summary>
         public double DeviceTimeoutSec = 3.0;
     }
@@ -109,6 +114,7 @@ namespace Arte.Rhythm.Net
         readonly ulong[] sentUs = new ulong[SendTimeRing];
         readonly byte[][] packets = new byte[LedFrame.PinsPerDevice][];
         readonly int[] packetLengths = new int[LedFrame.PinsPerDevice];
+        FrameEncoder[] mirrorEncoders;
 
         Socket socket;
         Thread thread;
@@ -279,6 +285,28 @@ namespace Arte.Rhythm.Net
                     if (d.RateWindowUs != 0) d.SentKbps = d.RateWindowBytes * 8 / ((now - d.RateWindowUs) / 1e3);
                     d.RateWindowUs = now;
                     d.RateWindowBytes = 0;
+                }
+            }
+            SendMirror(ledFrame, now, config);
+        }
+
+        void SendMirror(LedFrame ledFrame, ulong now, in DeviceConfig config)
+        {
+            var targets = options.MirrorTargets;
+            if (targets == null || targets.Count == 0) return;
+            if (mirrorEncoders == null || mirrorEncoders.Length != ledFrame.DeviceCount)
+            {
+                mirrorEncoders = new FrameEncoder[ledFrame.DeviceCount];
+                // Viewer を後から起動しても早く揃うよう，変わっていないピンも短い間隔で送り直す
+                for (int i = 0; i < mirrorEncoders.Length; i++) mirrorEncoders[i] = new FrameEncoder { RefreshIntervalUs = 250_000 };
+            }
+            for (int id = 0; id < ledFrame.DeviceCount; id++)
+            {
+                mirrorEncoders[id].Encode(ledFrame, id, frame, config, options.Curve, true, now, packets, packetLengths);
+                for (int pin = 0; pin < LedFrame.PinsPerDevice; pin++)
+                {
+                    if (packetLengths[pin] == 0) continue;
+                    foreach (var ep in targets) SendTo(packets[pin], packetLengths[pin], ep);
                 }
             }
         }
