@@ -58,6 +58,11 @@ namespace Arte.Rhythm.Charts
         /// <summary>current は今のテンポ（無ければ null）．求められなければ null．</summary>
         public static Result? Fit(IReadOnlyList<Tap> taps, TempoPoint current, int beatsPerBar = 4)
         {
+            // 時刻が戻っていたら（曲の頭からもう一度叩いた），戻ったあとの分だけを使う
+            int from = 0;
+            for (int i = 1; i < taps.Count; i++)
+                if (taps[i].Time <= taps[i - 1].Time) from = i;
+            if (from > 0) taps = taps.Skip(from).ToList();
             if (taps.Count < MinTaps) return null;
             var t = taps.Select(x => x.Time).ToArray();
             // 拍の間隔のおおよそ: 隣どうしの間隔の中央値（叩き損ねて 1 拍飛んでも引きずられにくい）

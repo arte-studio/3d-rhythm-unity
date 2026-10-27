@@ -78,6 +78,19 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void SecondPassFromSongStartDoesNotBreakTempo()
+        {
+            // 1 周目の最後の続きに，曲の頭から 2 周目を叩いた（時刻が戻る）
+            var base0 = new TempoPoint { TimeSec = 1.759, Bpm = 151.96, BeatsPerBar = 4 };
+            var taps = Taps(151.96, 1.759, 180, 20, 0.02, 7);
+            taps.AddRange(Taps(151.96, 1.759, 0, 20, 0.02, 8));
+            var r = TapTempo.Fit(taps, base0).Value;
+            Assert.AreEqual(151.96, r.Bpm, 1e-9);
+            Assert.AreEqual(151.96, r.FittedBpm, 1.0);
+            Assert.AreEqual(1.759, r.FirstBarSec, 0.02);
+        }
+
+        [Test]
         public void NeedsFourTaps()
         {
             Assert.IsNull(TapTempo.Fit(Taps(120, 0, 0, 3, 0, 5), null));

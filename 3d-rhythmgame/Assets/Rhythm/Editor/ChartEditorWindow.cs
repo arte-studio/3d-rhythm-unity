@@ -445,11 +445,12 @@ namespace Arte.Rhythm.Editor
 
         /// <summary>
         /// 曲に合わせて叩いた拍からテンポと小節の頭を合わせる（B = 拍，N = 小節の 1 拍目．計算は TapTempo）．
-        /// 間が 2 秒以上空いたら新しく数え直す．
+        /// 間が 2 秒以上空いたら・時刻が戻ったら新しく数え直す．
         /// </summary>
         void Tap(double t, bool downbeat)
         {
-            if (taps.Count > 0 && t - taps[taps.Count - 1].Time > 2.0) taps.Clear();
+            // 2 秒以上空いた・時刻が戻った（曲の頭からもう一度）ら数え直す
+            if (taps.Count > 0 && (t - taps[taps.Count - 1].Time > 2.0 || t <= taps[taps.Count - 1].Time)) taps.Clear();
             if (taps.Count == 0)
             {
                 var p0 = data.Tempo.Count > 0 ? data.Tempo[0] : null;
