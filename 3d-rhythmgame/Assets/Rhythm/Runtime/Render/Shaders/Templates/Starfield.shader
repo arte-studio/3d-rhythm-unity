@@ -10,6 +10,7 @@ Shader "Arte/LED/Starfield"
         _Brightness ("明るさ", Range(0, 2)) = 1
         _Every ("またたく周期（拍）", Float) = 2
         _Depth ("またたきの深さ（0 = 変わらない）", Range(0, 1)) = 0.3
+        _Variety ("明るさのばらつき（0 = みな同じ．1 = 本物の星空のように暗い星が多く明るい星は少し）", Range(0, 1)) = 0
     }
     SubShader
     {
@@ -22,7 +23,7 @@ Shader "Arte/LED/Starfield"
             #include "../ArteLed.cginc"
 
             float4 _ColorA, _ColorB;
-            float _Density, _Brightness, _Every, _Depth;
+            float _Density, _Brightness, _Every, _Depth, _Variety;
 
             float4 frag(ArteV2f i) : SV_Target
             {
@@ -31,7 +32,8 @@ Shader "Arte/LED/Starfield"
                 if (h >= _Density) return 0;
                 float h2 = ArteHash(cell + 19.1);
                 float tw = 1 - _Depth * (0.5 + 0.5 * sin(6.2831853 * (_ArteBeat / max(_Every, 1e-3) + h2)));
-                float3 c = lerp(_ColorA.rgb, _ColorB.rgb, ArteHash(cell + 5.3)) * _Brightness * tw;
+                float mag = lerp(1, 0.08 + 0.92 * pow(ArteHash(cell + 11.7), 3), _Variety);   // 等級のようなばらつき
+                float3 c = lerp(_ColorA.rgb, _ColorB.rgb, ArteHash(cell + 5.3)) * _Brightness * tw * mag;
                 return float4(c, 1);
             }
             ENDCG

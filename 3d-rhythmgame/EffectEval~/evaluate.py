@@ -123,21 +123,35 @@ def hue_sat(rgb):
 
 
 def flashes(series, fps):
-    """WCAG 2.3.1 に近い数え方: 明るさ（リニア）が 10% 以上（最大に対し）下がって上がる組を 1 回．1 秒の窓で最大何回か．"""
+    """WCAG 2.3.1 に近い数え方: 明るさ（リニア）が最大の 10% 以上下がって（または上がって）向きが変わるのを 1 回の変化とし，
+    2 回の変化で 1 回の点滅．暗い側が最大の 80% 未満のときだけ数える．1 秒の窓で最大何回か．
+    小さな揺れで 1 回の変化を 2 回に数えないよう，10% 動くまで向きを変えない（ジグザグ法）．"""
     s = series / max(series.max(), 1e-6)
-    ext = [0]
-    for i in range(1, len(s) - 1):
-        if (s[i] - s[i - 1]) * (s[i + 1] - s[i]) < 0:
-            ext.append(i)
-    ext.append(len(s) - 1)
-    trans = []
-    for a, b in zip(ext[:-1], ext[1:]):
-        if abs(s[b] - s[a]) >= 0.1 and min(s[a], s[b]) < 0.8:
-            trans.append(b)
+    # 折り返し点（10% 以上戻ったところで確定）を求め，隣どうしの折り返し点の間を 1 回の変化とする
+    turns = [(0, s[0])]
+    ext_i, ext_v, state = 0, s[0], 0
+    for i in range(1, len(s)):
+        v = s[i]
+        if state == 0:
+            if abs(v - s[0]) >= 0.1:
+                state = 1 if v > s[0] else -1
+                ext_i, ext_v = i, v
+            continue
+        if (state > 0 and v > ext_v) or (state < 0 and v < ext_v):
+            ext_i, ext_v = i, v
+        elif abs(v - ext_v) >= 0.1:
+            turns.append((ext_i, ext_v))
+            state = -state
+            ext_i, ext_v = i, v
+    turns.append((ext_i, ext_v))
+    trans = [b[0] for a, b in zip(turns[:-1], turns[1:]) if abs(b[1] - a[1]) >= 0.1 and min(a[1], b[1]) < 0.8]
     trans = np.array(trans)
-    worst = 0
+    worst, at = 0, 0.0
     for t in trans:
-        worst = max(worst, ((trans >= t) & (trans < t + fps)).sum() / 2)
+        c = ((trans >= t) & (trans < t + fps)).sum() / 2
+        if c > worst:
+            worst, at = c, t / fps
+    flashes.last_at = at
     return worst
 
 
@@ -208,25 +222,29 @@ def score_image(fr, F, level, onset, fps, sections, t0, P, bpb, path, title):
     img.save(path)
 
 
-def contact_sheet(mp4, times, labels, path):
-    if not os.path.exists(mp4):
-        return False
+def contact_sheet(mp4, fr, fps, times, labels, path):
+    """コマの一覧．上 = リングの中心・子どもの目の高さから見た絵（mp4），下 = LED の絵を一周ひらいたもの（横 = 一周，縦 = 高さ）．"""
     tiles = []
     for t in times:
-        out = subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{t:.3f}', '-i', mp4, '-frames:v', '1', '-vf', 'scale=384:216',
-                              '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True).stdout
-        if len(out) == 384 * 216 * 3:
-            tiles.append(Image.fromarray(np.frombuffer(out, np.uint8).reshape(216, 384, 3)))
-        else:
-            tiles.append(Image.new('RGB', (384, 216)))
+        im = Image.new('RGB', (384, 216))
+        if os.path.exists(mp4):
+            out = subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{t:.3f}', '-i', mp4, '-frames:v', '1', '-vf', 'scale=384:216',
+                                  '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True).stdout
+            if len(out) == 384 * 216 * 3:
+                im = Image.fromarray(np.frombuffer(out, np.uint8).reshape(216, 384, 3))
+        k = min(len(fr) - 1, int(round(t * fps)))
+        pano = Image.fromarray(fr[k][::-1]).resize((384, 88), Image.NEAREST)   # 一周 8.8m : 高さ 2m
+        tiles.append((im, pano))
     cols = 6
+    th = 18 + 216 + 2 + 88 + 6
     rows = (len(tiles) + cols - 1) // cols
-    sheet = Image.new('RGB', (cols * 386, rows * 236), (10, 10, 12))
+    sheet = Image.new('RGB', (cols * 386, rows * th), (10, 10, 12))
     d = ImageDraw.Draw(sheet)
     f = font(13)
-    for i, (im, lb) in enumerate(zip(tiles, labels)):
-        x, y = (i % cols) * 386, (i // cols) * 236
+    for i, ((im, pano), lb) in enumerate(zip(tiles, labels)):
+        x, y = (i % cols) * 386, (i // cols) * th
         sheet.paste(im, (x, y + 18))
+        sheet.paste(pano, (x, y + 18 + 216 + 2))
         d.text((x + 2, y + 1), lb, fill=(230, 230, 230), font=f)
     sheet.save(path)
     return True
@@ -266,6 +284,7 @@ def main():
     redness = (lin[..., 0] / (lin.sum(-1) + 1e-6) >= 0.8) * lin[..., 0]
     red = flashes(redness.mean((1, 2)) + 1e-4, fps) if redness.max() > 0.02 else 0
     R['flash_whole_per_s'] = whole
+    R['flash_at_sec'] = flashes.last_at
     R['flash_quarter_per_s'] = region
     R['flash_red_per_s'] = red
     R['mean_brightness'] = float(F['bright'].mean())
@@ -408,11 +427,11 @@ def main():
         bn = int(round((t - bar * 0.5 - t0) / bar)) + 1
         sec = [s['name'] for s in sections if s['t'] <= t + 1e-3]
         labels.append(f"{bn} 小節 {t:.1f}s {sec[-1][:8] if sec else ''}")
-    has_sheet = contact_sheet(a.base + '.mp4', [t - meta.get('from', 0) for t in times], labels, os.path.join(out, 'sheet.png'))
+    has_sheet = contact_sheet(a.base + '.mp4', fr, fps, [t - meta.get('from', 0) for t in times], labels, os.path.join(out, 'sheet.png'))
     rep.append('## 図\n')
     rep.append('- `score.png`: 光の譜面（上段 = 高さ方向，中段 = 一周方向，下段 = 音量・明るさ・動き．黄色の線 = 区切り）')
     if has_sheet:
-        rep.append('- `sheet.png`: 2 小節ごとのコマ（リングの中心・子どもの目の高さ）')
+        rep.append('- `sheet.png`: 2 小節ごとのコマ（上 = リングの中心・子どもの目の高さから，下 = LED の絵を一周ひらいたもの）')
     with open(os.path.join(out, 'report.md'), 'w', encoding='utf-8') as fp:
         fp.write('\n'.join(rep) + '\n')
     with open(os.path.join(out, 'metrics.json'), 'w', encoding='utf-8') as fp:

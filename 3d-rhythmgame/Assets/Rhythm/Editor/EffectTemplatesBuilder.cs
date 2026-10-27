@@ -21,6 +21,8 @@ namespace Arte.Rhythm.Editor
             "Solid", "Gradient", "BeatPulse", "Ripple3D", "Plane3D", "Sparkle", "Texture",
             // 初期の演出仕様書のために足したもの（P8）
             "SpiralRise", "StarFall", "Starfield", "SoftPulse", "RotateWipe", "BottomWave",
+            // AI の演出案のために足したもの（docs/effects/ai-proposals.md）
+            "Hit", "Aurora", "Constellation", "Beam",
         };
 
         [MenuItem("Tools/Arte Rhythm/Create LED Effect Templates")]
