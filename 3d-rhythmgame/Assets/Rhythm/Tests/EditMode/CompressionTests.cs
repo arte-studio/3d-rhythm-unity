@@ -1,10 +1,11 @@
 using System;
+using Arte.Rhythm.Hardware;
 using Arte.Rhythm.Net;
 using NUnit.Framework;
 
 namespace Arte.Rhythm.Tests
 {
-    /// <summary>PIXELS の圧縮（PackBits・明るさによる値そろえ・差分）．</summary>
+    /// <summary>PIXELS の作り方（明るさ・PackBits・差分）．</summary>
     public class CompressionTests
     {
         // ファームのテスト（test_pixels_packbits_golden）と同じバイト列
@@ -70,26 +71,18 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
-        public void CanonicalizeKeepsOutput()
+        public void BrightnessMatchesOutputModel()
         {
+            var src = new byte[256];
+            for (int i = 0; i < 256; i++) src[i] = (byte)i;
+            var dst = new byte[256];
             foreach (byte b in new byte[] { 0, 1, 10, 50, 128, 254, 255 })
             {
-                var src = new byte[256];
-                for (int i = 0; i < 256; i++) src[i] = (byte)i;
-                var dst = new byte[256];
-                PixelCodec.Canonicalize(src, dst, b);
-                for (int i = 0; i < 256; i++)
-                {
-                    Assert.AreEqual(PixelCodec.Scale(src[i], b), PixelCodec.Scale(dst[i], b), $"明るさ {b} 値 {i}");
-                    Assert.LessOrEqual(dst[i], src[i]);
-                }
-                if (b == 255) CollectionAssert.AreEqual(src, dst, "明るさ最大ならそのまま");
+                PixelCodec.ApplyBrightness(src, dst, b);
+                for (int i = 0; i < 256; i++) Assert.AreEqual(LedOutputModel.ApplyBrightness((byte)i, b), dst[i], $"明るさ {b} 値 {i}");
             }
-            // 明るさ 10 なら 11 段階になる
-            var all = new byte[256];
-            for (int i = 0; i < 256; i++) all[i] = (byte)i;
-            PixelCodec.Canonicalize(all, all, 10);
-            Assert.AreEqual(11, new System.Collections.Generic.HashSet<byte>(all).Count);
+            PixelCodec.ApplyBrightness(src, dst, 255);
+            CollectionAssert.AreEqual(src, dst, "明るさ最大ならそのまま");
         }
 
         static (FrameEncoder enc, LedFrame frame, byte[][] packets, int[] lengths) MakeEncoder()
@@ -142,7 +135,7 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
-        public void EncoderSendsRawToOldFirmware()
+        public void EncoderWithoutCompactSendsEveryPinRaw()
         {
             var (enc, frame, packets, lengths) = MakeEncoder();
             for (int i = 0; i < 2; i++)
@@ -156,7 +149,7 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
-        public void EncoderTreatsSameOutputAsUnchanged()
+        public void EncoderAppliesBrightnessBeforeComparing()
         {
             var (enc, frame, packets, lengths) = MakeEncoder();
             var dim = new DeviceConfig { BrightnessPerf = 10, BrightnessNote = 10 };
@@ -166,6 +159,11 @@ namespace Arte.Rhythm.Tests
             Assert.AreEqual(0, enc.Encode(frame, 0, 2, dim, true, 16_000, packets, lengths));
             frame.Pin(0, 0)[0] = 200;
             Assert.AreEqual(1, enc.Encode(frame, 0, 3, dim, true, 32_000, packets, lengths));
+            // 送る値は明るさを掛けた後
+            Assert.IsTrue(ArteProtocol.TryReadPixels(packets[0].AsSpan(0, lengths[0]), out var h, out var payload));
+            var rgb = new byte[480 * 3];
+            Assert.IsTrue(PixelCodec.DecodePackBits(payload, rgb, h.Count));
+            Assert.AreEqual(LedOutputModel.ApplyBrightness(200, 10), rgb[0]);
         }
     }
 }

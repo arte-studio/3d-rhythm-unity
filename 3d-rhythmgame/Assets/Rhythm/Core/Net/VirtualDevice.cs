@@ -84,8 +84,7 @@ namespace Arte.Rhythm.Net
 
         public byte Id { get; }
         public MacAddress Mac { get; }
-        /// <summary>HELLO で名乗るファームの版（0x0201 未満にすると PC は差分も PackBits も使わない）．</summary>
-        public ushort Firmware { get; set; } = ArteProtocol.FirmwarePackBits;
+
         public bool Registered => host != null;
         public uint Session { get; private set; }
         public DeviceConfig Config { get; private set; }
@@ -115,15 +114,12 @@ namespace Arte.Rhythm.Net
 
         public void Dispose() => socket.Close();
 
-        /// <summary>
-        /// 表示中の RGB（ブライトネス適用前）．PC は明るさで同じ出力になる値をそろえて送るので，
-        /// 実際の光り方と比べるときは PixelCodec.Scale を掛けてから比べる．
-        /// </summary>
+        /// <summary>表示中の RGB（PC が明るさを掛けた後の，LED に出る値）．</summary>
         public ReadOnlySpan<byte> ShownPin(int pin) => shown[pin];
 
         public void SendHello()
         {
-            var h = new Hello { Device = Id, Firmware = Firmware, Mac = Mac, Pins = 4, LedsPerPin = (ushort)(working[0].Length / 3), TouchCount = 5, Session = Session };
+            var h = new Hello { Device = Id, Firmware = 0x0202, Mac = Mac, Pins = 4, LedsPerPin = (ushort)(working[0].Length / 3), TouchCount = 5, Session = Session };
             Send(ArteProtocol.WriteHello(tx, h), hostHelloTarget);
         }
 

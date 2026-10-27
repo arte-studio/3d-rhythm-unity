@@ -5,12 +5,12 @@ namespace Arte.Rhythm.Hardware
     /// <summary>
     /// PC が送った 8bit の色が，実機の LED でどれだけの明るさになるかのモデル．
     ///
-    /// 実機（ファーム）は受け取った値に明るさ b を (c * (b + 1)) >> 8 で掛けてから LED に出す．
+    /// PC は送る前に明るさ b を (c * (b + 1)) >> 8 で掛け（FrameEncoder），ファームは届いた値をそのまま LED に出す．
     /// シミュレーションも同じ式を通すことで，暗い色が潰れる・段差が出るといった実機の見え方を再現する．
     /// </summary>
     public static class LedOutputModel
     {
-        /// <summary>ファームと同じ整数演算で明るさを掛ける．戻り値が LED に実際に出る PWM 値（0-255）．</summary>
+        /// <summary>明るさを掛ける（送信もシミュレーションもこれを使う）．戻り値が LED に実際に出る PWM 値（0-255）．</summary>
         public static byte ApplyBrightness(byte value, int brightness)
         {
             if (brightness < 0) brightness = 0;

@@ -20,7 +20,7 @@ namespace Arte.Rhythm.Net
         /// <summary>時刻合わせに使う（AdaptiveRate のときは混み具合を見るため 0.05 秒以下にする）．</summary>
         public double PingIntervalSec = 0.25;
         public double ConfigIntervalSec = 1.0;
-        /// <summary>差分と PackBits で通信量を減らす（v2.1 以降のファームだけ．古いファームには常にそのまま送る）．</summary>
+        /// <summary>差分と PackBits で通信量を減らす（false は比較用．毎回全ピンをそのまま送る）．</summary>
         public bool Compact = true;
         /// <summary>
         /// 混み具合を見て台ごとに送る頻度を下げる．Wi-Fi が詰まるとルーターに数秒分たまって遅れるので，
@@ -144,7 +144,6 @@ namespace Arte.Rhythm.Net
             // 送信（メインスレッドだけが触る）
             public readonly FrameEncoder Encoder = new FrameEncoder();
             public ulong LastSendUs;
-            public byte SentBrightnessPerf, SentBrightnessNote;
             public ulong RateWindowUs;
             public long RateWindowBytes;
             public double SentKbps;
@@ -256,7 +255,7 @@ namespace Arte.Rhythm.Net
                 {
                     if (!IsConnected(d, now)) continue;
                     ep = d.EndPoint;
-                    compact = options.Compact && d.Firmware >= ArteProtocol.FirmwarePackBits;
+                    compact = options.Compact;
                     if (d.AllowedFps <= 0) d.AllowedFps = options.MaxSendFps;
                     fps = options.AdaptiveRate ? d.AllowedFps : double.PositiveInfinity;
                     full = d.NeedsFullFrame;
@@ -264,12 +263,7 @@ namespace Arte.Rhythm.Net
                 }
                 // 間隔の 1/4 の余裕を持たせる（呼び出し側の周期と少しずれても上限どおりに送れるように）
                 if (!full && d.LastSendUs != 0 && now - d.LastSendUs < (ulong)(0.75e6 / fps)) continue;
-                if (full || d.SentBrightnessPerf != config.BrightnessPerf || d.SentBrightnessNote != config.BrightnessNote)
-                {
-                    d.Encoder.Invalidate();
-                    d.SentBrightnessPerf = config.BrightnessPerf;
-                    d.SentBrightnessNote = config.BrightnessNote;
-                }
+                if (full) d.Encoder.Invalidate();
                 d.LastSendUs = now;
                 d.Encoder.Encode(ledFrame, id, frame, config, compact, now, packets, packetLengths);
                 for (int pin = 0; pin < LedFrame.PinsPerDevice; pin++)

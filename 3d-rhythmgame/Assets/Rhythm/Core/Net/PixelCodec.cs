@@ -90,33 +90,19 @@ namespace Arte.Rhythm.Net
             return true;
         }
 
-        // ---- 明るさで同じ出力になる値をまとめる ----
-
-        static readonly byte[][] canonical = new byte[256][];
-
-        /// <summary>
-        /// ファームは c を (c × (明るさ+1)) >> 8 にして光らせるので，明るさが低いと多くの値が同じ出力になる
-        /// （明るさ 10 なら 256 段階が 11 段階）．同じ出力になる値を一番小さい値にそろえると，
-        /// LED の光り方はまったく同じまま，同じ色の並びが長くなって PackBits がよく効き，前フレームとの差も出にくくなる．
-        /// </summary>
-        public static void Canonicalize(ReadOnlySpan<byte> src, Span<byte> dest, byte brightness)
+        /// <summary>明るさを掛ける（LedOutputModel.ApplyBrightness と同じ式を表で引く）．</summary>
+        public static void ApplyBrightness(ReadOnlySpan<byte> src, Span<byte> dest, byte brightness)
         {
-            var table = canonical[brightness] ??= BuildTable(brightness);
+            var table = tables[brightness] ??= BuildTable(brightness);
             for (int i = 0; i < src.Length; i++) dest[i] = table[src[i]];
         }
 
-        /// <summary>ファームと同じ明るさの掛け方．</summary>
-        public static byte Scale(byte c, byte brightness) => (byte)((c * (brightness + 1)) >> 8);
+        static readonly byte[][] tables = new byte[256][];
 
         static byte[] BuildTable(byte brightness)
         {
             var t = new byte[256];
-            int first = 0;
-            for (int c = 0; c < 256; c++)
-            {
-                if (c == 0 || Scale((byte)c, brightness) != Scale((byte)(c - 1), brightness)) first = c;
-                t[c] = (byte)first;
-            }
+            for (int c = 0; c < 256; c++) t[c] = Hardware.LedOutputModel.ApplyBrightness((byte)c, brightness);
             return t;
         }
     }

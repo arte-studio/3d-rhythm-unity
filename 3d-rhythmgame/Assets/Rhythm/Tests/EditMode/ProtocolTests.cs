@@ -270,10 +270,10 @@ namespace Arte.Rhythm.Tests
             frame.Pin(7, 3)[3] = 77;
             host.SendFrame(frame);
             Assert.IsTrue(Until(() => dev3.Frames.FramesShown == 1 && dev7.Frames.FramesShown == 1), "フレームが表示されない");
-            // PC は明るさで同じ出力になる値にそろえて送るので，光り方（明るさを掛けた値）で比べる
-            byte bright = host.Options.Config.BrightnessPerf, brightNote = host.Options.Config.BrightnessNote;
-            Assert.AreEqual(PixelCodec.Scale(200, bright), PixelCodec.Scale(dev3.ShownPin(2)[30], bright));
-            Assert.AreEqual(PixelCodec.Scale(77, brightNote), PixelCodec.Scale(dev7.ShownPin(3)[3], brightNote));
+            // PC が明るさを掛けて送る
+            var c = host.Options.Config;
+            Assert.AreEqual(LedOutputModel.ApplyBrightness(200, c.BrightnessPerf), dev3.ShownPin(2)[30]);
+            Assert.AreEqual(LedOutputModel.ApplyBrightness(77, c.BrightnessNote), dev7.ShownPin(3)[3]);
             Assert.AreEqual(0u, dev7.Frames.FramesForced);
 
             // 表示までの遅れが測れる（PONG に最後の表示フレームが載る）

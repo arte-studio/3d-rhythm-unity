@@ -26,8 +26,6 @@ namespace Arte.Rhythm.Net
         /// <summary>PIXELS の encoding．0 = RGB そのまま，1 = PackBits（PixelCodec）．</summary>
         public const byte EncodingRaw = 0;
         public const byte EncodingPackBits = 1;
-        /// <summary>PackBits を読めるファームの版（v2.1）．</summary>
-        public const ushort FirmwarePackBits = 0x0201;
 
         public const int WelcomeSize = HeaderSize + 4;
         public const int PingSize = HeaderSize + 12;
