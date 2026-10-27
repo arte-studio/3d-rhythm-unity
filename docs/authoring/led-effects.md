@@ -2,6 +2,7 @@
 
 コードを書かずに，Unity の Timeline に「演出のクリップ」を並べて LED の演出を作る．
 作った演出は，リングの内側から見たシミュレーション（暗幕の部屋）で確かめ，動画に書き出して見せられる．
+Unity を初めて使う人向けに，画面の写真を付けてある．
 
 ## しくみ（最初に読む）
 
@@ -19,30 +20,67 @@
 - 実機の LED は暗めに設定してある（明るさ 50/255）ので，画面で見るより段階が粗い．
   暗い色の細かい違いは LED では出にくい．
 
+## 0. Unity の画面
+
+![Unity の画面](images/00-editor.png)
+
+| 場所 | 何をするところか |
+| --- | --- |
+| Hierarchy（左上） | 今開いているシーンの中身の一覧．ここで選んだものの設定が Inspector に出る |
+| Timeline（真ん中） | 演出を時間に沿って並べる．上のタブで Scene / Game（再生した画面）/ Timeline を切り替える |
+| Inspector（右） | 選んだもの（シーンの中のもの，ファイル，クリップ）の設定 |
+| Project（下） | プロジェクトのファイル．フォルダをたどってマテリアルや曲を探す |
+| 再生ボタン（上の真ん中） | 押すと Play モード（ゲームとして動く）．もう一度押すと止まる |
+
+Timeline が見当たらないときは，上のメニューの Window → Sequencing → Timeline で開く．
+
 ## 1. 準備
 
-1. `Assets/Rhythm/Scenes/Play.unity` を開く．
-2. 自分のフォルダを作る: `Assets/Rhythm/Effects/<自分の名前>/`
-3. 曲用の Timeline を作る: 自分のフォルダで右クリック → Create / Timeline．
-   曲の SongAsset（例: `Assets/Rhythm/Songs/kodaisai-2025/kodaisai-2025.asset`）の `timeline` に入れる．
-   入れないうちは見本（`Assets/Rhythm/Effects/Samples/Showcase.playable`）が流れる．
+1. Project で `Assets/Rhythm/Scenes/Play` をダブルクリックして開く．
+2. 自分のフォルダを作る: Project の `Assets/Rhythm/Effects` を右クリック → Create → Folder で `<自分の名前>` を作る．
+3. 曲用の Timeline を作る: 自分のフォルダで右クリック → Create → Timeline．
+   曲の SongAsset（`Assets/Rhythm/Songs/kodaisai-2025/kodaisai-2025`）を選び，Inspector の `Timeline` に作った Timeline をドラッグして入れる．
+   入れないうちは見本（`Assets/Rhythm/Effects/Samples/Showcase`）が流れる．
+
+   ![曲の設定（SongAsset）](images/07-song-asset.png)
 
 ## 2. 演出を置く
 
-1. Hierarchy の `Rhythm` を選び，Window / Sequencing / Timeline を開く．
-   （Rhythm の PlayableDirector の Playable に自分の Timeline を入れると編集できる）
-2. Timeline の左の「+」→ **LED Effect Track** でトラックを足す．バインド先は空でよい．
-3. トラックの上で右クリック → **Add LED Effect Clip**．クリップを選び，Inspector の `material` に演出のマテリアルを入れる．
-4. マテリアルは `Assets/Rhythm/Effects/Templates/` のテンプレートを **自分のフォルダに複製（Ctrl+D して移動）** して使う．
-   テンプレートそのものは直さない．
-5. クリップの Inspector:
-   - **重ね方（blend）**: 普通（上書き）/ 足す（光を足す．きらめきや点滅に）/ 掛ける（下の色を暗くする）/ 明るい方
-   - **不透明度（opacity）**: 0〜1．クリップのカーブで時間とともに変えられる
+1. Hierarchy の `Rhythm` を選ぶ．
+
+   ![Hierarchy で Rhythm を選ぶ](images/02-hierarchy-rhythm.png)
+
+2. Inspector の下の方の Playable Director の `Playable` に，自分の Timeline を入れる（Timeline ウィンドウに表示される）．
+
+   ![Rhythm の Inspector（Playable Director）](images/03-director-inspector.png)
+
+3. Timeline ウィンドウの左上の「+」→ **LED Effect Track** でトラックを足す（見本では 2 本: 下に敷く土台と，上に重ねる演出）．
+   トラックの右の丸（バインド先）は空でよい．
+4. トラックの上で右クリック → **Add LED Effect Clip** でクリップを置く．左右の端を引くと長さ，クリップ同士を重ねるとクロスフェードになる．
+
+   ![Timeline（見本）．上のトラックが土台のグラデーション，下のトラックに演出が並ぶ](images/04-timeline.png)
+
+5. クリップを選ぶと Inspector にクリップの設定が出る．
+   - `Material`: 演出のマテリアル（次の 6. で用意する）
+   - `Template` の中の `Blend`（重ね方）: Normal（上書き）/ Add（光を足す．きらめきや点滅に）/ Multiply（下の色を暗くする）/ Lighten（明るい方）
+   - `Template` の中の `Opacity`（不透明度）: 0〜1
+   - `Blend In / Out Duration`: フェードイン・アウトの長さ（秒）
+
+   ![クリップの設定](images/05-clip-inspector.png)
+
+6. マテリアルは `Assets/Rhythm/Effects/Templates` のテンプレートを **自分のフォルダに複製して** 使う
+   （テンプレートを選んで Ctrl+D で複製し，自分のフォルダへドラッグ．テンプレートそのものは直さない）．
+
+   ![テンプレートのフォルダ](images/01-project-templates.png)
+
+7. 複製したマテリアルを選ぶと，Inspector に演出の設定が日本語で出る．色をクリックすると色を選べる．
+
+   ![マテリアルの設定（波紋）](images/06-material-inspector.png)
 
 ### テンプレート
 
 | テンプレート | 何をするか | 主な設定 |
-|---|---|---|
+| --- | --- | --- |
 | Solid（単色） | 全部を 1 色 | 色 |
 | Gradient（グラデーション） | 2 色の間を高さ方向か一周方向に．流せる | 色 1・色 2，向き，流す速さ（1 拍で進む割合），往復 |
 | BeatPulse（拍で光る） | 決めた拍ごとにぱっと光って消える | 色，何拍ごと，消える速さ |
@@ -55,30 +93,37 @@
 
 ## 3. 確かめる
 
-1. Play（▶）を押し，Game ビューで **Enter** で曲が始まる．
-2. 操作:
+1. 再生ボタンを押し，上のタブで Game を選んでから，キーボードの **Enter** で曲が始まる．
+   リングの内側から見たシミュレーションが映る（暗幕の部屋．床も LED の光で照らされる）．
+
+   ![再生した画面（リングの中心・子どもの目の高さ，白い床）](images/09-viewer.png)
+
+2. 操作（Game の画面をクリックしてから）:
 
 | キー | 内容 |
-|---|---|
+| --- | --- |
 | Enter / Space | 最初から再生 / 一時停止・再開 |
 | ← → | 5 秒戻る / 進む |
 | 右ボタン + マウス，右ボタン + WASD / Q / E | 見回す，歩く（Shift で速く） |
 | F5 / F6 / F7 / F8 | 中心・子どもの目 / 中心・大人の目 / 外から / 真上から |
 | F2 | 実機の接続状態の表示（「色の曲線」で LED の見え方を切り替え） |
 
-3. Play 中にマテリアルの値を変えると，その場で見た目が変わる（マテリアルはアセットなので，Play を止めても変えた値が残る）．
-   Timeline のクリップの位置は Play を止めてから動かす．
-4. 実機がつながっていれば，同じ演出が実機の LED にも出る．
+再生中にマテリアルの値を変えると，その場で見た目が変わる（マテリアルはファイルなので，再生を止めても変えた値が残る）．
+Timeline のクリップの位置は，再生を止めてから動かす．
+実機がつながっていれば，同じ演出が実機の LED にも出る．
 
 ## 4. 動画に書き出す
 
-Window / Arte Rhythm / **Preview Export** で，始める時刻・長さ・大きさを決めて「書き出す」．
-Play シーンが開いて 1 フレームずつ撮り，終わると止まる．曲の音つきの mp4 ができる（既定は `3d-rhythmgame/Recordings/preview.mp4`）．
+上のメニューの Window → Arte Rhythm → **Preview Export** を開き，始める時刻・長さ・大きさを決めて「書き出す」．
+Play シーンが開いて 1 フレームずつ撮り，終わると止まる（その間は触らない）．
+曲の音つきの mp4 ができる（既定は `3d-rhythmgame/Recordings/preview.mp4`）．
 PC が遅くてもコマ落ちしない．ffmpeg が無い PC では PNG の連番になる（ffmpeg を入れると mp4 になる）．
+
+![プレビュー書き出しのウィンドウ](images/08-preview-export.png)
 
 コマンドで書き出す場合（ビルドした Play.exe）:
 
-```
+```text
 Play.exe -record out.mp4 -record-from 30 -record-length 20 -record-fps 30 -record-size 1920x1080 -view child -floor school-white
 ```
 
@@ -88,7 +133,7 @@ Play.exe -record out.mp4 -record-from 30 -record-length 20 -record-fps 30 -recor
 `#include "../ArteLed.cginc"` で次の値と道具が使える．返す色はリニア（マテリアルの Color はそのまま使える）．
 
 | 名前 | 中身 |
-|---|---|
+| --- | --- |
 | `_ArteTime` | 曲の時刻（秒） |
 | `_ArteBeat`，`_ArteBar` | 拍，小節（小数） |
 | `_ArteCanvasSize` | (列数, LED 数, 1/列数, 1/LED 数) |
@@ -99,3 +144,13 @@ Play.exe -record out.mp4 -record-from 30 -record-length 20 -record-fps 30 -recor
 | `ArteHue(h)`，`ArteHash(p)`，`ArteScreenToLinear(c)` | 色相 → 色，乱数，画面の色 → リニア |
 
 普通の重ね方では，返す色の a（アルファ）が「そこを塗る強さ」になる（光らない所は a = 0 にすると下が見える）．
+
+## スクリーンショットを撮り直す
+
+Unity のバージョンや画面が変わったら，Unity を閉じてから次で撮り直せる（`docs/authoring/images/` に保存して終了する．撮影中は触らない）．
+
+```text
+Unity.exe -projectPath 3d-rhythmgame -executeMethod Arte.Rhythm.Editor.DocScreenshots.Run
+```
+
+全体の画面（00-editor.png）の枠と名前は，撮ったあとに ffmpeg で描いている．

@@ -21,6 +21,7 @@ namespace Arte.Rhythm.Editor
 
         void OnGUI()
         {
+            EditorGUIUtility.labelWidth = 220;
             EditorGUILayout.LabelField("LED 演出をリングの内側から見た動画（曲の音つき）を書き出す", EditorStyles.wordWrappedLabel);
             req.from = EditorGUILayout.FloatField("始める曲の時刻（秒）", req.from);
             req.length = EditorGUILayout.FloatField("長さ（秒）", req.length);
