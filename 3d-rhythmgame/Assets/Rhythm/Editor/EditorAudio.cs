@@ -47,6 +47,8 @@ namespace Arte.Rhythm.Editor
         {
             if (!Available || c == null) return;
             Stop();
+            // 読み込んだばかりの音声はデータがまだ無いことがあるので，先に読み込んでおく
+            if (c.loadState != AudioDataLoadState.Loaded) c.LoadAudioData();
             clip = c;
             int start = Mathf.Clamp((int)(fromSec * c.frequency), 0, c.samples - 1);
             PlayMethod.Invoke(null, new object[] { c, start, false });

@@ -97,3 +97,7 @@ ServerData
 
 # Auto-generated scenes by play mode tests
 [Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# 譜面エディタのメトロノームが書く一時ファイル
+/3d-rhythmgame/Assets/ArteTemp/
+/3d-rhythmgame/Assets/ArteTemp.meta

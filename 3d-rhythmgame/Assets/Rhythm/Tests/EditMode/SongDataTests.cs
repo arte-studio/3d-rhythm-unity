@@ -83,7 +83,7 @@ namespace Arte.Rhythm.Tests
         public void KodaisaiSongHasTempoAndSections()
         {
             var song = SongJson.Load(System.IO.File.ReadAllText(System.IO.Path.Combine(TestData.SongsDir(), "kodaisai-2025", "song.json")));
-            Assert.AreEqual(75.98, song.Tempo[0].Bpm, 0.01);
+            Assert.AreEqual(151.96, song.Tempo[0].Bpm, 0.01);
             Assert.AreEqual("前奏", song.SectionAt(1));
             Assert.AreEqual("最後", song.SectionAt(85));
         }

@@ -8,16 +8,41 @@
   "video": "arte.mp4",
   "videoOffsetSec": -0.017,
   "tempo": [
-    {"t":1.759,"bpm":75.98,"beatsPerBar":4}
+    {
+      "t": 1.759,
+      "bpm": 151.96,
+      "beatsPerBar": 4
+    }
   ],
   "sections": [
-    {"t":0.0,"name":"前奏"},
-    {"t":14.39,"name":"Aメロ"},
-    {"t":27.03,"name":"Bメロ"},
-    {"t":42.82,"name":"サビ1"},
-    {"t":64.93,"name":"サビ前（デクレッシェンド→クレッシェンド）"},
-    {"t":66.51,"name":"サビ2"},
-    {"t":80.73,"name":"最後"}
+    {
+      "t": 0.0,
+      "name": "前奏"
+    },
+    {
+      "t": 14.39,
+      "name": "Aメロ"
+    },
+    {
+      "t": 27.03,
+      "name": "Bメロ"
+    },
+    {
+      "t": 42.82,
+      "name": "サビ1"
+    },
+    {
+      "t": 64.93,
+      "name": "サビ前（デクレッシェンド→クレッシェンド）"
+    },
+    {
+      "t": 66.51,
+      "name": "サビ2"
+    },
+    {
+      "t": 80.73,
+      "name": "最後"
+    }
   ],
   "notes": [
     {"t":2.26,"lane":2,"type":"touch"},
@@ -62,6 +87,7 @@
     {"t":20.16,"lane":7,"type":"touch"},
     {"t":20.16,"lane":10,"type":"touch"},
     {"t":20.16,"lane":1,"type":"touch"},
+    {"t":21.6985,"lane":3,"type":"touch"},
     {"t":22.03,"lane":6,"type":"touch"},
     {"t":22.03,"lane":9,"type":"touch"},
     {"t":22.03,"lane":0,"type":"touch"},
@@ -92,6 +118,7 @@
     {"t":34.17,"lane":5,"type":"touch"},
     {"t":34.17,"lane":10,"type":"touch"},
     {"t":34.17,"lane":14,"type":"touch"},
+    {"t":34.7282,"lane":1,"type":"touch"},
     {"t":36.05,"lane":4,"type":"touch"},
     {"t":36.05,"lane":9,"type":"touch"},
     {"t":36.05,"lane":13,"type":"touch"},
@@ -113,6 +140,7 @@
     {"t":43.28,"lane":9,"type":"touch"},
     {"t":43.28,"lane":14,"type":"touch"},
     {"t":43.28,"lane":3,"type":"touch"},
+    {"t":43.8095,"lane":1,"type":"touch"},
     {"t":45.2,"lane":10,"type":"touch"},
     {"t":45.2,"lane":0,"type":"touch"},
     {"t":45.2,"lane":4,"type":"touch"},

@@ -23,7 +23,7 @@ namespace Arte.Rhythm.Editor
     /// 操作:
     ///   クリック = ノーツを置く / 選ぶ（Shift で追加選択），ドラッグ = 移動，右クリック = 削除
     ///   ルーラー（上端）をクリック = カーソル移動，Space = カーソルから再生 / 停止
-    ///   Alt + クリック = 一番近い拍にノーツを置く
+    ///   Alt + クリック = 一番近い拍にノーツを置く，M = メトロノームの入 / 切（拍と曲が合っているか耳で確かめる）
     ///   波形の上で右クリック = 曲の区切り（前奏，A メロなど）を足す・名前を変える・消す．区切りの線をドラッグで動かす
     ///   1〜0, Q〜P = そのレーンにノーツを置く（再生中は再生位置，停止中はカーソル位置）
     ///   B = テンポのタップ（再生中に拍に合わせて4回以上），Delete = 削除，←→ = グリッド1つ移動，↑↓ = レーン移動
@@ -54,6 +54,10 @@ namespace Arte.Rhythm.Editor
         [SerializeField] bool snap = true;
         [SerializeField] int setupIndex = 1; // 0 は「指定しない」．既定は最初の設営プロファイル
         [SerializeField] float tapLatencyMs;
+        [SerializeField] bool metronome;
+
+        AudioClip metronomeClip;
+        string metronomeKey;
 
         SongData data;
         TempoMap tempo;
@@ -395,6 +399,8 @@ namespace Arte.Rhythm.Editor
                 GUILayout.Label("グリッド", GUILayout.Width(44));
                 divisionIndex = EditorGUILayout.Popup(divisionIndex, DivisionLabels, EditorStyles.toolbarPopup, GUILayout.Width(52));
                 snap = GUILayout.Toggle(snap, "スナップ", EditorStyles.toolbarButton, GUILayout.Width(56));
+                bool m = GUILayout.Toggle(metronome, new GUIContent("メトロノーム", "再生中に拍でクリック音を鳴らす（M キー）．小節の頭は高い音"), EditorStyles.toolbarButton, GUILayout.Width(80));
+                if (m != metronome) SetMetronome(m);
                 GUILayout.Label("設営", GUILayout.Width(28));
                 int si = EditorGUILayout.Popup(setupIndex, setupNames, EditorStyles.toolbarPopup, GUILayout.Width(150));
                 if (si != setupIndex) { setupIndex = si; UpdateWiredLanes(); }
@@ -456,6 +462,91 @@ namespace Arte.Rhythm.Editor
             SetTempo(Math.Round(60 / period, 2), Math.Round(first, 4), data.Tempo.Count > 0 ? data.Tempo[0].BeatsPerBar : 4);
         }
 
+        void SetMetronome(bool on)
+        {
+            metronome = on;
+            double ph = PlayheadSec;
+            if (!double.IsNaN(ph)) PlayFrom(ph);
+        }
+
+        /// <summary>曲時刻 t から鳴らす（メトロノームが入っていれば，曲にクリック音を混ぜた音を鳴らす．ずれないように 1 本の音にする）．</summary>
+        void PlayFrom(double t)
+        {
+            var clip = metronome ? MetronomeClip() : song.audio;
+            EditorAudio.Play(clip ?? song.audio, t + data.AudioStartSec);
+        }
+
+        AudioClip MetronomeClip()
+        {
+            var src = song.audio;
+            if (src == null || !src.LoadAudioData()) return null;
+            string key = $"{src.GetInstanceID()}:{string.Join(";", tempo.Points.Select(p => $"{p.TimeSec},{p.Bpm},{p.BeatsPerBar}"))}:{data.AudioStartSec}";
+            if (metronomeClip != null && metronomeKey == key) return metronomeClip;
+            int ch = src.channels, rate = src.frequency;
+            var samples = new float[src.samples * ch];
+            if (!src.GetData(samples, 0)) return null;
+            // 曲を少し下げてクリック音を足す（小節の頭 2000Hz，ほかの拍 1200Hz，30ms で減衰）
+            for (int i = 0; i < samples.Length; i++) samples[i] *= 0.7f;
+            double length = (double)src.samples / rate - data.AudioStartSec;
+            int clickLen = (int)(0.03 * rate);
+            foreach (var (sec, isBeat, isBar) in tempo.GridLines(0, length, 1))
+            {
+                if (!isBeat && !isBar) continue;
+                long start = (long)Math.Round((sec + data.AudioStartSec) * rate);
+                double freq = isBar ? 2000 : 1200;
+                float amp = isBar ? 0.6f : 0.4f;
+                for (int k = 0; k < clickLen; k++)
+                {
+                    long s = start + k;
+                    if (s < 0 || s >= src.samples) continue;
+                    float v = amp * (float)(Math.Sin(2 * Math.PI * freq * k / rate) * Math.Exp(-k / (0.006 * rate)));
+                    for (int c = 0; c < ch; c++) samples[s * ch + c] += v;
+                }
+            }
+            // エディタの試聴はスクリプトで作った AudioClip を鳴らせないので，WAV に書いて読み込む（ArteTemp は git に入れない）
+            Directory.CreateDirectory(MetronomeDir);
+            WriteWav(MetronomePath, samples, ch, rate);
+            AssetDatabase.ImportAsset(MetronomePath, ImportAssetOptions.ForceSynchronousImport);
+            if (AssetImporter.GetAtPath(MetronomePath) is AudioImporter importer)
+            {
+                var settings = importer.defaultSampleSettings;
+                if (settings.compressionFormat != AudioCompressionFormat.PCM || settings.loadType != AudioClipLoadType.DecompressOnLoad)
+                {
+                    settings.compressionFormat = AudioCompressionFormat.PCM;
+                    settings.loadType = AudioClipLoadType.DecompressOnLoad;
+                    importer.defaultSampleSettings = settings;
+                    importer.SaveAndReimport();
+                }
+            }
+            metronomeClip = AssetDatabase.LoadAssetAtPath<AudioClip>(MetronomePath);
+            metronomeKey = metronomeClip != null ? key : null;
+            return metronomeClip;
+        }
+
+        const string MetronomeDir = "Assets/ArteTemp";
+        const string MetronomePath = MetronomeDir + "/metronome.wav";
+
+        static void WriteWav(string path, float[] samples, int channels, int rate)
+        {
+            using (var w = new BinaryWriter(File.Create(path)))
+            {
+                int bytes = samples.Length * 2;
+                w.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
+                w.Write(36 + bytes);
+                w.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt "));
+                w.Write(16);
+                w.Write((short)1);
+                w.Write((short)channels);
+                w.Write(rate);
+                w.Write(rate * channels * 2);
+                w.Write((short)(channels * 2));
+                w.Write((short)16);
+                w.Write(System.Text.Encoding.ASCII.GetBytes("data"));
+                w.Write(bytes);
+                foreach (float v in samples) w.Write((short)(Mathf.Clamp(v, -1f, 1f) * 32767));
+            }
+        }
+
         void TogglePlay()
         {
             if (EditorAudio.IsPlaying)
@@ -464,7 +555,7 @@ namespace Arte.Rhythm.Editor
                 EditorAudio.Stop();
                 if (!double.IsNaN(ph)) cursorSec = ph;
             }
-            else EditorAudio.Play(song.audio, cursorSec + data.AudioStartSec);
+            else PlayFrom(cursorSec);
         }
 
         void HandleInput()
@@ -505,7 +596,7 @@ namespace Arte.Rhythm.Editor
                             break;
                         }
                         cursorSec = Math.Max(0, SnapTime(TimeOf(e.mousePosition.x)));
-                        if (EditorAudio.IsPlaying) EditorAudio.Play(song.audio, cursorSec + data.AudioStartSec);
+                        if (EditorAudio.IsPlaying) PlayFrom(cursorSec);
                         e.Use();
                         break;
                     }
@@ -625,6 +716,12 @@ namespace Arte.Rhythm.Editor
                     return;
             }
 
+            if (e.keyCode == KeyCode.M)
+            {
+                SetMetronome(!metronome);
+                e.Use();
+                return;
+            }
             double now = PlayheadSec;
             bool live = !double.IsNaN(now);
             double at = live ? now - tapLatencyMs / 1000.0 : cursorSec;
