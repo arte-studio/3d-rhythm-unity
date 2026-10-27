@@ -39,6 +39,18 @@ namespace Arte.Rhythm.Editor
             else Debug.LogWarning("[SongTimelineSync] Timeline を設定した SongAsset を選ぶ");
         }
 
+        /// <summary>Timeline を持つすべての曲で目印を作り直す．</summary>
+        [MenuItem("Tools/Arte Rhythm/Sync All Song Timelines")]
+        public static void SyncAll()
+        {
+            foreach (var guid in AssetDatabase.FindAssets("t:SongAsset"))
+            {
+                var s = AssetDatabase.LoadAssetAtPath<SongAsset>(AssetDatabase.GUIDToAssetPath(guid));
+                if (s != null && s.timeline != null && s.Data != null) Sync(s.timeline, s.Data, s.LengthSec);
+            }
+            AssetDatabase.SaveAssets();
+        }
+
         /// <summary>小節の頭と区切りの目印を作り直す．</summary>
         public static void Sync(TimelineAsset timeline, SongData data, double lengthSec)
         {
@@ -60,7 +72,7 @@ namespace Arte.Rhythm.Editor
                     }
                 }
             }
-            track.locked = false;
+            track.locked = false; // 以前はロックしていた（「Locked」の表示が区切りの名前に重なるのでやめた）
             foreach (var m in track.GetMarkers().ToList()) track.DeleteMarker(m);
 
             var tempo = data.TempoMap();
@@ -76,7 +88,6 @@ namespace Arte.Rhythm.Editor
                 var m = track.CreateMarker<SongSectionMarker>(s.Time);
                 m.sectionName = s.Name;
             }
-            track.locked = true;
             EditorUtility.SetDirty(timeline);
             TimelineEditor.Refresh(RefreshReason.ContentsAddedOrRemoved);
         }

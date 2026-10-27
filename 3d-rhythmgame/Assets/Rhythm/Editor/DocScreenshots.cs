@@ -53,7 +53,11 @@ namespace Arte.Rhythm.Editor
             EditorSceneManager.OpenScene("Assets/Rhythm/Scenes/Play.unity");
             steps = new List<Step>
             {
-                new Step { Name = "00-editor", Prepare = WholeEditor, Wait = 3f, Mid = _ => FrameAll(Resources.FindObjectsOfTypeAll<TimelineEditorWindow>().First()) },
+                new Step { Name = "00-editor", Prepare = WholeEditor, Wait = 3f, Mid = _ =>
+                {
+                    FrameAll(Resources.FindObjectsOfTypeAll<TimelineEditorWindow>().First());
+                    Selection.activeGameObject = Rhythm();
+                } },
                 new Step { Name = "01-project-templates", Prepare = ProjectTemplates },
                 new Step { Name = "02-hierarchy-rhythm", Prepare = HierarchyRhythm },
                 new Step { Name = "03-director-inspector", Prepare = DirectorInspector },
@@ -86,6 +90,8 @@ namespace Arte.Rhythm.Editor
             {
                 EditorApplication.update -= Tick;
                 CloseOpened();
+                // 撮るために変えたシーン（director の Timeline など）は保存しない．保存するか聞かれて止まらないよう，開き直す
+                EditorSceneManager.OpenScene("Assets/Rhythm/Scenes/Play.unity");
                 Debug.Log("[DocScreenshots] 終わり");
                 EditorApplication.Exit(0);
                 return;
@@ -255,17 +261,20 @@ namespace Arte.Rhythm.Editor
             return w;
         }
 
+        // 曲の Timeline（古代祭版）のクリップ．曲に入れた Timeline なので「小節・拍」の欄が出る
         static EditorWindow ClipInspector()
         {
-            var timeline = (TimelineAsset)Rhythm().GetComponent<PlayableDirector>().playableAsset;
-            var clip = timeline.GetOutputTracks().OfType<LedEffectTrack>().Skip(1).First().GetClips().Skip(1).First();
-            // 重ね方と不透明度（template の中）を開いておく
+            var song = AssetDatabase.LoadAssetAtPath<Song.SongAsset>("Assets/Rhythm/Songs/kodaisai-2025/kodaisai-2025.asset");
+            var director = Rhythm().GetComponent<PlayableDirector>();
+            director.playableAsset = song.timeline;
+            var tw = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>().First();
+            tw.SetTimeline(director);
+            var clip = song.timeline.GetOutputTracks().OfType<LedEffectTrack>().SelectMany(t => t.GetClips()).First(c => c.displayName.StartsWith("11_"));
             var so = new SerializedObject(clip.asset);
             so.FindProperty("template").isExpanded = true;
             so.ApplyModifiedPropertiesWithoutUndo();
             TimelineEditor.selectedClip = clip;
-            var w = Float("UnityEditor.InspectorWindow", new Rect(80, 80, 520, 520));
-            return w;
+            return Float("UnityEditor.InspectorWindow", new Rect(80, 80, 520, 640));
         }
 
         static EditorWindow MaterialInspector()
