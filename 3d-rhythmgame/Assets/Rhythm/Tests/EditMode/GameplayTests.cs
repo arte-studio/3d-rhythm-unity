@@ -132,7 +132,7 @@ namespace Arte.Rhythm.Tests
 
         static IEnumerable<object[]> EquivalenceCases()
         {
-            var kodaisai = new JudgeRules();
+            var kodaisai = JudgeRules.Legacy();
             var tight = new JudgeRules { PerfectSec = 0.05, GoodSec = 0.12, MissAfterSec = 0.2, LaneCooldownSec = 0.1, SpawnLeadSec = 0.12 };
             foreach (string file in new[] { "Kodaisai_NoteData_1101.json", "Kokasai_NoteData_1026.json" })
                 foreach (int seed in new[] { 1, 2, 3, 4, 5 })
@@ -170,7 +170,7 @@ namespace Arte.Rhythm.Tests
             Assert.That(events.Count, Is.EqualTo(chart.Notes.Count(n => n.Type == NoteType.Touch)), "全ノーツが1回ずつ判定される");
         }
 
-        // ---- 判定の境界（既定 = 古代祭の値） ----
+        // ---- 判定の境界（旧版 = 古代祭の値） ----
 
         static Chart OneNote(double t = 10, int lane = 0) => new Chart(new[] { new ChartNote(t, lane, NoteType.Touch) });
 
@@ -183,17 +183,36 @@ namespace Arte.Rhythm.Tests
         [TestCase(0.51, JudgeResult.Miss)]
         public void Judge_KodaisaiWindows(double offset, JudgeResult? expected)
         {
+            var judge = new TouchJudge(OneNote(), JudgeRules.Legacy());
+            var events = new List<JudgeEvent>();
+            judge.Touch(0, 10 + offset, events);
+            Assert.That(judge.ResultOf(0), Is.EqualTo(expected));
+        }
+
+        // 既定 = 仕様書 9.1（Perfect ±50ms，Good ±150ms）
+        [TestCase(-0.16, null)]
+        [TestCase(-0.149, JudgeResult.Good)]
+        [TestCase(-0.06, JudgeResult.Good)]
+        [TestCase(-0.049, JudgeResult.Perfect)]
+        [TestCase(0.0, JudgeResult.Perfect)]
+        [TestCase(0.049, JudgeResult.Perfect)]
+        [TestCase(0.1, JudgeResult.Good)]
+        [TestCase(0.149, JudgeResult.Good)]
+        [TestCase(0.16, JudgeResult.Miss)]
+        public void Judge_SpecWindows(double offset, JudgeResult? expected)
+        {
             var judge = new TouchJudge(OneNote(), new JudgeRules());
             var events = new List<JudgeEvent>();
             judge.Touch(0, 10 + offset, events);
             Assert.That(judge.ResultOf(0), Is.EqualTo(expected));
+            Assert.That(judge.Score, Is.EqualTo(expected == JudgeResult.Perfect ? 100 : expected == JudgeResult.Good ? 50 : 0));
         }
 
         [Test]
         public void Judge_CooldownIgnoresRapidRetouch()
         {
             var chart = new Chart(new[] { new ChartNote(10, 0, NoteType.Touch), new ChartNote(10.05, 0, NoteType.Touch) });
-            var judge = new TouchJudge(chart, new JudgeRules());
+            var judge = new TouchJudge(chart, JudgeRules.Legacy());
             var events = new List<JudgeEvent>();
             Assert.That(judge.Touch(0, 10.00, events), Is.EqualTo(TouchOutcome.Judged));
             Assert.That(judge.Touch(0, 10.05, events), Is.EqualTo(TouchOutcome.Cooldown));
@@ -205,7 +224,7 @@ namespace Arte.Rhythm.Tests
         public void Judge_ConnectNotesAreNotJudged()
         {
             var chart = new Chart(new[] { new ChartNote(1, 0, NoteType.Connect) });
-            var judge = new TouchJudge(chart, new JudgeRules());
+            var judge = new TouchJudge(chart, JudgeRules.Legacy());
             var events = new List<JudgeEvent>();
             judge.Advance(100, events);
             Assert.That(events, Is.Empty);
@@ -215,7 +234,7 @@ namespace Arte.Rhythm.Tests
         public void Replay_ReproducesLiveJudgement()
         {
             var chart = LoadLegacy("Kodaisai_NoteData_1101.json");
-            var rules = new JudgeRules();
+            var rules = JudgeRules.Legacy();
             var rng = new Random(7);
             var log = new TouchLog { ChartName = "Kodaisai_NoteData_1101" };
             var live = new TouchJudge(chart, rules);

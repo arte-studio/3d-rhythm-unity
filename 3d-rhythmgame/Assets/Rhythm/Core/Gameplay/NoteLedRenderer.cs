@@ -6,15 +6,22 @@ using Arte.Rhythm.Net;
 
 namespace Arte.Rhythm.Gameplay
 {
-    /// <summary>ノーツ用 LED の見た目の設定．既定値は旧版（GameManager と古代祭のシーン設定）．</summary>
+    /// <summary>ノーツ用 LED の見た目の設定．色は仕様書（docs/SPECIFICATION.md 7.1），速さなどは旧版の値．</summary>
     [Serializable]
     public sealed class NoteLedStyle
     {
-        // 色は旧版の Unity の Color を Color32 にした値（Color.yellow は (1, 0.92, 0.016)）
-        public byte[] openColor = { 255, 235, 4 };      // 判定の受付中（黄）
-        public byte[] perfectColor = { 255, 0, 255 };   // magenta
-        public byte[] goodColor = { 255, 255, 255 };    // white
-        public byte[] missColor = { 0, 255, 255 };      // cyan
+        /// <summary>案内（タイミング案内）は青の点滅．</summary>
+        public byte[] openColor = { 0, 0, 255 };
+        /// <summary>点滅の周期．ノーツ時刻にちょうど点く位相にそろえる．</summary>
+        public float openBlinkPeriodSec = 0.5f;
+        public byte[] perfectColor = { 0, 255, 0 };     // 緑
+        public byte[] goodColor = { 255, 255, 0 };      // 黄
+        public byte[] missColor = { 255, 0, 0 };        // 赤
+
+        /// <summary>Perfect のとき，むぎゅっとに虹色の回転を出す時間（旧版 PerfectPerformance．旧版は画面上の 3D オブジェクトにだけ出ていた）．</summary>
+        public float perfectRainbowSec = 0.2f;
+        /// <summary>虹色が回る速さ（周/秒）．</summary>
+        public float perfectRainbowSpeed = 0.8f;
 
         /// <summary>
         /// 判定色を出してから消えるまで（仕様書 4.7「判定 → フェードアウト」）．旧版は判定色のまま次のノーツまで残っていた
@@ -46,8 +53,8 @@ namespace Arte.Rhythm.Gameplay
     /// <summary>
     /// ノーツ用 LED（むぎゅっと 8×8 と，つながるノーツ用 30 個）を描く．仕様書（docs/SPECIFICATION.md 4.7，7.1）の意図に沿い，
     /// 色や速さは旧版 GameManager / NoteLeds の値を使う:
-    /// - 判定の受付が始まった未判定のノーツ（TouchJudge.IsOpen）のレーンのむぎゅっとを受付色にする
-    /// - 判定したらむぎゅっとを判定色にし，judgedFadeSec で消す
+    /// - 案内が始まった未判定のノーツ（TouchJudge.IsOpen）のレーンのむぎゅっとを青で点滅させる
+    /// - 判定したらむぎゅっとを判定色（Perfect は虹色の回転のあと）にし，judgedFadeSec で消す
     /// - 判定したらそのレーンのつながるノーツ用 LED に判定色の光を流す（3 秒で消える）
     /// - 曲の間，つながるノーツ用 LED を色相を変えながら塗っていく（connectSweep）．流れる光が出ている間はそちらが上
     /// つながるノーツ用のテープは色の並びが違うので R と G を入れ替えて書く（NoteLayout.ConnectSwapRG）．
@@ -60,12 +67,13 @@ namespace Arte.Rhythm.Gameplay
         readonly NoteLayout layout;
         readonly NoteLedStyle style;
         readonly int[] lanes;               // 実機にあるレーン
-        readonly byte[][] mugu;             // [lane] 3 バイト（むぎゅっと全体が 1 色）
+        readonly byte[][] mugu;             // [lane] むぎゅっとの LED × 3 バイト（行 × 列の順）
         readonly byte[][] connect;          // [lane] 30 × 3 バイト（R と G を入れ替える前）
         readonly double[] trailStart;       // [lane] NaN = 流れていない
         readonly byte[][] trailColor;
         readonly double[] judgedAt;         // [lane] NaN = 判定色を出していない
         readonly byte[][] judgedColor;
+        readonly bool[] judgedPerfect;
         readonly int laneCount;
         int openCursor;
         double sweepHue, sweepSteps;
@@ -84,9 +92,10 @@ namespace Arte.Rhythm.Gameplay
             trailStart = new double[laneCount];
             judgedColor = new byte[laneCount][];
             judgedAt = new double[laneCount];
+            judgedPerfect = new bool[laneCount];
             for (int l = 0; l < laneCount; l++)
             {
-                mugu[l] = new byte[Channels];
+                mugu[l] = new byte[layout.MuguLeds * Channels];
                 connect[l] = new byte[layout.ConnectLeds * Channels];
                 trailColor[l] = new byte[Channels];
                 judgedColor[l] = new byte[Channels];
@@ -101,7 +110,7 @@ namespace Arte.Rhythm.Gameplay
         {
             for (int l = 0; l < laneCount; l++)
             {
-                Array.Clear(mugu[l], 0, Channels);
+                Array.Clear(mugu[l], 0, mugu[l].Length);
                 Array.Clear(connect[l], 0, connect[l].Length);
                 trailStart[l] = double.NaN;
                 judgedAt[l] = double.NaN;
@@ -120,6 +129,7 @@ namespace Arte.Rhythm.Gameplay
             byte[] c = e.Result == JudgeResult.Perfect ? style.perfectColor : e.Result == JudgeResult.Good ? style.goodColor : style.missColor;
             Array.Copy(c, judgedColor[e.Lane], Channels);
             judgedAt[e.Lane] = realtime;
+            judgedPerfect[e.Lane] = e.Result == JudgeResult.Perfect;
             Array.Copy(c, trailColor[e.Lane], Channels);
             trailStart[e.Lane] = realtime;
         }
@@ -148,14 +158,53 @@ namespace Arte.Rhythm.Gameplay
 
         void PaintJudged(int lane, double realtime)
         {
-            float t = style.judgedFadeSec > 0 ? (float)(realtime - judgedAt[lane]) / style.judgedFadeSec : 1f;
-            if (t >= 1f)
+            float elapsed = (float)(realtime - judgedAt[lane]);
+            float fade = Math.Max(style.judgedFadeSec, judgedPerfect[lane] ? style.perfectRainbowSec : 0f);
+            if (elapsed >= fade)
             {
-                Array.Clear(mugu[lane], 0, Channels);
+                Array.Clear(mugu[lane], 0, mugu[lane].Length);
                 judgedAt[lane] = double.NaN;
                 return;
             }
-            for (int ch = 0; ch < Channels; ch++) mugu[lane][ch] = ToByte(judgedColor[lane][ch] / 255f * (1f - Clamp01(t)));
+            if (judgedPerfect[lane] && elapsed < style.perfectRainbowSec)
+            {
+                PaintRainbow(mugu[lane], elapsed);
+                return;
+            }
+            float k = 1f - Clamp01(elapsed / fade);
+            var c = judgedColor[lane];
+            Fill(mugu[lane], ToByte(c[0] / 255f * k), ToByte(c[1] / 255f * k), ToByte(c[2] / 255f * k));
+        }
+
+        // 旧版 RunPerfectRainbowAnimation と同じ: 中心からの角度で色相を付け，時間で回す
+        void PaintRainbow(byte[] dest, float elapsed)
+        {
+            int rows = layout.MuguRows, cols = layout.MuguColumns;
+            float cx = (cols - 1) / 2f, cy = (rows - 1) / 2f;
+            float offset = elapsed * style.perfectRainbowSpeed;
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    float angle = (float)Math.Atan2(r - cy, c - cx);
+                    float h = (angle / (2f * (float)Math.PI) + 0.5f + offset) % 1f;
+                    HsvToRgb(h, 1f, 1f, out float rr, out float gg, out float bb);
+                    int i = (r * cols + c) * Channels;
+                    dest[i] = ToByte(rr);
+                    dest[i + 1] = ToByte(gg);
+                    dest[i + 2] = ToByte(bb);
+                }
+            }
+        }
+
+        static void Fill(byte[] dest, byte r, byte g, byte b)
+        {
+            for (int i = 0; i < dest.Length; i += Channels)
+            {
+                dest[i] = r;
+                dest[i + 1] = g;
+                dest[i + 2] = b;
+            }
         }
 
         bool Has(int lane) => lane >= 0 && lane < laneCount && layout.HasLane(lane);
@@ -163,13 +212,18 @@ namespace Arte.Rhythm.Gameplay
         void PaintOpenNotes(Chart chart, TouchJudge judge, double songTime)
         {
             var notes = chart.Notes;
-            double lead = judge.Rules.GoodSec;
+            double lead = judge.Rules.SpawnLeadSec;
             // 判定が済んだ（またはタッチでない）先頭のノーツは飛ばす（ノーツは時刻順）
             while (openCursor < notes.Count && (notes[openCursor].Type != NoteType.Touch || judge.ResultOf(openCursor) != null)) openCursor++;
             for (int i = openCursor; i < notes.Count && notes[i].Time - lead <= songTime; i++)
             {
                 if (!judge.IsOpen(i, songTime) || !Has(notes[i].Lane)) continue;
-                Array.Copy(style.openColor, mugu[notes[i].Lane], Channels);
+                // ノーツ時刻にちょうど点く位相で点滅（点いている時間は周期の半分）
+                double phase = (songTime - notes[i].Time) / style.openBlinkPeriodSec;
+                bool on = style.openBlinkPeriodSec <= 0 || phase - Math.Floor(phase) < 0.5;
+                var c = style.openColor;
+                if (on) Fill(mugu[notes[i].Lane], c[0], c[1], c[2]);
+                else Fill(mugu[notes[i].Lane], 0, 0, 0);
             }
         }
 
@@ -243,13 +297,7 @@ namespace Arte.Rhythm.Gameplay
                 int muguStart = layout.MuguLedIndex(m.module, 0, 0) * Channels;
                 int conStart = layout.ConnectLedIndex(m.module, 0) * Channels;
                 if (conStart + layout.ConnectLeds * Channels > pin.Length) continue;
-                var c = mugu[lane];
-                for (int i = 0; i < layout.MuguLeds; i++)
-                {
-                    pin[muguStart + i * Channels] = c[0];
-                    pin[muguStart + i * Channels + 1] = c[1];
-                    pin[muguStart + i * Channels + 2] = c[2];
-                }
+                mugu[lane].AsSpan().CopyTo(pin.Slice(muguStart));
                 var con = connect[lane];
                 bool swap = layout.ConnectSwapRG;
                 for (int i = 0; i < layout.ConnectLeds; i++)

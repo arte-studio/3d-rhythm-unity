@@ -104,10 +104,10 @@ namespace Arte.Rhythm.Gameplay
         public JudgeResult? ResultOf(int noteIndex) => results[noteIndex];
 
         /// <summary>
-        /// 未判定で，判定の受付が始まっているか（旧版でノーツを黄色にしていた状態）．
+        /// 未判定で，案内（受付色の点滅）が始まっているか（ノーツ時刻の SpawnLeadSec 前から）．
         /// </summary>
         public bool IsOpen(int noteIndex, double songTime) =>
-            results[noteIndex] == null && notes[noteIndex].Type == NoteType.Touch && songTime >= notes[noteIndex].Time - rules.GoodSec;
+            results[noteIndex] == null && notes[noteIndex].Type == NoteType.Touch && songTime >= notes[noteIndex].Time - rules.SpawnLeadSec;
 
         /// <summary>
         /// 曲時刻を進め，タッチされないまま MissAfterSec を過ぎたノーツを Miss にする．

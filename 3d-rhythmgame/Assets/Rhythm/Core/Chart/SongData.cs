@@ -48,12 +48,12 @@ namespace Arte.Rhythm.Charts
 
         [JsonProperty("tempo")] public List<TempoPoint> Tempo = new List<TempoPoint>();
 
-        /// <summary>この曲だけ判定ルールを変える場合に書く．null なら既定（古代祭の値）．</summary>
+        /// <summary>この曲だけ判定ルールを変える場合に書く．null なら既定（仕様書の判定幅）．</summary>
         [JsonProperty("rules", NullValueHandling = NullValueHandling.Ignore)] public JudgeRules Rules;
 
         [JsonProperty("notes")] public List<SongNote> Notes = new List<SongNote>();
 
-        public JudgeRules EffectiveRules => Rules ?? new JudgeRules();
+        [JsonIgnore] public JudgeRules EffectiveRules => Rules ?? new JudgeRules();
 
         public TempoMap TempoMap() => new TempoMap(Tempo);
 

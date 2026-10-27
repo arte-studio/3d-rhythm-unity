@@ -195,15 +195,5 @@
     {"t":87.17,"lane":5,"type":"touch"},
     {"t":87.17,"lane":10,"type":"touch"},
     {"t":87.17,"lane":0,"type":"touch"}
-  ],
-  "EffectiveRules": {
-    "perfectSec": 2.0,
-    "goodSec": 3.0,
-    "missAfterSec": 0.5,
-    "laneCooldownSec": 0.1,
-    "spawnLeadSec": 3.0,
-    "perfectScore": 5,
-    "goodScore": 3,
-    "AcceptUntilSec": 3.5
-  }
+  ]
 }
