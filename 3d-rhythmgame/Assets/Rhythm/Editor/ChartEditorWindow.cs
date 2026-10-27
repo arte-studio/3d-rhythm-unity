@@ -61,6 +61,7 @@ namespace Arte.Rhythm.Editor
 
         SongData data;
         TempoMap tempo;
+        TempoMap savedTempo; // 最後に保存した（読み込んだ）テンポ．保存のときに変わっていたらノーツと演出を動かすか聞く
         readonly List<ChartNote> notes = new List<ChartNote>();
         readonly List<SongSection> sections = new List<SongSection>();
         int draggingSection = -1;
@@ -167,6 +168,7 @@ namespace Arte.Rhythm.Editor
             {
                 data = SongJson.Load(song.songJson.text);
                 tempo = data.TempoMap();
+                savedTempo = tempo;
                 notes.AddRange(data.ToChart().Notes);
                 sections.Clear();
                 sections.AddRange(data.Sections.OrderBy(x => x.Time).Select(x => new SongSection { Time = x.Time, Name = x.Name }));
@@ -183,6 +185,26 @@ namespace Arte.Rhythm.Editor
         void Save()
         {
             if (data == null || song?.songJson == null) return;
+            var newTempo = data.TempoMap();
+            if (savedTempo != null && !savedTempo.SameAs(newTempo))
+            {
+                // テンポや 1 小節目を直した: ノーツ・区切り・演出を「小節.拍」を保って動かすか
+                int choice = EditorUtility.DisplayDialogComplex("テンポが変わりました",
+                    "ノーツ，曲の区切り，演出（Timeline のクリップ）を，同じ「小節.拍」に来るように動かしますか？\n\n" +
+                    "・拍に合わせて置いたものは動かす（例: 12 小節目の 3 拍目のまま）\n" +
+                    "・音を聞いて置いた（拍とは関係ない）ものは動かさない",
+                    "全部動かす", "動かさない", "区切りと演出だけ動かす");
+                if (choice != 1)
+                {
+                    RecordUndo();
+                    if (choice == 0)
+                        for (int i = 0; i < notes.Count; i++)
+                            notes[i] = new ChartNote(Math.Max(0, TempoMap.Retime(notes[i].Time, savedTempo, newTempo)), notes[i].Lane, notes[i].Type);
+                    foreach (var sec in sections) sec.Time = Math.Max(0, TempoMap.Retime(sec.Time, savedTempo, newTempo));
+                    int moved = song.timeline != null ? SongTimelineSync.Retime(song.timeline, savedTempo, newTempo) : 0;
+                    Debug.Log($"[ChartEditor] テンポに合わせて動かした: {(choice == 0 ? $"ノーツ {notes.Count}，" : "")}区切り {sections.Count}，演出 {moved}");
+                }
+            }
             data.SetNotes(notes);
             data.Sections = sections.OrderBy(x => x.Time).Select(x => new SongSection { Time = Math.Round(x.Time, 3), Name = x.Name }).ToList();
             string path = AssetDatabase.GetAssetPath(song.songJson);
@@ -193,6 +215,8 @@ namespace Arte.Rhythm.Editor
             notes.AddRange(data.ToChart().Notes);
             selected.Clear();
             dirty = false;
+            savedTempo = data.TempoMap();
+            if (song.timeline != null) SongTimelineSync.Sync(song.timeline, data, song.LengthSec);
             Debug.Log($"[ChartEditor] 保存: {path}（{notes.Count} ノーツ）");
         }
 
@@ -427,7 +451,9 @@ namespace Arte.Rhythm.Editor
                 int bpb = EditorGUILayout.IntField("拍子", p?.BeatsPerBar ?? 4, GUILayout.Width(70));
                 EditorGUIUtility.labelWidth = labelWidth;
                 if (EditorGUI.EndChangeCheck() && bpm > 0 && bpb > 0) SetTempo(bpm, first, bpb);
-                if (data.Tempo.Count > 1) GUILayout.Label($"（他 {data.Tempo.Count - 1} 箇所のテンポ変化は song.json で編集）");
+                if (data.Tempo.Count > 1) GUILayout.Label($"（ほかに {data.Tempo.Count - 1} 箇所でテンポが変わる）");
+                if (GUILayout.Button(new GUIContent("テンポ表…", "途中でテンポや拍子が変わる曲のときに使う"), EditorStyles.toolbarButton, GUILayout.Width(70)))
+                    TempoTableWindow.Open(this);
                 GUILayout.FlexibleSpace();
                 tapLatencyMs = EditorGUILayout.FloatField(new GUIContent("タップ補正(ms)", "キー入力で置くノーツを何ミリ秒早めるか"), tapLatencyMs, GUILayout.Width(160));
                 pxPerSec = EditorGUILayout.Slider(pxPerSec, 20, 800, GUILayout.Width(160));
@@ -993,6 +1019,19 @@ namespace Arte.Rhythm.Editor
             if (!EditorAudio.Available) msg += "  ※この Unity では再生できません";
             if (!string.IsNullOrEmpty(tapMessage)) msg += "  " + tapMessage;
             GUI.Label(r, msg, EditorStyles.miniLabel);
+        }
+
+        // ---- テンポ表（TempoTableWindow）から使う ----
+
+        internal SongData Data => data;
+        internal double CursorSec => cursorSec;
+
+        internal void ReplaceTempo(List<TempoPoint> points)
+        {
+            data.Tempo = points.OrderBy(p => p.TimeSec).Select(p => new TempoPoint { TimeSec = p.TimeSec, Bpm = p.Bpm, BeatsPerBar = p.BeatsPerBar }).ToList();
+            tempo = data.TempoMap();
+            dirty = true;
+            Repaint();
         }
     }
 }
