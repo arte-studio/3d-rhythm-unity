@@ -81,6 +81,7 @@ namespace Arte.Rhythm.Editor
 
         readonly List<TapTempo.Tap> taps = new List<TapTempo.Tap>();
         string tapMessage = "";
+        TempoPoint tapBase; // 叩き始める前のテンポ（叩いている間はこれを基準にする）
 
         // ドラッグ中の状態
         bool dragging;
@@ -449,8 +450,14 @@ namespace Arte.Rhythm.Editor
         void Tap(double t, bool downbeat)
         {
             if (taps.Count > 0 && t - taps[taps.Count - 1].Time > 2.0) taps.Clear();
+            if (taps.Count == 0)
+            {
+                var p0 = data.Tempo.Count > 0 ? data.Tempo[0] : null;
+                tapBase = p0 == null ? null : new TempoPoint { TimeSec = p0.TimeSec, Bpm = p0.Bpm, BeatsPerBar = p0.BeatsPerBar };
+            }
             taps.Add(new TapTempo.Tap(t, downbeat));
-            var current = data.Tempo.Count > 0 ? data.Tempo[0] : null;
+            // 叩くたびに書き換えたテンポを基準にすると，最初の数回で決まったテンポから動かなくなるので，叩き始める前のものを使う
+            var current = tapBase;
             int bpb = current?.BeatsPerBar ?? 4;
             var r = TapTempo.Fit(taps, current, bpb);
             if (r == null)
@@ -462,7 +469,7 @@ namespace Arte.Rhythm.Editor
             SetTempo(res.KeptTempo ? current.Bpm : Math.Round(res.Bpm, 2), Math.Round(res.FirstBarSec, 4), bpb);
             int downs = taps.Count(x => x.Downbeat);
             tapMessage = $"タップ {taps.Count} 回（うち 1 拍目 {downs}）: " +
-                         (res.KeptTempo ? $"テンポは今のまま（{current.Bpm} BPM）" : $"{res.Bpm:F2} BPM") +
+                         (res.KeptTempo ? $"テンポは元のまま（{current.Bpm} BPM．叩いた拍だけで求めると {res.FittedBpm:F2}）" : $"{res.Bpm:F2} BPM") +
                          $"，小節の頭 {res.FirstBarSec:F3} 秒（{res.ShiftSec * 1000:+0;-0} ms），ばらつき {res.ErrorSec * 1000:F0} ms" +
                          (downs == 0 ? "．1 拍目で N を叩くとどの拍が小節の頭かも合わせる" : "");
         }

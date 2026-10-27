@@ -65,6 +65,19 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void WholeSongTapsWithFixedBaseFollowTheMusic()
+        {
+            // 曲は 151.96 BPM．1 曲分（200 拍）叩く．基準は叩き始める前のテンポのまま（譜面エディタと同じ使い方）
+            var base0 = new TempoPoint { TimeSec = 1.759, Bpm = 151.96, BeatsPerBar = 4 };
+            var all = Taps(151.96, 2.154, 4, 200, 0.03, 6);
+            TapTempo.Result last = default;
+            for (int n = TapTempo.MinTaps; n <= all.Count; n++) last = TapTempo.Fit(all.GetRange(0, n), base0).Value;
+            Assert.IsTrue(last.KeptTempo);
+            Assert.AreEqual(151.96, last.FittedBpm, 0.05, "叩いた拍だけでもほぼ同じテンポになる");
+            Assert.AreEqual(2.154, last.FirstBarSec, 0.005);
+        }
+
+        [Test]
         public void NeedsFourTaps()
         {
             Assert.IsNull(TapTempo.Fit(Taps(120, 0, 0, 3, 0, 5), null));

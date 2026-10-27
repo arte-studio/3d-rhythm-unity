@@ -9,7 +9,8 @@ namespace Arte.Rhythm.Charts
     ///
     /// - 叩いた時刻に拍番号を振り（間隔のおおよそから），拍番号に対する時刻の最小二乗直線で拍の間隔と位置を出す．
     ///   人の叩くばらつき（1 回 20〜30ms）は回数が増えるほど打ち消し合う
-    /// - 今のテンポとの差が 1% 以内なら，テンポは今の値のまま（解析などで正確に分かっているため）拍の位置だけ合わせる
+    /// - 今のテンポとの差が 1% 以内なら，テンポは今の値のまま（解析などで正確に分かっているため）拍の位置だけ合わせる．
+    ///   current には叩き始める前のテンポを渡す（叩くたびに結果で置き換えると，最初の数回のテンポから動かなくなる）
     /// - 1 拍目として叩いた（downbeat）拍の拍番号を拍子で割った余りの多数決で，どの拍が小節の頭かを決める．
     ///   1 拍目を叩いていなければ，今の小節の頭に一番近いものにする
     /// </summary>
@@ -38,9 +39,12 @@ namespace Arte.Rhythm.Charts
             public readonly double ShiftSec;
             /// <summary>叩いた時刻と，求めた拍の差の大きさ（秒，二乗平均）．</summary>
             public readonly double ErrorSec;
+            /// <summary>叩いた拍だけで求めたテンポ（KeptTempo でも参考に出す）．</summary>
+            public readonly double FittedBpm;
 
-            public Result(double bpm, double firstBarSec, bool keptTempo, double shiftSec, double errorSec)
+            public Result(double bpm, double firstBarSec, bool keptTempo, double shiftSec, double errorSec, double fittedBpm)
             {
+                FittedBpm = fittedBpm;
                 Bpm = bpm;
                 FirstBarSec = firstBarSec;
                 KeptTempo = keptTempo;
@@ -75,6 +79,7 @@ namespace Arte.Rhythm.Charts
             }
             if (skk <= 0) return null;
             double p = skt / skk;
+            double fitted = 60 / p;
             bool kept = false;
             if (current != null && Math.Abs(60 / p - current.Bpm) / current.Bpm < 0.01)
             {
@@ -101,7 +106,7 @@ namespace Arte.Rhythm.Charts
             // 小節の番号が大きく変わらないよう，今の小節の頭に一番近いものにする（テンポが無ければ曲頭以降で最初のもの）
             double first = current != null ? head + Math.Round((current.TimeSec - head) / bar) * bar : head - Math.Floor(head / bar) * bar;
             double shift = current != null ? first - current.TimeSec : 0;
-            return new Result(60 / p, first, kept, shift, err);
+            return new Result(60 / p, first, kept, shift, err, fitted);
         }
     }
 }
