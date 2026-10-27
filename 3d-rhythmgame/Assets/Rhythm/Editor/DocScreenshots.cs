@@ -63,6 +63,7 @@ namespace Arte.Rhythm.Editor
                 new Step { Name = "07-song-asset", Prepare = SongAssetInspector },
                 new Step { Name = "08-preview-export", Prepare = PreviewExport },
                 new Step { Name = "10-chart-editor", Prepare = ChartEditor, Wait = 3f },
+                new Step { Name = "11-kodaisai-timeline", Prepare = KodaisaiTimeline, Wait = 3f, Mid = FrameAll },
             };
             // 起動引数 -docshot-steps 名前,名前 で一部だけ撮る
             var args = Environment.GetCommandLineArgs();
@@ -293,6 +294,19 @@ namespace Arte.Rhythm.Editor
                 w.position = new Rect(80, 80, 1400, 520);
                 opened.Add(w);
             }
+            return w;
+        }
+
+        // 曲の Timeline（古代祭版の演出）．一番上に小節と区切りの目印
+        static EditorWindow KodaisaiTimeline()
+        {
+            var song = AssetDatabase.LoadAssetAtPath<Song.SongAsset>("Assets/Rhythm/Songs/kodaisai-2025/kodaisai-2025.asset");
+            var director = Rhythm().GetComponent<PlayableDirector>();
+            director.playableAsset = song.timeline;
+            Selection.activeGameObject = director.gameObject;
+            EditorApplication.ExecuteMenuItem("Window/Sequencing/Timeline");
+            var w = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>().First();
+            w.SetTimeline(director);
             return w;
         }
 

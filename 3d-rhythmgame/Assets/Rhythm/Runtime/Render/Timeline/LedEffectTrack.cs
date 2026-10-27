@@ -10,11 +10,10 @@ namespace Arte.Rhythm.Render
     /// - 同じトラックで重なったクリップは，重なりの間で入れ替わる（クロスフェード）．クリップの端を引くとフェードイン・アウト
     /// - トラックを増やすと上に重ねていく（Timeline の上のトラックから順に重ねる）
     /// - 時間は曲の時刻（SongVisualSync が Timeline を曲に合わせて進める）
-    /// バインド先は LedCanvas（空ならシーンの LedCanvas を使う）．
+    /// 重ねる先はシーンの LedCanvas（バインドは無い．トラックの左にはトラックの名前が出る）．
     /// </summary>
     [TrackColor(1f, 0.55f, 0.1f)]
     [TrackClipType(typeof(LedEffectClip))]
-    [TrackBindingType(typeof(LedCanvas))]
     public sealed class LedEffectTrack : TrackAsset
     {
         public override Playable CreateTrackMixer(PlayableGraph graph, GameObject go, int inputCount) =>
@@ -29,7 +28,7 @@ namespace Arte.Rhythm.Render
 
         public override void ProcessFrame(Playable playable, FrameData info, object playerData)
         {
-            var canvas = playerData as LedCanvas ?? LedCanvas.Current;
+            var canvas = LedCanvas.Current;
             if (canvas == null) return;
             int n = playable.GetInputCount();
             for (int i = 0; i < n; i++)

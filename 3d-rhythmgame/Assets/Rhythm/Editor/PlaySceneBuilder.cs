@@ -64,8 +64,6 @@ namespace Arte.Rhythm.Editor
             canvas.link = link;
             canvas.conductor = conductor;
             canvas.compositeMaterial = MaterialAsset("Arte/LedCanvas/Composite", "Composite");
-            foreach (var output in director.playableAsset.outputs)
-                if (output.sourceObject is LedEffectTrack) director.SetGenericBinding(output.sourceObject, canvas);
             var painter = devices.AddComponent<NoteLedPainter>();
             painter.link = link;
             painter.session = session;
