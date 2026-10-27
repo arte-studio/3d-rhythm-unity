@@ -26,7 +26,7 @@ namespace Arte.Rhythm.Editor
     ///   Alt + クリック = 一番近い拍にノーツを置く，M = メトロノームの入 / 切（拍と曲が合っているか耳で確かめる）
     ///   波形の上で右クリック = 曲の区切り（前奏，A メロなど）を足す・名前を変える・消す．区切りの線をドラッグで動かす
     ///   1〜0, Q〜P = そのレーンにノーツを置く（再生中は再生位置，停止中はカーソル位置）
-    ///   B = テンポのタップ（再生中に拍に合わせて4回以上），Delete = 削除，←→ = グリッド1つ移動，↑↓ = レーン移動
+    ///   B / N = テンポのタップ（再生中に拍に合わせて 4 回以上．小節の 1 拍目は N），Delete = 削除，←→ = グリッド1つ移動，↑↓ = レーン移動
     ///   Ctrl+Z / Ctrl+Y = 元に戻す / やり直し，Ctrl+S = 保存，ホイール = スクロール，Ctrl+ホイール = 拡大縮小
     /// </summary>
     public sealed class ChartEditorWindow : EditorWindow
@@ -79,7 +79,8 @@ namespace Arte.Rhythm.Editor
         float[] waveMin, waveMax;
         float waveSecPerBin;
 
-        readonly List<double> taps = new List<double>();
+        readonly List<TapTempo.Tap> taps = new List<TapTempo.Tap>();
+        string tapMessage = "";
 
         // ドラッグ中の状態
         bool dragging;
@@ -414,7 +415,7 @@ namespace Arte.Rhythm.Editor
             {
                 if (data == null) return;
                 var p = data.Tempo.Count > 0 ? data.Tempo[0] : null;
-                GUILayout.Label(p == null ? "テンポ未設定（120 BPM で表示中．再生中に B キーで拍をタップ）" : "テンポ", GUILayout.Width(p == null ? 280 : 40));
+                GUILayout.Label(p == null ? "テンポ未設定（120 BPM で表示中．再生中に B キーで拍をタップ，1 拍目は N）" : "テンポ", GUILayout.Width(p == null ? 330 : 40));
                 EditorGUI.BeginChangeCheck();
                 float labelWidth = EditorGUIUtility.labelWidth;
                 EditorGUIUtility.labelWidth = 32;
@@ -442,24 +443,28 @@ namespace Arte.Rhythm.Editor
         }
 
         /// <summary>
-        /// タップの時刻列から BPM と1拍目の位置を求める（拍番号に対する時刻の最小二乗直線）．
-        /// 間が 2 秒以上空いたら新しいタップ列とみなす．
+        /// 曲に合わせて叩いた拍からテンポと小節の頭を合わせる（B = 拍，N = 小節の 1 拍目．計算は TapTempo）．
+        /// 間が 2 秒以上空いたら新しく数え直す．
         /// </summary>
-        void Tap(double t)
+        void Tap(double t, bool downbeat)
         {
-            if (taps.Count > 0 && t - taps[taps.Count - 1] > 2.0) taps.Clear();
-            taps.Add(t);
-            if (taps.Count < 4) return;
-            int n = taps.Count;
-            double mx = (n - 1) / 2.0, my = taps.Average();
-            double sxy = 0, sxx = 0;
-            for (int i = 0; i < n; i++) { sxy += (i - mx) * (taps[i] - my); sxx += (i - mx) * (i - mx); }
-            double period = sxy / sxx;
-            if (period <= 0.2 || period > 2) return;
-            double t0 = my - period * mx;
-            // 1拍目は曲頭に最も近い拍にする
-            double first = t0 - Math.Floor(t0 / period) * period;
-            SetTempo(Math.Round(60 / period, 2), Math.Round(first, 4), data.Tempo.Count > 0 ? data.Tempo[0].BeatsPerBar : 4);
+            if (taps.Count > 0 && t - taps[taps.Count - 1].Time > 2.0) taps.Clear();
+            taps.Add(new TapTempo.Tap(t, downbeat));
+            var current = data.Tempo.Count > 0 ? data.Tempo[0] : null;
+            int bpb = current?.BeatsPerBar ?? 4;
+            var r = TapTempo.Fit(taps, current, bpb);
+            if (r == null)
+            {
+                tapMessage = $"タップ {taps.Count} 回（{TapTempo.MinTaps} 回から合わせ始める）";
+                return;
+            }
+            var res = r.Value;
+            SetTempo(res.KeptTempo ? current.Bpm : Math.Round(res.Bpm, 2), Math.Round(res.FirstBarSec, 4), bpb);
+            int downs = taps.Count(x => x.Downbeat);
+            tapMessage = $"タップ {taps.Count} 回（うち 1 拍目 {downs}）: " +
+                         (res.KeptTempo ? $"テンポは今のまま（{current.Bpm} BPM）" : $"{res.Bpm:F2} BPM") +
+                         $"，小節の頭 {res.FirstBarSec:F3} 秒（{res.ShiftSec * 1000:+0;-0} ms），ばらつき {res.ErrorSec * 1000:F0} ms" +
+                         (downs == 0 ? "．1 拍目で N を叩くとどの拍が小節の頭かも合わせる" : "");
         }
 
         void SetMetronome(bool on)
@@ -726,9 +731,9 @@ namespace Arte.Rhythm.Editor
             bool live = !double.IsNaN(now);
             double at = live ? now - tapLatencyMs / 1000.0 : cursorSec;
 
-            if (e.keyCode == KeyCode.B && live)
+            if ((e.keyCode == KeyCode.B || e.keyCode == KeyCode.N) && live)
             {
-                Tap(at);
+                Tap(at, e.keyCode == KeyCode.N);
                 e.Use();
                 return;
             }
@@ -978,6 +983,7 @@ namespace Arte.Rhythm.Editor
             string msg = $"{t:F3} 秒（{bar} 小節 {beat:F2} 拍{(string.IsNullOrEmpty(sec) ? "" : $"，{sec}")}）  ノーツ {notes.Count}  選択 {selected.Count}";
             if (unwired > 0) msg += $"  ⚠ 配線の無いレーンのノーツ {unwired}（赤）";
             if (!EditorAudio.Available) msg += "  ※この Unity では再生できません";
+            if (!string.IsNullOrEmpty(tapMessage)) msg += "  " + tapMessage;
             GUI.Label(r, msg, EditorStyles.miniLabel);
         }
     }
