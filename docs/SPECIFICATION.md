@@ -171,6 +171,7 @@ d = タッチ時刻 − ノーツ時刻（秒）．既定は旧仕様書の判�
 | --- | --- | --- |
 | 譜面エディタ | ノーツ，テンポ，区切り，メトロノーム，叩いてテンポを合わせる | `docs/authoring/chart-editor.md` |
 | テンポ表 | 途中でテンポや拍子が変わる曲 | `docs/authoring/music-data.md` |
+| 拍の解析（BeatTool~） | 新しい曲の拍・小節の頭・区切りの候補を出し，聴き比べ用のクリック音を作る | `docs/authoring/beat-finding.md` |
 | Timeline と演出テンプレート | LED 演出を並べる | `docs/authoring/led-effects.md` |
 | プレビュー書き出し | 演出をリングの内側から見た動画（曲の音つき） | `docs/authoring/led-effects.md` |
 | 接続モニタ（F2） | 実機の接続・通信・テスト表示・色の曲線 | `docs/architecture-v2.md` の P4 |
