@@ -61,9 +61,9 @@ namespace Arte.Rhythm.Editor
                 });
             }
             root["modules"] = array;
-            root["modulesNote"] = $"仮配置: {Path.GetFileName(legacyPath)}（旧版のシーンの配置）から ModulePlacementImporter で作った．" +
-                                  "旧版はレーンと置き場所の対応を持っていなかったので，各レーンのモジュールがつながるデバイスの演出用ストリップに近い場所を割り当てた．" +
-                                  "実際の置き場所と，つながるノーツ用テープの向き（0 番目の LED の端）は未確認．";
+            root["modulesNote"] = $"仮配置: {Path.GetFileName(legacyPath)}（旧版のシーンの配置）のむぎゅっとの位置から ModulePlacementImporter で作った．" +
+                                  "決まりごと（確認済み）: 内側から見て左から右へレーン番号が進む．つながるノーツ用テープは次のむぎゅっとへ伸び，0 番目の LED は若い番号の側．" +
+                                  "旧版はレーンと置き場所の対応を持っていなかったので，各レーンのモジュールがつながるデバイスの演出用ストリップに近い位置を選んだ．実際の位置は未確認．";
             File.WriteAllText(setupPath, root.ToString(Formatting.Indented) + "\n");
             AssetDatabase.ImportAsset(setupPath);
             Debug.Log($"[ModulePlacementImporter] {setupPath} に {placements.Count} 個");

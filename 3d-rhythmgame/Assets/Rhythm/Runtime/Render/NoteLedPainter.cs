@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Arte.Rhythm.Render
 {
     /// <summary>
-    /// ノーツ用 LED を DeviceLink.Frame に描く（中身は Core の NoteLedRenderer．旧版の GameManager / NoteLeds と同じ動き）．
+    /// ノーツ用 LED を DeviceLink.Frame に描く（中身は Core の NoteLedRenderer．仕様書の意図に沿い，色や速さは旧版の値）．
     /// 判定は GameSession から受け取る．LedTestPattern のノーツ表示を選んでいる間はそちらが上書きする．
     /// </summary>
     [DefaultExecutionOrder(-15)]
@@ -30,15 +30,22 @@ namespace Arte.Rhythm.Render
             painter = new NoteLedRenderer(link.Notes, style);
             session.Judged += OnJudged;
             conductor.Started += OnStarted;
+            conductor.Ended += OnEnded;
         }
 
         void OnDestroy()
         {
             if (session != null) session.Judged -= OnJudged;
-            if (conductor != null) conductor.Started -= OnStarted;
+            if (conductor != null)
+            {
+                conductor.Started -= OnStarted;
+                conductor.Ended -= OnEnded;
+            }
         }
 
         void OnStarted(double fromSec) => painter.Reset();
+
+        void OnEnded() => painter.OnSongEnded();
 
         void OnJudged(JudgeEvent e) => painter.OnJudged(e, Time.timeAsDouble);
 

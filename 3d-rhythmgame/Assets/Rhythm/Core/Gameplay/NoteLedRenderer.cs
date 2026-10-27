@@ -16,17 +16,25 @@ namespace Arte.Rhythm.Gameplay
         public byte[] goodColor = { 255, 255, 255 };    // white
         public byte[] missColor = { 0, 255, 255 };      // cyan
 
-        /// <summary>判定のあとにつながるノーツ用 LED を流れる光（旧 RunTouchJudgeTrail）．</summary>
+        /// <summary>
+        /// 判定色を出してから消えるまで（仕様書 4.7「判定 → フェードアウト」）．旧版は判定色のまま次のノーツまで残っていた
+        /// （0.5 秒で黒に戻す処理が画面上の 3D オブジェクトにしか効いていなかった）．
+        /// </summary>
+        public float judgedFadeSec = 0.5f;
+
+        /// <summary>判定のあとにつながるノーツ用 LED を流れる光（仕様書 7.1.1，旧 RunTouchJudgeTrail）．</summary>
         public float trailDurationSec = 3.0f;
         public float trailSpeedLedsPerSec = 18.0f;
         public float trailSigmaLeds = 4.0f;
 
         /// <summary>
-        /// 曲の間，レーン 0 のつながるノーツ用 LED を 1 フレームに 1 個ずつ色相を変えながら塗る（旧 ConnectLEDPerform）．
-        /// 旧版は全モジュールのつもりで書かれていたが，LED にはレーン 0 にしか出ていなかった（SetConColor(0, ...)）．
-        /// 実機の動作を変えないため既定は旧版どおり．
+        /// 曲の間，全モジュールのつながるノーツ用 LED を 1 個ずつ色相を変えながら塗っていく（旧 ConnectLEDPerform）．
+        /// 旧版は全モジュールのつもりで書かれていたが，LED にはレーン 0 にしか出ておらず（SetConColor(0, ...)），
+        /// 1 フレームに 1 個進むのでフレームレートで速さが変わっていた．曲が終わったら消す（旧版の意図）．
         /// </summary>
-        public bool legacyLane0ConnectSweep = true;
+        public bool connectSweep = true;
+        /// <summary>塗る位置が進む速さ（個/秒）．旧版は 1 フレームに 1 個（60fps なら 60）．</summary>
+        public float connectSweepLedsPerSec = 60f;
         public float connectHueMinDeg = 210f;
         public float connectHueMaxDeg = 296f;
         public float connectSaturation = 1f;
@@ -36,11 +44,12 @@ namespace Arte.Rhythm.Gameplay
     }
 
     /// <summary>
-    /// ノーツ用 LED（むぎゅっと 8×8 と，つながるノーツ用 30 個）を描く．旧版 GameManager / NoteLeds の LED の動きと同じ:
-    /// - 判定の受付が始まった未判定のノーツ（TouchJudge.IsOpen）のレーンのむぎゅっとを黄色にする
-    /// - 判定したらむぎゅっとを Perfect = magenta，Good = white，Miss = cyan にする．次のノーツが黄色にするまでそのまま
+    /// ノーツ用 LED（むぎゅっと 8×8 と，つながるノーツ用 30 個）を描く．仕様書（docs/SPECIFICATION.md 4.7，7.1）の意図に沿い，
+    /// 色や速さは旧版 GameManager / NoteLeds の値を使う:
+    /// - 判定の受付が始まった未判定のノーツ（TouchJudge.IsOpen）のレーンのむぎゅっとを受付色にする
+    /// - 判定したらむぎゅっとを判定色にし，judgedFadeSec で消す
     /// - 判定したらそのレーンのつながるノーツ用 LED に判定色の光を流す（3 秒で消える）
-    /// - legacyLane0ConnectSweep（上の説明）
+    /// - 曲の間，つながるノーツ用 LED を色相を変えながら塗っていく（connectSweep）．流れる光が出ている間はそちらが上
     /// つながるノーツ用のテープは色の並びが違うので R と G を入れ替えて書く（NoteLayout.ConnectSwapRG）．
     /// Unity に依存しないので，時刻は呼び出し側が渡す（songTime = 曲の時刻，realtime = 実時間）．
     /// </summary>
@@ -55,9 +64,11 @@ namespace Arte.Rhythm.Gameplay
         readonly byte[][] connect;          // [lane] 30 × 3 バイト（R と G を入れ替える前）
         readonly double[] trailStart;       // [lane] NaN = 流れていない
         readonly byte[][] trailColor;
+        readonly double[] judgedAt;         // [lane] NaN = 判定色を出していない
+        readonly byte[][] judgedColor;
         readonly int laneCount;
         int openCursor;
-        double sweepHue;
+        double sweepHue, sweepSteps;
         int sweepDirection = 1, sweepIndex;
 
         public NoteLedRenderer(NoteLayout layout, NoteLedStyle style = null)
@@ -71,11 +82,14 @@ namespace Arte.Rhythm.Gameplay
             connect = new byte[laneCount][];
             trailColor = new byte[laneCount][];
             trailStart = new double[laneCount];
+            judgedColor = new byte[laneCount][];
+            judgedAt = new double[laneCount];
             for (int l = 0; l < laneCount; l++)
             {
                 mugu[l] = new byte[Channels];
                 connect[l] = new byte[layout.ConnectLeds * Channels];
                 trailColor[l] = new byte[Channels];
+                judgedColor[l] = new byte[Channels];
             }
             Reset();
         }
@@ -90,8 +104,10 @@ namespace Arte.Rhythm.Gameplay
                 Array.Clear(mugu[l], 0, Channels);
                 Array.Clear(connect[l], 0, connect[l].Length);
                 trailStart[l] = double.NaN;
+                judgedAt[l] = double.NaN;
             }
             openCursor = 0;
+            sweepSteps = 0;
             sweepHue = style.connectHueMinDeg / 360.0;
             sweepDirection = 1;
             sweepIndex = 0;
@@ -102,22 +118,44 @@ namespace Arte.Rhythm.Gameplay
         {
             if (!Has(e.Lane)) return;
             byte[] c = e.Result == JudgeResult.Perfect ? style.perfectColor : e.Result == JudgeResult.Good ? style.goodColor : style.missColor;
-            Array.Copy(c, mugu[e.Lane], Channels);
+            Array.Copy(c, judgedColor[e.Lane], Channels);
+            judgedAt[e.Lane] = realtime;
             Array.Copy(c, trailColor[e.Lane], Channels);
             trailStart[e.Lane] = realtime;
         }
 
+        /// <summary>曲が終わったときに呼ぶ（つながるノーツ用 LED の色相の演出を消す．流れる光とむぎゅっとはそのまま消えていく）．</summary>
+        public void OnSongEnded()
+        {
+            for (int l = 0; l < laneCount; l++)
+                if (double.IsNaN(trailStart[l])) Array.Clear(connect[l], 0, connect[l].Length);
+        }
+
         /// <summary>
-        /// 1 フレーム分を進めて frame のノーツ用ピンに書く．playing は曲の再生中か（レーン 0 の色相の動きに使う），
+        /// 1 フレーム分を進めて frame のノーツ用ピンに書く．playing は曲の再生中か（色相の演出に使う），
         /// deltaTime は前のフレームからの実時間（秒）．
         /// </summary>
         public void Render(Chart chart, TouchJudge judge, double songTime, double realtime, float deltaTime, bool playing, LedFrame frame)
         {
+            for (int l = 0; l < laneCount; l++)
+                if (!double.IsNaN(judgedAt[l])) PaintJudged(l, realtime);
             if (chart != null && judge != null) PaintOpenNotes(chart, judge, songTime);
+            if (playing && style.connectSweep) PaintSweep(deltaTime);
             for (int l = 0; l < laneCount; l++)
                 if (!double.IsNaN(trailStart[l])) PaintTrail(l, realtime);
-            if (playing && style.legacyLane0ConnectSweep && Has(0)) PaintSweep(deltaTime);
             Write(frame);
+        }
+
+        void PaintJudged(int lane, double realtime)
+        {
+            float t = style.judgedFadeSec > 0 ? (float)(realtime - judgedAt[lane]) / style.judgedFadeSec : 1f;
+            if (t >= 1f)
+            {
+                Array.Clear(mugu[lane], 0, Channels);
+                judgedAt[lane] = double.NaN;
+                return;
+            }
+            for (int ch = 0; ch < Channels; ch++) mugu[lane][ch] = ToByte(judgedColor[lane][ch] / 255f * (1f - Clamp01(t)));
         }
 
         bool Has(int lane) => lane >= 0 && lane < laneCount && layout.HasLane(lane);
@@ -161,7 +199,7 @@ namespace Arte.Rhythm.Gameplay
             }
         }
 
-        // 旧 ConnectLEDPerform と同じ（1 フレームに 1 個ずつ）
+        // 旧 ConnectLEDPerform と同じ色の動き．塗る位置は時間で進め，全レーンに塗る
         void PaintSweep(float deltaTime)
         {
             double min = style.connectHueMinDeg / 360.0, max = style.connectHueMaxDeg / 360.0;
@@ -177,11 +215,21 @@ namespace Arte.Rhythm.Gameplay
                 sweepDirection = 1;
             }
             HsvToRgb((float)sweepHue, style.connectSaturation, style.connectValue, out float r, out float g, out float b);
-            var dest = connect[0];
-            dest[sweepIndex * Channels] = ToByte(r);
-            dest[sweepIndex * Channels + 1] = ToByte(g);
-            dest[sweepIndex * Channels + 2] = ToByte(b);
-            sweepIndex = (sweepIndex + 1) % layout.ConnectLeds;
+            byte br = ToByte(r), bg = ToByte(g), bb = ToByte(b);
+            sweepSteps += deltaTime * style.connectSweepLedsPerSec;
+            int steps = Math.Min((int)sweepSteps, layout.ConnectLeds);
+            sweepSteps -= (int)sweepSteps;
+            for (int k = 0; k < steps; k++)
+            {
+                foreach (int lane in lanes)
+                {
+                    var dest = connect[lane];
+                    dest[sweepIndex * Channels] = br;
+                    dest[sweepIndex * Channels + 1] = bg;
+                    dest[sweepIndex * Channels + 2] = bb;
+                }
+                sweepIndex = (sweepIndex + 1) % layout.ConnectLeds;
+            }
         }
 
         void Write(LedFrame frame)

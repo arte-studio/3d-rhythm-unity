@@ -56,7 +56,7 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
-        public void JudgedColorStaysAndTrailFlows()
+        public void JudgedColorFadesAndTrailFlows()
         {
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch), new ChartNote(20, 4, NoteType.Touch));
             var r = new NoteLedRenderer(notes);
@@ -65,18 +65,35 @@ namespace Arte.Rhythm.Tests
             Assert.AreEqual(JudgeResult.Perfect, events[0].Result);
             r.OnJudged(events[0], 100.0);
 
-            // 0.5 秒後: 光の先頭は 9 個目，強さは 1 − 0.5/3．magenta × 0.8333 = 212.5 → 212（偶数への丸め）
-            r.Render(chart, judge, 10.0, 100.5, 0.016f, true, frame);
+            // 判定直後は判定色，0.25 秒で半分（127.5 → 128），0.5 秒で消える（仕様書「判定 → フェードアウト」）
+            r.Render(chart, judge, 9.5, 100.0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 255, 0, 255 }, Mugu(3, 1), "Perfect は magenta");
+            r.Render(chart, judge, 9.75, 100.25, 0.016f, false, frame);
+            CollectionAssert.AreEqual(new byte[] { 128, 0, 128 }, Mugu(3, 1));
+
+            // 0.5 秒後: 光の先頭は 9 個目，強さは 1 − 0.5/3．magenta × 0.8333 = 212.5 → 212（偶数への丸め）
+            r.Render(chart, judge, 10.0, 100.5, 0.016f, false, frame);
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Mugu(3, 1));
             CollectionAssert.AreEqual(new byte[] { 0, 212, 212 }, Con(3, 1, 9), "R と G を入れ替えて書く");
             Assert.Less(Con(3, 1, 0)[2], Con(3, 1, 5)[2], "先頭から離れるほど暗い");
 
-            // 3 秒で光は消える．むぎゅっとは次のノーツが黄色にするまで magenta のまま
-            r.Render(chart, judge, 16.9, 103.0, 0.016f, true, frame);
+            // 3 秒で光は消える．次のノーツの受付で黄色
+            r.Render(chart, judge, 16.9, 103.0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(3, 1, 9));
-            CollectionAssert.AreEqual(new byte[] { 255, 0, 255 }, Mugu(3, 1));
-            r.Render(chart, judge, 17.0, 103.1, 0.016f, true, frame);
+            r.Render(chart, judge, 17.0, 103.1, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 255, 235, 4 }, Mugu(3, 1));
+        }
+
+        [Test]
+        public void NextNoteOpeningWinsOverFade()
+        {
+            var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch), new ChartNote(12, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes);
+            var events = new List<JudgeEvent>();
+            judge.Touch(4, 9.5, events);
+            r.OnJudged(events[0], 0);
+            r.Render(chart, judge, 9.5, 0.1, 0.016f, false, frame);
+            CollectionAssert.AreEqual(new byte[] { 255, 235, 4 }, Mugu(3, 1), "次のノーツ（12 秒）はもう受付中");
         }
 
         [Test]
@@ -87,24 +104,30 @@ namespace Arte.Rhythm.Tests
             var events = new List<JudgeEvent>();
             judge.Advance(10.6, events);
             r.OnJudged(events[0], 0);
-            r.Render(chart, judge, 10.6, 0, 0.016f, true, frame);
+            r.Render(chart, judge, 10.6, 0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 255, 255 }, Mugu(7, 0), "レーン 9 = デバイス 7 のモジュール 0");
         }
 
         [Test]
-        public void Lane0ConnectSweepLikeLegacy()
+        public void ConnectSweepPaintsAllLanesByTime()
         {
             var r = new NoteLedRenderer(notes);
             // 0.1 秒: 色相 210/360 + 0.05 = 0.6333 → HSV(0.6333, 1, 1) = (0, 0.2, 1) → (0, 51, 255)．R と G を入れ替えて (51, 0, 255)
+            // 60 個/秒なので 0.1 秒で 6 個
             r.Render(null, null, 0, 0, 0.1f, true, frame);
             CollectionAssert.AreEqual(new byte[] { 51, 0, 255 }, Con(0, 0, 0));
-            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(0, 0, 1), "1 フレームに 1 個ずつ");
-            r.Render(null, null, 0, 0, 0.1f, true, frame);
-            Assert.AreNotEqual(0, Con(0, 0, 1)[2]);
-            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(0, 1, 0), "レーン 0 だけ");
+            CollectionAssert.AreEqual(new byte[] { 51, 0, 255 }, Con(0, 0, 5));
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(0, 0, 6));
+            CollectionAssert.AreEqual(new byte[] { 51, 0, 255 }, Con(3, 1, 0), "全レーン");
+            CollectionAssert.AreEqual(new byte[] { 51, 0, 255 }, Con(7, 1, 5));
 
-            // 再生していなければ進まない．切ることもできる
-            var off = new NoteLedRenderer(notes, new NoteLedStyle { legacyLane0ConnectSweep = false });
+            // 曲が終わったら消える
+            r.OnSongEnded();
+            r.Render(null, null, 0, 0, 0.1f, false, frame);
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(0, 0, 0));
+
+            // 切ることもできる
+            var off = new NoteLedRenderer(notes, new NoteLedStyle { connectSweep = false });
             off.Render(null, null, 0, 0, 0.1f, true, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(0, 0, 0));
         }

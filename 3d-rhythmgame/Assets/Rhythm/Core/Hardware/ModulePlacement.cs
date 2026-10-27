@@ -58,48 +58,49 @@ namespace Arte.Rhythm.Hardware
 
         /// <summary>
         /// 旧版の配置ファイルから，設営のレーンごとの置き場所を作る．
-        /// ファイルは touch_notes（むぎゅっと）と Connect_module（テープ）が交互に並んでいるので，touch_notes と
-        /// その次の Connect_module を 1 組とする．旧版はノーツが来るたびに順番に組を使い回していたので，レーンとの対応は
-        /// ファイルに無い．ここでは各レーンのモジュールがつながるデバイスの演出用ストリップの角度に近い組から順に割り当てる（仮）．
+        ///
+        /// 決まりごと（ユーザー確認済み）: モジュールは演出用 LED と同じく，リングの内側から見て左から右へ番号（レーン）が進む．
+        /// つながるノーツ用テープはむぎゅっと k から次のむぎゅっとへ伸び，0 番目の LED は若い番号（k）の側．
+        ///
+        /// 旧版はレーンと置き場所の対応を持っていなかった（ノーツが来るたびに順番に使い回していた）ので，ファイルの
+        /// むぎゅっと（touch_notes）の位置から，各レーンのモジュールがつながるデバイスの演出用ストリップに近いものを選び，
+        /// 選んだ位置を左から右の順にレーンへ割り当てる（仮）．テープはファイルの向きを使わず，次のレーンのむぎゅっとへ向ける．
         /// </summary>
         public static List<ModulePlacement> FromLegacy(IReadOnlyList<LegacyPlacedObject> objects, PerfLayout perf, NoteLayout notes,
-                                                       float connectHalfLengthM = 0.2475f)
+                                                       float connectLengthM = 0.495f, float connectGapM = 0.04f)
         {
-            var pairs = new List<(LegacyPlacedObject touch, LegacyPlacedObject connect)>();
-            for (int i = 0; i + 1 < objects.Count; i++)
-            {
-                if (objects[i].prefabName == "touch_notes" && objects[i + 1].prefabName == "Connect_module")
-                {
-                    pairs.Add((objects[i], objects[i + 1]));
-                    i++;
-                }
-            }
+            var spots = new List<LegacyPlacedObject>();
+            foreach (var o in objects)
+                if (o.prefabName == "touch_notes") spots.Add(o);
 
-            // デバイスごとの演出用ストリップの向き（平均）
+            // デバイスごとの演出用ストリップの向き（平均）と，列番号が増える向き（内側から見て左 → 右）
             var sumSin = new double[perf.DeviceCount];
             var sumCos = new double[perf.DeviceCount];
             for (int c = 0; c < perf.ColumnCount; c++)
             {
-                var s = perf.GetStrip(c);
-                perf.GetLedPosition(c, 0, out float x, out _, out float z);
-                double a = Math.Atan2(x, z);
-                sumSin[s.Address.device] += Math.Sin(a);
-                sumCos[s.Address.device] += Math.Cos(a);
+                double a = ColumnAngle(perf, c);
+                int d = perf.GetStrip(c).Address.device;
+                sumSin[d] += Math.Sin(a);
+                sumCos[d] += Math.Cos(a);
             }
+            int ringStep = Math.Min(3, perf.ColumnCount - 1);   // 同じ輪の隣の列（列は輪を順に回る）
+            double dir = Math.Sign(Math.IEEERemainder(ColumnAngle(perf, ringStep) - ColumnAngle(perf, 0), 2 * Math.PI));
+            if (dir == 0) dir = 1;
 
-            var used = new bool[pairs.Count];
-            var result = new List<ModulePlacement>();
-            foreach (int lane in notes.Lanes)
+            // 各レーンに近い位置を選ぶ
+            var lanes = new List<int>(notes.Lanes);
+            var used = new bool[spots.Count];
+            var chosen = new List<int>();
+            foreach (int lane in lanes)
             {
                 notes.TryGetModule(lane, out var m);
                 double target = Math.Atan2(sumSin[m.device], sumCos[m.device]);
                 int best = -1;
                 double bestDist = double.MaxValue;
-                for (int k = 0; k < pairs.Count; k++)
+                for (int k = 0; k < spots.Count; k++)
                 {
                     if (used[k]) continue;
-                    double a = Math.Atan2(pairs[k].touch.x, pairs[k].touch.z);
-                    double d = Math.Abs(Math.IEEERemainder(a - target, 2 * Math.PI));
+                    double d = Math.Abs(Math.IEEERemainder(SpotAngle(spots[k]) - target, 2 * Math.PI));
                     if (d < bestDist)
                     {
                         bestDist = d;
@@ -108,17 +109,55 @@ namespace Arte.Rhythm.Hardware
                 }
                 if (best < 0) break;
                 used[best] = true;
-                var (t, con) = pairs[best];
-                Rotate(con.rx, con.ry, con.rz, connectHalfLengthM, out float hx, out float hy, out float hz);
+                chosen.Add(best);
+            }
+
+            // 選んだ位置を，最初のレーンの近くから左 → 右の順に並べてレーン順に割り当てる
+            if (lanes.Count == 0 || chosen.Count == 0) return new List<ModulePlacement>();
+            notes.TryGetModule(lanes[0], out var first);
+            double origin = Math.Atan2(sumSin[first.device], sumCos[first.device]) - dir * Math.PI / 8;
+            chosen.Sort((a, b) => Along(spots[a], origin, dir).CompareTo(Along(spots[b], origin, dir)));
+
+            var result = new List<ModulePlacement>();
+            for (int i = 0; i < chosen.Count; i++)
+            {
+                var t = spots[chosen[i]];
+                var next = spots[chosen[(i + 1) % chosen.Count]];
+                float ux = next.x - t.x, uy = next.y - t.y, uz = next.z - t.z;
+                float dist = (float)Math.Sqrt(ux * ux + uy * uy + uz * uz);
+                if (dist > 1e-6f)
+                {
+                    ux /= dist;
+                    uy /= dist;
+                    uz /= dist;
+                }
+                float len = Math.Max(0.05f, Math.Min(connectLengthM, dist - 2 * connectGapM));
+                var from = new[] { t.x + ux * connectGapM, t.y + uy * connectGapM, t.z + uz * connectGapM };
                 result.Add(new ModulePlacement
                 {
-                    lane = lane,
+                    lane = lanes[i],
                     mugyu = new[] { t.x, t.y, t.z },
-                    connectFrom = new[] { con.x - hx, con.y - hy, con.z - hz },
-                    connectTo = new[] { con.x + hx, con.y + hy, con.z + hz },
+                    connectFrom = from,
+                    connectTo = new[] { from[0] + ux * len, from[1] + uy * len, from[2] + uz * len },
                 });
             }
             return result;
+        }
+
+        static double ColumnAngle(PerfLayout perf, int column)
+        {
+            perf.GetLedPosition(column, 0, out float x, out _, out float z);
+            return Math.Atan2(x, z);
+        }
+
+        static double SpotAngle(LegacyPlacedObject o) => Math.Atan2(o.x, o.z);
+
+        // origin から dir の向きに測った角度（0〜2π）
+        static double Along(LegacyPlacedObject o, double origin, double dir)
+        {
+            double a = (SpotAngle(o) - origin) * dir;
+            a %= 2 * Math.PI;
+            return a < 0 ? a + 2 * Math.PI : a;
         }
 
         /// <summary>Unity の Quaternion.Euler(rx, ry, rz) * (len, 0, 0)（z → x → y の順に回す）．</summary>
