@@ -18,7 +18,9 @@ namespace Arte.Rhythm.Diagnostics
     /// 使い方:
     /// - エディタ: Window / Arte Rhythm / Preview Export（Play シーンを開いて書き出す）
     /// - ビルド: Play.exe -record out.mp4 [-record-from 秒] [-record-length 秒] [-record-fps 30] [-record-size 1920x1080]
-    ///          [-view child|adult|outside|top] [-floor ...] [-ffmpeg ffmpeg.exe のパス]
+    ///          [-view child|adult|outside|top] [-floor ...] [-ffmpeg ffmpeg.exe のパス] [-effects 演出の名前] [-record-canvas]
+    /// -record-canvas を付けると，LED に送る絵（キャンバス．列 × LED，画面で見える値）も 1 フレームずつ
+    /// 「出力の名前.canvas.rgba」（RGBA 8bit を下の行から）と「.canvas.json」（大きさと時刻）に書く．演出の評価に使う（EffectEval~）．
     /// </summary>
     public sealed class PreviewRecorder : MonoBehaviour
     {
@@ -33,6 +35,7 @@ namespace Arte.Rhythm.Diagnostics
             public int width = 1920;
             public int height = 1080;
             public string ffmpeg = "ffmpeg";
+            public bool canvas;
         }
 
         public const string PrefsKey = "Arte.PreviewRecorder.Request";
@@ -44,6 +47,8 @@ namespace Arte.Rhythm.Diagnostics
         Stream stdin;
         string pngDir, wavPath;
         int frames;
+        Texture2D canvasRead;
+        FileStream canvasOut;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void AutoStart()
@@ -77,6 +82,7 @@ namespace Arte.Rhythm.Diagnostics
                 r.height = h;
             }
             r.ffmpeg = Arg("-ffmpeg") ?? r.ffmpeg;
+            r.canvas = Array.IndexOf(Environment.GetCommandLineArgs(), "-record-canvas") >= 0;
             return r;
         }
 
@@ -144,7 +150,29 @@ namespace Arte.Rhythm.Diagnostics
                 // PNG は上下がそのまま（ReadPixels は下から読むので EncodeToPNG で正しい向きになる）
                 File.WriteAllBytes(Path.Combine(pngDir, $"{frames:D6}.png"), readback.EncodeToPNG());
             }
+            CaptureCanvas();
             frames++;
+        }
+
+        void CaptureCanvas()
+        {
+            var tex = req.canvas && Render.LedCanvas.Current != null ? Render.LedCanvas.Current.Texture : null;
+            if (tex == null) return;
+            if (canvasOut == null)
+            {
+                string basePath = Path.ChangeExtension(Path.GetFullPath(req.output), null);
+                canvasOut = File.Create(basePath + ".canvas.rgba");
+                canvasRead = new Texture2D(tex.width, tex.height, TextureFormat.RGBA32, false);
+                File.WriteAllText(basePath + ".canvas.json",
+                    $"{{\"width\": {tex.width}, \"height\": {tex.height}, \"fps\": {req.fps}, \"from\": {req.from.ToString(System.Globalization.CultureInfo.InvariantCulture)}, " +
+                    $"\"effects\": \"{Song.SongVisualSync.CurrentEffects}\"}}");
+            }
+            var prev = RenderTexture.active;
+            RenderTexture.active = tex;
+            canvasRead.ReadPixels(new Rect(0, 0, tex.width, tex.height), 0, 0, false);
+            RenderTexture.active = prev;
+            var raw = canvasRead.GetRawTextureData<byte>();
+            canvasOut.Write(raw.ToArray(), 0, raw.Length);
         }
 
         void StartEncoder()
@@ -220,6 +248,8 @@ namespace Arte.Rhythm.Diagnostics
 
         void Finish(string error)
         {
+            canvasOut?.Dispose();
+            canvasOut = null;
             if (error != null) Debug.LogError($"[PreviewRecorder] {error}");
             if (stdin != null)
             {

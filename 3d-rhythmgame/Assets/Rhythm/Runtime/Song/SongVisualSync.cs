@@ -24,6 +24,9 @@ namespace Arte.Rhythm.Song
         [Tooltip("演出の Timeline（任意）．曲の SongAsset.timeline を再生する")]
         public PlayableDirector director;
 
+        /// <summary>今の演出の名前（Timeline の名前）．F9 で切り替える．</summary>
+        public static string CurrentEffects { get; private set; }
+
         void OnEnable()
         {
             if (conductor != null) conductor.Started += OnStarted;
@@ -49,11 +52,38 @@ namespace Arte.Rhythm.Song
             if (director != null)
             {
                 // 曲に Timeline が無ければ，シーンの director に入っているもの（見本など）をそのまま使う
-                if (song.timeline != null) director.playableAsset = song.timeline;
+                var effects = song.AllEffects();
+                string wanted = CurrentEffects ?? Arg("-effects");
+                var pick = effects.Find(e => e.name == wanted) ?? (effects.Count > 0 ? effects[0] : null);
+                if (wanted != null && (pick == null || pick.name != wanted)) Debug.LogWarning($"[SongVisualSync] 演出 {wanted} が無い（{song.name} の effectVariants）");
+                if (pick != null) director.playableAsset = pick;
+                CurrentEffects = director.playableAsset != null ? director.playableAsset.name : null;
                 director.timeUpdateMode = DirectorUpdateMode.Manual;
                 director.extrapolationMode = DirectorWrapMode.Hold;
                 director.RebuildGraph();
             }
+        }
+
+        static string Arg(string name)
+        {
+            var args = System.Environment.GetCommandLineArgs();
+            int i = System.Array.IndexOf(args, name);
+            return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+        }
+
+        void Update()
+        {
+            // F9: 曲の別の演出（SongAsset.effectVariants）に切り替える
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb == null || !kb.f9Key.wasPressedThisFrame || director == null || conductor == null || conductor.song == null) return;
+            var effects = conductor.song.AllEffects();
+            if (effects.Count < 2) return;
+            int i = effects.FindIndex(e => e == director.playableAsset);
+            var next = effects[(i + 1) % effects.Count];
+            director.playableAsset = next;
+            director.RebuildGraph();
+            CurrentEffects = next.name;
+            Debug.Log($"[SongVisualSync] 演出: {next.name}");
         }
 
         void LateUpdate()

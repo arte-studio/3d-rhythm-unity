@@ -25,6 +25,20 @@ namespace Arte.Rhythm.Song
         [Tooltip("演出の Timeline（任意）")]
         public TimelineAsset timeline;
 
+        [Tooltip("比べるための別の演出（任意）．Play 中に F9 で切り替える．起動引数 -effects 名前 でも選べる")]
+        public TimelineAsset[] effectVariants = new TimelineAsset[0];
+
+        /// <summary>timeline と effectVariants を合わせた一覧（0 番目が timeline）．</summary>
+        public System.Collections.Generic.List<TimelineAsset> AllEffects()
+        {
+            var list = new System.Collections.Generic.List<TimelineAsset>();
+            if (timeline != null) list.Add(timeline);
+            if (effectVariants != null)
+                foreach (var v in effectVariants)
+                    if (v != null && !list.Contains(v)) list.Add(v);
+            return list;
+        }
+
         SongData cached;
         string cachedText;
 

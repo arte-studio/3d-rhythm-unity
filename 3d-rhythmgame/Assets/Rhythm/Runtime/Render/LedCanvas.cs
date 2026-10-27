@@ -158,8 +158,10 @@ namespace Arte.Rhythm.Render
             Shader.SetGlobalFloat(TimeId, (float)t);
             Shader.SetGlobalFloat(BeatId, (float)beat);
             Shader.SetGlobalFloat(BarId, (float)(beat / beatsPerBar));
+            var prev = RenderTexture.active;
             if (canvasCamera != null || (video != null && video.clip != null)) Graphics.Blit(BaseTexture, work);
             else Clear(work);
+            RenderTexture.active = prev;
         }
 
         static readonly TempoMap DefaultTempo = new TempoMap(null);
@@ -195,19 +197,25 @@ namespace Arte.Rhythm.Render
         public void Composite(Material effect, Blend mode, float opacity)
         {
             if (work == null || effect == null || opacity <= 0f) return;
+            var prev = RenderTexture.active;
             Graphics.Blit(null, layer, effect);
             composite.SetTexture(DstId, work);
             composite.SetFloat(ModeId, (float)mode);
             composite.SetFloat(OpacityId, Mathf.Clamp01(opacity));
             Graphics.Blit(layer, spare, composite);
             (work, spare) = (spare, work);
+            RenderTexture.active = prev;
         }
 
         // すべての演出を重ね終わったあと（描画の直前）に，LED に送る絵を作って読み戻す
         void OnBeginRendering(ScriptableRenderContext context, System.Collections.Generic.List<Camera> cameras)
         {
             if (work == null) return;
+            // Blit は描き込み先（RenderTexture.active）を変えたままにする．戻さないと，そのあとの OnGUI（画面の文字やボタン）が
+            // LED のキャンバスに描かれてしまう（2026-10-28 に見つけた．プレビューの録画のキャンバスに HUD が写っていた）
+            var prev = RenderTexture.active;
             Graphics.Blit(work, Texture);
+            RenderTexture.active = prev;
             if (!writeToLeds || pending) return;
             pending = true;
             requestedAt = Time.realtimeSinceStartup;

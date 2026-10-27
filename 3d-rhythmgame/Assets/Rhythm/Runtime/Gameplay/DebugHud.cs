@@ -70,7 +70,8 @@ namespace Arte.Rhythm.Gameplay
         void OnGUI()
         {
             if (conductor == null || session == null) return;
-            GUI.Label(new Rect(10, 10, 800, 22), "Enter = 最初から再生，Space = 一時停止 / 再開，← → = 5 秒戻る / 進む，1〜0・Q〜P = レーン 1〜20 をタッチ");
+            GUI.Label(new Rect(10, 10, 800, 22), "Enter = 最初から再生，Space = 一時停止 / 再開，← → = 5 秒戻る / 進む，1〜0・Q〜P = レーン 1〜20 をタッチ，F9 = 演出を切り替え" +
+                (SongVisualSync.CurrentEffects != null ? $"（今: {SongVisualSync.CurrentEffects}）" : ""));
             if (!conductor.IsStarted || session.Judge == null) return;
 
             double now = conductor.SongTime;
