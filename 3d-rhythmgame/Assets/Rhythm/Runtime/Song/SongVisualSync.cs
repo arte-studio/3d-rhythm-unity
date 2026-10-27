@@ -48,6 +48,7 @@ namespace Arte.Rhythm.Song
             }
             if (director != null)
             {
+                // 曲に Timeline が無ければ，シーンの director に入っているもの（見本など）をそのまま使う
                 if (song.timeline != null) director.playableAsset = song.timeline;
                 director.timeUpdateMode = DirectorUpdateMode.Manual;
                 director.extrapolationMode = DirectorWrapMode.Hold;

@@ -59,12 +59,18 @@ namespace Arte.Rhythm.Gameplay
                 if (conductor.IsPaused) conductor.Resume();
                 else conductor.Pause();
             }
+            // 演出の確認用に 5 秒ずつ飛ぶ（判定は飛んだ先から数え直す）
+            if (conductor.IsStarted && (kb.leftArrowKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame))
+            {
+                double t = conductor.SongTime + (kb.rightArrowKey.wasPressedThisFrame ? 5 : -5);
+                conductor.Play(System.Math.Max(0, t));
+            }
         }
 
         void OnGUI()
         {
             if (conductor == null || session == null) return;
-            GUI.Label(new Rect(10, 10, 800, 22), "Enter = 最初から再生，Space = 一時停止 / 再開，1〜0・Q〜P = レーン 1〜20 をタッチ");
+            GUI.Label(new Rect(10, 10, 800, 22), "Enter = 最初から再生，Space = 一時停止 / 再開，← → = 5 秒戻る / 進む，1〜0・Q〜P = レーン 1〜20 をタッチ");
             if (!conductor.IsStarted || session.Judge == null) return;
 
             double now = conductor.SongTime;

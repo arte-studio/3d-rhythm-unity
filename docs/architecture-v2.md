@@ -42,7 +42,7 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 | P4 | UDP v2＋ファーム v2（S3 に統一） | プロトコル v2，ファーム v2.1，DeviceLink・接続モニタ・テスト表示，LinkTool~．実機 1 台で接続・時刻合わせ・表示を確認（タッチは未接続） |
 | P5 | LED 描画の GPU 化（ノート PC で 60fps 固定） | 送信の圧縮，明るさを PC で掛ける（ファーム v2.2），色の曲線（linear/srgb），演出用キャンバス（GPU → LED），シミュレーション表示（HDR），ノーツ用 LED（旧版と同じ動き），ノーツモジュールの置き場所（仮） |
 | P6 | Viewer（光の広がり，暗幕の部屋，内側からの視点，VR の準備） | 部屋（床・暗幕・テープ本体を LED の光で照らす），カメラ操作，別 PC へのミラー（Viewer.exe）．VR は未（下記） |
-| P7 | 演出の制作環境とプレビュー書き出し，美大生向けテンプレート | |
+| P7 | 演出の制作環境とプレビュー書き出し，美大生向けテンプレート | Timeline の LED 演出トラック，テンプレート 7 種と見本，プレビュー動画の書き出し，手引き（`docs/authoring/led-effects.md`） |
 | P8 | 既存演出の移行，仕様書の更新 | |
 
 ## P0 の基準値について
@@ -178,3 +178,20 @@ d = タッチ時刻 − ノーツ時刻として，
   4. 視点: `ViewerCamera` の代わりに XR Origin（頭の位置はヘッドセット）．床の高さを合わせ，コントローラで F5〜F8 と同じ視点に移動・床の種類を切り替え
   5. 速度: 両目で 2064×2208 × 2，72〜90Hz．デスクトップの今の値（1080p で 3.8ms）からは余裕がある見込みだが，ブルームの解像度を下げるなど調整する
   6. 確認すること: 暗幕の部屋の暗さ（Quest 3 の LCD の黒の浮き），LED の眩しさ（トーンマップ），実際の大きさ（1m が 1m に見えるか）
+
+## P7: 演出の制作環境
+
+手引きは `docs/authoring/led-effects.md`（美大生向け）．
+
+- **キャンバスの流れ**（`LedCanvas`）: 土台（カメラ・動画）→ 演出を重ねる（`Composite`．リニアの半精度で計算）→ 描画の直前に sRGB 8bit にして読み戻す．
+  重ね方は 普通 / 足す / 掛ける / 明るい方（`Shaders/Composite.shader`）
+- **Timeline**（`Runtime/Render/Timeline/`）: `LedEffectTrack`（バインド先 LedCanvas．空ならシーンの LedCanvas）と `LedEffectClip`（マテリアル，重ね方，不透明度）．
+  クリップの重なりでクロスフェード，トラックの順に重ねる．曲の Timeline が無いときは Play シーンの見本（`Effects/Samples/Showcase.playable`）が流れる
+- **演出に渡す値**（`Shaders/ArteLed.cginc`）: 曲の時刻，拍・小節（テンポマップ．無ければ 120BPM），キャンバスの大きさ，
+  各ピクセルの LED の 3D 位置（`_ArtePositionTex`．キャンバスの列はリングを順に回らないので，位置で決まる演出はこれを使う），クリップの時刻
+- **テンプレート**（`Shaders/Templates/`，マテリアルは `Effects/Templates/`．`Tools/Arte Rhythm/Create LED Effect Templates` で作り直せる）:
+  Solid，Gradient，BeatPulse，Ripple3D，Plane3D，Sparkle，Texture
+- **プレビュー書き出し**（`Diagnostics/PreviewRecorder.cs`，`Window/Arte Rhythm/Preview Export`）: `AudioClock.Manual` で時刻を 1 フレームずつ進め，
+  カメラを RenderTexture に描いて ffmpeg（無ければ PNG の連番）へ．音は曲の音声から同じ範囲を WAV にして付ける．
+  1280×720・30fps の 10 秒が開発用デスクトップで約 10 秒．LED の値はキャンバスの読み戻しのぶん 1 フレーム遅れて映る
+- 確認用に Play シーンで ← → で 5 秒ずつ飛べる．`-screenshot` でキャンバスも `-canvas.png` に保存する

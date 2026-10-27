@@ -74,7 +74,7 @@ namespace Arte.Rhythm.Song
 
             source.Stop();
             source.clip = song.audio;
-            double dspStart = AudioSettings.dspTime + scheduleLeadSec;
+            double dspStart = AudioClock.DspNow + scheduleLeadSec;
             double filePos = Data.AudioStartSec + fromSec;
             if (filePos >= 0)
             {

@@ -22,6 +22,15 @@ namespace Arte.Rhythm.Song
         static double frameValue;
         static double frameRealtime;
 
+        /// <summary>
+        /// 動画の書き出しなど，実時間でなく 1 フレームずつ進めたいときに入れる（null で通常どおり）．
+        /// 入れている間は Now と DspNow がこの値を返す．
+        /// </summary>
+        public static double? Manual;
+
+        /// <summary>今の DSP 時刻（Manual があればそれ）．再生の予約に使う．</summary>
+        public static double DspNow => Manual ?? AudioSettings.dspTime;
+
         /// <summary>スレッドを問わず使える実時間（秒）．</summary>
         public static double Realtime => Watch.Elapsed.TotalSeconds;
 
@@ -30,6 +39,7 @@ namespace Arte.Rhythm.Song
         {
             get
             {
+                if (Manual.HasValue) return Manual.Value;
                 if (Time.frameCount == lastFrame) return frameValue;
                 lastFrame = Time.frameCount;
                 double dsp = AudioSettings.dspTime;

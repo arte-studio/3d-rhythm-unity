@@ -13,7 +13,7 @@ namespace Arte.Rhythm.Editor
     /// <summary>
     /// 新しいランタイムを試すためのシーン（Assets/Rhythm/Scenes/Play.unity）を作る．
     /// 曲の再生・判定・確認用の画面表示と，実機との通信（DeviceLink，F2 で接続状態）が入っている．
-    /// 演出用 LED はキャンバス（LedCanvas，例として Sweep のシェーダー）から送り，同じ値をリングの内側から見た
+    /// 演出用 LED はキャンバス（LedCanvas）から送る．演出は Timeline の LED 演出トラック（曲に Timeline が無ければ見本）．同じ値をリングの内側から見た
     /// シミュレーション（LedPreview，HDR とブルーム）にも描く．ノーツ用 LED は NoteLedPainter（旧版と同じ動き）．Viewer は P6．
     /// コマンドライン: -executeMethod Arte.Rhythm.Editor.PlaySceneBuilder.Build
     /// </summary>
@@ -40,7 +40,14 @@ namespace Arte.Rhythm.Editor
             var hud = root.AddComponent<DebugHud>();
             hud.conductor = conductor;
             hud.session = session;
-            root.AddComponent<SongVisualSync>().conductor = conductor;
+            var sync = root.AddComponent<SongVisualSync>();
+            sync.conductor = conductor;
+            // 演出の Timeline（曲に Timeline が無ければ見本を流す）
+            EffectTemplatesBuilder.Build();
+            var director = root.AddComponent<UnityEngine.Playables.PlayableDirector>();
+            director.playOnAwake = false;
+            director.playableAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Timeline.TimelineAsset>(EffectTemplatesBuilder.ShowcasePath);
+            sync.director = director;
 
             var devices = new GameObject("Devices");
             var link = devices.AddComponent<DeviceLink>();
@@ -55,14 +62,14 @@ namespace Arte.Rhythm.Editor
 
             var canvas = devices.AddComponent<LedCanvas>();
             canvas.link = link;
+            canvas.conductor = conductor;
+            canvas.compositeMaterial = MaterialAsset("Arte/LedCanvas/Composite", "Composite");
+            foreach (var output in director.playableAsset.outputs)
+                if (output.sourceObject is LedEffectTrack) director.SetGenericBinding(output.sourceObject, canvas);
             var painter = devices.AddComponent<NoteLedPainter>();
             painter.link = link;
             painter.session = session;
             painter.conductor = conductor;
-            var effect = devices.AddComponent<LedCanvasEffect>();
-            effect.canvas = canvas;
-            effect.conductor = conductor;
-            effect.material = MaterialAsset("Arte/LedCanvas/Sweep", "CanvasSweep");
 
             var preview = new GameObject("LedPreview").AddComponent<LedPreview>();
             preview.source = LedPreview.Source.Local;
