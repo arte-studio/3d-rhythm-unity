@@ -151,6 +151,41 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void CanvasPackerMatchesPackPin()
+        {
+            // GPU から読み戻した並び（RGBA，行ごと，y = 0 が下端）から詰めても PackPin（旧パイプラインと一致）と同じになる
+            var rng = new Random(99);
+            var canvas = new byte[90 * 120 * 3];
+            rng.NextBytes(canvas);
+            var rgba = new byte[90 * 120 * 4];
+            for (int c = 0; c < 90; c++)
+                for (int row = 0; row < 120; row++)
+                    for (int ch = 0; ch < 3; ch++)
+                        rgba[(row * 90 + c) * 4 + ch] = canvas[(c * 120 + row) * 3 + ch];
+            var notes = new NoteLayout(config, setup);
+            var frame = Arte.Rhythm.Net.LedFrame.FromLayout(perf, notes, 8);
+            frame.Pin(0, 3).Fill(7);
+            Arte.Rhythm.Net.CanvasPacker.Pack(rgba, perf, frame);
+            var dest = new byte[4 * 360];
+            for (int device = 0; device < 8; device++)
+            {
+                for (int pin = 0; pin < 3; pin++)
+                {
+                    int n = perf.PackPin(canvas, device, pin, dest);
+                    if (frame.LedCount(device, pin) == 0)
+                    {
+                        // 全部外したピンは送らない（PackPin は 0 で埋める）
+                        for (int i = 0; i < n; i++) Assert.AreEqual(0, dest[i]);
+                        continue;
+                    }
+                    Assert.AreEqual(n, frame.LedCount(device, pin) * 3, $"device {device} pin {pin} の長さ");
+                    CollectionAssert.AreEqual(dest.AsSpan(0, n).ToArray(), frame.Pin(device, pin).ToArray(), $"device {device} pin {pin}");
+                }
+            }
+            Assert.AreEqual(7, frame.Pin(0, 3)[0], "ノーツ用ピンには触らない");
+        }
+
+        [Test]
         public void RemovedStripsAreTheLastDevicesOuterPins()
         {
             int removed = 0;

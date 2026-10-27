@@ -40,7 +40,7 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 | P2 | Core（判定・時刻管理）の書き直し，テスト，リプレイ入力 | 判定・曲時刻・リプレイ作成済み（旧版との一致をテストで保証）．Runtime への接続は P3 で |
 | P3 | 曲データ形式＋Timeline での譜面・演出編集環境＋音楽との同期 | song.json，予約再生と時刻補間，動画/Timeline 同期，譜面エディタ，確認用シーン（`docs/authoring/chart-editor.md`）．演出クリップは P5/P7 |
 | P4 | UDP v2＋ファーム v2（S3 に統一） | プロトコル v2，ファーム v2.1，DeviceLink・接続モニタ・テスト表示，LinkTool~．実機 1 台で接続・時刻合わせ・表示を確認（タッチは未接続） |
-| P5 | LED 描画の GPU 化（ノート PC で 60fps 固定） | 送信の圧縮（PackBits・変わっていないピンを送らない）を先に実装 |
+| P5 | LED 描画の GPU 化（ノート PC で 60fps 固定） | 送信の圧縮，明るさを PC で掛ける（ファーム v2.2），色の曲線（linear/srgb），演出用キャンバス（GPU → LED），シミュレーション表示（HDR）．ノーツ用 LED の描画は未 |
 | P6 | Viewer（光の広がり，暗幕の部屋，内側からの視点，VR の準備） | |
 | P7 | 演出の制作環境とプレビュー書き出し，美大生向けテンプレート | |
 | P8 | 既存演出の移行，仕様書の更新 | |
@@ -116,3 +116,17 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 `dotnet run --project 3d-rhythmgame/LinkTool~ -- rainbow 30 [--raw] [--adaptive]` で比べられる．
 
 旧版の `UdpController` とは同じポート（9999）を使うので，同じシーンに置かない．旧ファームとは通信できない（全台 v2 に書き換える）．
+
+## P5: LED の描画
+
+- **演出用キャンバス**（`Runtime/Render/LedCanvas.cs`）: 幅 = ストリップの列数，高さ = 1 本の LED 数の RenderTexture（1 ピクセル = LED 1 個，y = 0 が下端）．
+  カメラ・動画・シェーダー（`LedCanvasEffect`）など何で描いてもよく，非同期で読み戻して `CanvasPacker` が配線順（ジグザグ・外したストリップ）に詰める．
+  読み戻しのぶん LED に出るのは描いてから 1〜2 フレーム後．キャンバスの色は画面で見える値（sRGB の 8bit）．
+- **LED に送る値**: `LedOutputModel.Encode`（色の曲線 → 明るさ → 1 回だけ丸める）．曲線は設営データの `outputCurve`
+  - `linear`（既定，旧版と同じ）: 色の値に比例して光る．LED の光量は送った値にほぼ比例し，人の目は暗い所の差に敏感なので，画面の絵より中間が明るく（白っぽく）見える
+  - `srgb`: 色を画面用の値とみなし光量に直して送る．画面の絵に近い見た目になるが，明るさ 50（51 段階）だと暗い色が 0 や 1 に潰れやすい
+  - 接続モニタ（F2）で切り替えて実機で見比べられる．どちらにするかは未決定
+- **シミュレーション表示**（`LedPreview`）: 実機に送るのと同じ値を光量（`OutputToLinear`，送った値に比例．`hardware.json` の `output` で補正できるが未計測）として
+  HDR で描き，ブルームとトーンマップで画面に出す．全 LED を 1 回の描画で描く．旧版は送る値をそのまま画面の色にしていたため，明るさ（50）が掛からず約 5 倍明るく，中間は実機より暗く見えていた．
+- **速度**（`Builds/Play/Play.exe -probe`，1920×1080）: 開発用デスクトップ（i7-11700 / RTX 3060）で 1 フレーム平均 1.9ms（99% 4.0ms），GC 割り当て 0．本番ノート PC では未計測．
+- 見た目の自動確認: `Play.exe -screenshot <png> [-screenshot-delay 秒] [-quit-after 秒]`．ビルドは `Tools/Arte Rhythm/Build Play Player`．

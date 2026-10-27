@@ -116,7 +116,7 @@ namespace Arte.Rhythm.Hardware
     {
         /// <summary>LED 1個の最大電流時の相対的な明るさの比（R, G, B）．Viewer の発光強度の基準．</summary>
         public float[] channelLuminance = { 1f, 1f, 1f };
-        /// <summary>ファーム側で掛けるガンマ．1 はガンマ補正なし（現行ファーム）．</summary>
+        /// <summary>LED に送った値 → 光量の曲線の指数（LedOutputModel.OutputToLinear）．1 = 比例（PWM のデューティ比どおり．未計測）．</summary>
         public float firmwareGamma = 1f;
         public string notes = "";
     }
