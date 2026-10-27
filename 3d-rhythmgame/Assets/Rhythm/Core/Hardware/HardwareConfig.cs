@@ -98,6 +98,8 @@ namespace Arte.Rhythm.Hardware
         public int modulesPerDevice = 5;
         public int muguColumns = 8;
         public int muguRows = 8;
+        /// <summary>むぎゅっとの端の LED の中心から反対の端の LED の中心まで（m）．旧版の LEDMatrix は一辺約 6cm．</summary>
+        public float muguSizeM = 0.056f;
         public int connectLeds = 30;
         /// <summary>モジュール1個分の LED 数（ムギュ + Connect）．配線上の先頭位置の間隔になる．</summary>
         public int moduleStrideLeds = 94;

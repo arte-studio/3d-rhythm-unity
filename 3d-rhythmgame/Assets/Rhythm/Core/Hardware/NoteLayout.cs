@@ -23,6 +23,9 @@ namespace Arte.Rhythm.Hardware
         public int NoteOutputPin => cfg.noteOutputPin;
         public int NotePacketLeds => cfg.notePacketLeds;
         public bool ConnectSwapRG => cfg.connectSwapRG;
+        public int MuguRows => cfg.muguRows;
+        public int MuguColumns => cfg.muguColumns;
+        public float MuguSizeM => cfg.muguSizeM;
         /// <summary>この設営で使えるレーン番号（昇順）．</summary>
         public IReadOnlyList<int> Lanes => lanes;
 
@@ -48,7 +51,13 @@ namespace Arte.Rhythm.Hardware
             }
             lanes = new List<int>(moduleOfLane.Keys).ToArray();
             Array.Sort(lanes);
+            foreach (var p in setup?.modules ?? Array.Empty<ModulePlacement>()) placements[p.lane] = p;
         }
+
+        readonly Dictionary<int, ModulePlacement> placements = new Dictionary<int, ModulePlacement>();
+
+        /// <summary>レーンのモジュールの置き場所（設営データに無ければ false）．</summary>
+        public bool TryGetPlacement(int lane, out ModulePlacement placement) => placements.TryGetValue(lane, out placement);
 
         public bool HasLane(int lane) => moduleOfLane.ContainsKey(lane);
 

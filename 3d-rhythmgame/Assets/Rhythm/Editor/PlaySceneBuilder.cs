@@ -14,7 +14,7 @@ namespace Arte.Rhythm.Editor
     /// 新しいランタイムを試すためのシーン（Assets/Rhythm/Scenes/Play.unity）を作る．
     /// 曲の再生・判定・確認用の画面表示と，実機との通信（DeviceLink，F2 で接続状態）が入っている．
     /// 演出用 LED はキャンバス（LedCanvas，例として Sweep のシェーダー）から送り，同じ値をリングの内側から見た
-    /// シミュレーション（LedPreview，HDR とブルーム）にも描く．ノーツ用 LED の描画と Viewer（P6）はあとで足す．
+    /// シミュレーション（LedPreview，HDR とブルーム）にも描く．ノーツ用 LED は NoteLedPainter（旧版と同じ動き）．Viewer は P6．
     /// コマンドライン: -executeMethod Arte.Rhythm.Editor.PlaySceneBuilder.Build
     /// </summary>
     public static class PlaySceneBuilder
@@ -54,6 +54,10 @@ namespace Arte.Rhythm.Editor
 
             var canvas = devices.AddComponent<LedCanvas>();
             canvas.link = link;
+            var painter = devices.AddComponent<NoteLedPainter>();
+            painter.link = link;
+            painter.session = session;
+            painter.conductor = conductor;
             var effect = devices.AddComponent<LedCanvasEffect>();
             effect.canvas = canvas;
             effect.conductor = conductor;
