@@ -96,6 +96,28 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void LoudnessEnvelope_FollowsVolume()
+        {
+            // 1 秒の静かな音のあと 1 秒の大きな音，ステレオ 8000Hz
+            int rate = 8000;
+            var x = new float[rate * 2 * 2];
+            for (int f = 0; f < rate * 2; f++)
+            {
+                float amp = f < rate ? 0.01f : 0.5f;
+                float v = amp * (float)System.Math.Sin(2 * System.Math.PI * 440 * f / rate);
+                x[f * 2] = v;
+                x[f * 2 + 1] = v;
+            }
+            var env = LoudnessEnvelope.FromSamples(x, 2, rate);
+            Assert.AreEqual(2.0, env.LengthSec, 0.05);
+            Assert.Less(env.At(0.5), 0.1);
+            Assert.Greater(env.At(1.5), 0.9);
+            Assert.AreEqual(0, env.At(-1));
+            // 曲時刻 0 を音声の 1 秒目にすると，0.5 秒はもう大きい
+            Assert.Greater(LoudnessEnvelope.FromSamples(x, 2, rate, 1.0).At(0.5), 0.9);
+        }
+
+        [Test]
         public void Sections_RoundTripAndLookup()
         {
             var song = new SongData();

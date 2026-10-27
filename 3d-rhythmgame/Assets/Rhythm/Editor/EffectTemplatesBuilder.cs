@@ -16,7 +16,12 @@ namespace Arte.Rhythm.Editor
         public const string TemplateDir = "Assets/Rhythm/Effects/Templates";
         public const string ShowcasePath = "Assets/Rhythm/Effects/Samples/Showcase.playable";
 
-        static readonly string[] Templates = { "Solid", "Gradient", "BeatPulse", "Ripple3D", "Plane3D", "Sparkle", "Texture" };
+        static readonly string[] Templates =
+        {
+            "Solid", "Gradient", "BeatPulse", "Ripple3D", "Plane3D", "Sparkle", "Texture",
+            // 初期の演出仕様書のために足したもの（P8）
+            "SpiralRise", "StarFall", "Starfield", "SoftPulse", "RotateWipe", "BottomWave",
+        };
 
         [MenuItem("Tools/Arte Rhythm/Create LED Effect Templates")]
         public static void Build()

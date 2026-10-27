@@ -10,6 +10,7 @@ float _ArteTime;          // 曲の時刻（秒）
 float _ArteBeat;          // 拍（曲のテンポから．テンポが無ければ 120BPM）
 float _ArteBar;           // 小節（小数）
 float4 _ArteCanvasSize;   // (列数, LED 数, 1/列数, 1/LED 数)
+float _ArteLevel;         // 曲の音量（0〜1．曲の音声から求めた値．大きい音で 1 近く）
 sampler2D _ArtePositionTex;
 
 // クリップの値（LedEffectClip が入れる．Timeline 以外で使うときは 0）

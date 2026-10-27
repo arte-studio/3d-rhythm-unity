@@ -23,6 +23,7 @@ namespace Arte.Rhythm.Render
     /// 演出のシェーダーには次の global の値を渡す（Shaders/ArteLed.cginc．テンプレートは Shaders/Templates）:
     ///   _ArteTime 曲の時刻（秒，LED の遅れ込み）/ _ArteBeat 拍（テンポが無ければ 120BPM）/ _ArteBar 小節（小数）
     ///   _ArteCanvasSize (列数, LED 数, 1/列数, 1/LED 数) / _ArtePositionTex 各ピクセルの LED の 3D 位置（m，w = 付いていれば 1）
+    ///   _ArteLevel 曲の音量（0〜1）
     /// </summary>
     [DefaultExecutionOrder(-20)]
     public sealed class LedCanvas : MonoBehaviour
@@ -32,6 +33,7 @@ namespace Arte.Rhythm.Render
         static readonly int TimeId = Shader.PropertyToID("_ArteTime");
         static readonly int BeatId = Shader.PropertyToID("_ArteBeat");
         static readonly int BarId = Shader.PropertyToID("_ArteBar");
+        static readonly int LevelId = Shader.PropertyToID("_ArteLevel");
         static readonly int SizeId = Shader.PropertyToID("_ArteCanvasSize");
         static readonly int PositionTexId = Shader.PropertyToID("_ArtePositionTex");
         static readonly int DstId = Shader.PropertyToID("_Dst");
@@ -67,6 +69,8 @@ namespace Arte.Rhythm.Render
         float requestedAt;
         TempoMap tempo;
         int beatsPerBar = 4;
+        LoudnessEnvelope loudness;
+        SongAsset loudnessSong;
 
         void Start()
         {
@@ -150,6 +154,7 @@ namespace Arte.Rhythm.Render
                 beatsPerBar = tempo.Points[0].BeatsPerBar;
             }
             double beat = (tempo ?? DefaultTempo).BeatOf(t);
+            Shader.SetGlobalFloat(LevelId, Loudness()?.At(t) ?? 0f);
             Shader.SetGlobalFloat(TimeId, (float)t);
             Shader.SetGlobalFloat(BeatId, (float)beat);
             Shader.SetGlobalFloat(BarId, (float)(beat / beatsPerBar));
@@ -158,6 +163,22 @@ namespace Arte.Rhythm.Render
         }
 
         static readonly TempoMap DefaultTempo = new TempoMap(null);
+
+        // 曲の音量（_ArteLevel）．曲が決まったら音声から一度だけ求める（Load Type が Decompress On Load の音声だけ）
+        LoudnessEnvelope Loudness()
+        {
+            var song = conductor != null && conductor.IsStarted ? conductor.song : null;
+            if (song == null || song == loudnessSong) return loudness;
+            loudnessSong = song;
+            loudness = null;
+            tempo = null;
+            var clip = song.audio;
+            if (clip == null || clip.loadType != AudioClipLoadType.DecompressOnLoad || !clip.LoadAudioData()) return null;
+            var samples = new float[clip.samples * clip.channels];
+            if (!clip.GetData(samples, 0)) return null;
+            loudness = LoudnessEnvelope.FromSamples(samples, clip.channels, clip.frequency, conductor.Data?.AudioStartSec ?? 0);
+            return loudness;
+        }
 
         static void Clear(RenderTexture rt)
         {
