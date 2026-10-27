@@ -136,11 +136,12 @@ Claude の採点（5 段階．観点ごと）:
 ```sh
 # 3d-rhythmgame で（Unity を閉じてから）
 py EffectEval~/music_features.py Assets/GameMusic.wav --song Assets/Rhythm/Songs/kodaisai-2025/song.json --out Assets/Rhythm/Effects/kodaisai-2025-ai/music.json
-sh Recordings/eval/cycle.sh v7      # 組み立て → ビルド → 3 案を録画して評価（5 分くらい）
+sh EffectEval~/cycle.sh v7         # 組み立て → ビルド → 3 案を録画して評価（5 分くらい）．数値の比べは compare.py
+py EffectEval~/filmstrip.py Recordings/eval/切り替わり.png v7_A v7_B v7_C --at 27.1 43.1 51.1 --span 3
 py EffectEval~/compare_video.py Recordings/eval/比較.mp4 "v7_A:案A" "v7_B:案B" "v7_C:案C" --audio Assets/GameMusic.wav
 ```
 
-（`Recordings/eval/run.sh`，`cycle.sh`，`compare.py` は git に入れていない作業用．中身は `EffectEval~` の道具を順に呼ぶだけ）
+（録画と評価は `Recordings/eval/` に書く．git には入れない）
 
 - 気に入った案を手で直すときは，`kodaisai-2025-ai/<案>` をフォルダごと複製して，曲の SongAsset の timeline に入れる（`EffectProposals` を実行すると案のフォルダは作り直される）
 - 次にやるとよいこと: 人が 3 案を見て好みを付ける → その理由を Claude に伝えて次の案に反映（人の評価を取り込むくり返し）．

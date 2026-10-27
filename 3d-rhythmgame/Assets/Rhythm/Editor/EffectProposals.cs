@@ -292,7 +292,8 @@ namespace Arte.Rhythm.Editor
                 m.SetColor("_ColorB", Mul(Blue, 0.45f));
                 m.SetFloat("_Direction", 0);
             });
-            Clip(stars, "Starfield", "星が灯る", B(Intro), B(Chorus1 - 1), LedCanvas.Blend.Add, 1, Beats(16), Beats(4), m => Stars(m, 0.05f, 1.6f, 3, 0.4f));
+            // v5 では 26 小節がまるごと真っ暗になった（1.6 秒）．星は暗転の直前まで残す
+            Clip(stars, "Starfield", "星が灯る", B(Intro), B(Chorus1 - 1, 4), LedCanvas.Blend.Add, 1, Beats(16), Beats(3), m => Stars(m, 0.05f, 1.6f, 3, 0.4f));
             // A メロ: 紫とピンクのオーロラがゆっくり揺れる（夜明け前）
             // v1 では暗すぎて見えなかった（前奏から A メロの光の量 0.02）．もっと見えるように
             Clip(aurora, "Aurora", "夜明け前のオーロラ", B(5), B(BMelo), LedCanvas.Blend.Add, 1f, Beats(16), Beats(4), m =>
