@@ -43,7 +43,7 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 | P5 | LED 描画の GPU 化（ノート PC で 60fps 固定） | 送信の圧縮，明るさを PC で掛ける（ファーム v2.2），色の曲線（linear/srgb），演出用キャンバス（GPU → LED），シミュレーション表示（HDR），ノーツ用 LED（旧版と同じ動き），ノーツモジュールの置き場所（仮） |
 | P6 | Viewer（光の広がり，暗幕の部屋，内側からの視点，VR の準備） | 部屋（床・暗幕・テープ本体を LED の光で照らす），カメラ操作，別 PC へのミラー（Viewer.exe）．VR は未（下記） |
 | P7 | 演出の制作環境とプレビュー書き出し，美大生向けテンプレート | Timeline の LED 演出トラック，テンプレート 7 種と見本，プレビュー動画の書き出し，手引き（`docs/authoring/led-effects.md`） |
-| P8 | 既存演出の移行，仕様書の更新 | 演出の大本は初期の演出仕様書（`docs/effects/original-spec.md`）．旧版の演出動画は参考 |
+| P8 | 既存演出の移行，仕様書の更新 | 曲の区切りとテンポ，Timeline を小節・拍で扱う仕組み，古代祭版の演出の下書き（`docs/effects/kodaisai-2025.md`），仕様書 v2（`docs/SPECIFICATION.md`．旧版は `docs/legacy/SPECIFICATION-v1.md`） |
 
 ## P0 の基準値について
 
@@ -55,7 +55,7 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 
 ## P2: 判定の仕様
 
-`Assets/Rhythm/Core/Gameplay/`．**2026-10-27 にユーザーの決定で仕様書（SPECIFICATION.md 9.1）の判定幅に変えた**（「一旦仕様書通り．子ども向けなので多少緩めてもよい．タッチしっぱなしは禁止」）．
+`Assets/Rhythm/Core/Gameplay/`．**2026-10-27 にユーザーの決定で旧仕様書（docs/legacy/SPECIFICATION-v1.md 9.1）の判定幅に変えた**（「一旦仕様書通り．子ども向けなので多少緩めてもよい．タッチしっぱなしは禁止」）．
 d = タッチ時刻 − ノーツ時刻として，
 
 - Perfect: |d| ≦ 0.05，Good: |d| ≦ 0.15，d > +0.15 までタッチが無ければ Miss．スコアは Perfect 100 / Good 50
@@ -134,7 +134,7 @@ d = タッチ時刻 − ノーツ時刻として，
   HDR で描き，ブルームとトーンマップで画面に出す．全 LED を 1 回の描画で描く．旧版は送る値をそのまま画面の色にしていたため，明るさ（50）が掛からず約 5 倍明るく，中間は実機より暗く見えていた．
 - **速度**（`Builds/Play/Play.exe -probe`，1920×1080）: 開発用デスクトップ（i7-11700 / RTX 3060）で 1 フレーム平均 1.9ms（99% 4.0ms），GC 割り当て 0．本番ノート PC では未計測．
 - 見た目の自動確認: `Play.exe -screenshot <png> [-screenshot-delay 秒] [-quit-after 秒]`．ビルドは `Tools/Arte Rhythm/Build Play Player`．
-- **ノーツ用 LED**（`Core/Gameplay/NoteLedRenderer.cs`，`Runtime/Render/NoteLedPainter.cs`）: 仕様書（SPECIFICATION.md 4.7，7.1，7.1.1）に沿う（2026-10-27 ユーザー決定）．
+- **ノーツ用 LED**（`Core/Gameplay/NoteLedRenderer.cs`，`Runtime/Render/NoteLedPainter.cs`）: 旧仕様書（docs/legacy/SPECIFICATION-v1.md 4.7，7.1，7.1.1）に沿う（2026-10-27 ユーザー決定．今の仕様は docs/SPECIFICATION.md 6 章）．
   - 案内: ノーツ時刻の 3 秒前から青の点滅（周期 0.5 秒，ノーツ時刻にちょうど点く位相）
   - 判定: Perfect 緑（最初の 0.2 秒は虹色の回転），Good 黄，Miss 赤．0.5 秒でフェードアウト
   - 判定したらそのレーンのつながるノーツ用 LED に判定色の光を流す（3 秒．旧版の計算どおり）

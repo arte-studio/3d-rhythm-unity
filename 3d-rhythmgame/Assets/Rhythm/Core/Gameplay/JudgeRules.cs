@@ -3,7 +3,8 @@ using Newtonsoft.Json;
 namespace Arte.Rhythm.Gameplay
 {
     /// <summary>
-    /// タッチノーツの判定ルール．既定値は仕様書（docs/SPECIFICATION.md 9.1）の判定幅（2026-10-27 にユーザーが決定）．
+    /// タッチノーツの判定ルール．既定値は旧仕様書（docs/legacy/SPECIFICATION-v1.md 9.1）の判定幅（2026-10-27 にユーザーが決定．
+    /// 今の仕様は docs/SPECIFICATION.md 5 章）．
     /// 旧版（古代祭 2025-11-01 のシーン設定）の値は Legacy() で作れる．
     ///
     /// d = タッチ時刻 − ノーツ時刻として:

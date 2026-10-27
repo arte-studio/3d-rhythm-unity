@@ -6,7 +6,7 @@ using Arte.Rhythm.Net;
 
 namespace Arte.Rhythm.Gameplay
 {
-    /// <summary>ノーツ用 LED の見た目の設定．色は仕様書（docs/SPECIFICATION.md 7.1），速さなどは旧版の値．</summary>
+    /// <summary>ノーツ用 LED の見た目の設定．色は旧仕様書（docs/legacy/SPECIFICATION-v1.md 7.1），速さなどは旧版の値（docs/SPECIFICATION.md 6 章）．</summary>
     [Serializable]
     public sealed class NoteLedStyle
     {
@@ -51,7 +51,7 @@ namespace Arte.Rhythm.Gameplay
     }
 
     /// <summary>
-    /// ノーツ用 LED（むぎゅっと 8×8 と，つながるノーツ用 30 個）を描く．仕様書（docs/SPECIFICATION.md 4.7，7.1）の意図に沿い，
+    /// ノーツ用 LED（むぎゅっと 8×8 と，つながるノーツ用 30 個）を描く．旧仕様書（docs/legacy/SPECIFICATION-v1.md 4.7，7.1）の意図に沿い，
     /// 色や速さは旧版 GameManager / NoteLeds の値を使う:
     /// - 案内が始まった未判定のノーツ（TouchJudge.IsOpen）のレーンのむぎゅっとを青で点滅させる
     /// - 判定したらむぎゅっとを判定色（Perfect は虹色の回転のあと）にし，judgedFadeSec で消す
