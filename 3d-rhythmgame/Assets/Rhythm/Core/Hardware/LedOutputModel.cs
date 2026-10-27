@@ -19,9 +19,9 @@ namespace Arte.Rhythm.Hardware
         /// </summary>
         public enum OutputCurve { Linear, Srgb }
 
-        /// <summary>設営データの文字列（"linear" / "srgb"）から．</summary>
+        /// <summary>設営データの文字列（"linear" / "srgb"）から．書いていなければ Srgb（2026-10-28 から既定）．</summary>
         public static OutputCurve ParseCurve(string s) =>
-            string.Equals(s, "srgb", StringComparison.OrdinalIgnoreCase) ? OutputCurve.Srgb : OutputCurve.Linear;
+            string.Equals(s, "linear", StringComparison.OrdinalIgnoreCase) ? OutputCurve.Linear : OutputCurve.Srgb;
 
         /// <summary>
         /// 演出の色を，曲線と明るさを掛けて LED に送る値にする．Linear なら ApplyBrightness と同じ（旧版と同じ見え方）．

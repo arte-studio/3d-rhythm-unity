@@ -129,8 +129,8 @@ namespace Arte.Rhythm.Tests
                 Thread.Sleep(5);
             }
             var c = options.Config;
-            Assert.AreEqual(LedOutputModel.ApplyBrightness(200, c.BrightnessPerf), output.Pin(2, 1)[33]);
-            Assert.AreEqual(LedOutputModel.ApplyBrightness(128, c.BrightnessNote), output.Pin(7, 3)[5]);
+            Assert.AreEqual(LedOutputModel.Encode(200, c.BrightnessPerf, options.Curve), output.Pin(2, 1)[33]);
+            Assert.AreEqual(LedOutputModel.Encode(128, c.BrightnessNote, options.Curve), output.Pin(7, 3)[5]);
             Assert.AreEqual(0, mirror.PacketsBad);
         }
     }

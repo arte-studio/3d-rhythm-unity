@@ -23,7 +23,7 @@ namespace Arte.Rhythm.Hardware
         /// <summary>ノーツ用 LED の明るさ（0-255）．</summary>
         public int brightnessNote = 50;
         /// <summary>色を LED に送る値にする曲線．"linear"（旧版と同じ）か "srgb"（LedOutputModel.OutputCurve）．</summary>
-        public string outputCurve = "linear";
+        public string outputCurve = "srgb";
         /// <summary>ノーツモジュールの置き場所（シミュレーション表示用．無いレーンは表示しない）．</summary>
         public ModulePlacement[] modules = Array.Empty<ModulePlacement>();
         /// <summary>置き場所の出どころなどのメモ．</summary>

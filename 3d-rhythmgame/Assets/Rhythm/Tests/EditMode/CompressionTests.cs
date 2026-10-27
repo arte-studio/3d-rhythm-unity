@@ -116,7 +116,8 @@ namespace Arte.Rhythm.Tests
             // Linear は従来と同じ
             for (int c = 0; c < 256; c++) Assert.AreEqual(LedOutputModel.ApplyBrightness((byte)c, 50), LedOutputModel.Encode((byte)c, 50, Lin));
             Assert.AreEqual(LedOutputModel.OutputCurve.Srgb, LedOutputModel.ParseCurve("sRGB"));
-            Assert.AreEqual(LedOutputModel.OutputCurve.Linear, LedOutputModel.ParseCurve(null));
+            Assert.AreEqual(LedOutputModel.OutputCurve.Srgb, LedOutputModel.ParseCurve(null), "書いていなければ Srgb");
+            Assert.AreEqual(LedOutputModel.OutputCurve.Linear, LedOutputModel.ParseCurve("linear"));
         }
 
         [Test]

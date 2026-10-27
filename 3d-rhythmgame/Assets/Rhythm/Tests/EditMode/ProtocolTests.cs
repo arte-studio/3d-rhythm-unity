@@ -272,8 +272,8 @@ namespace Arte.Rhythm.Tests
             Assert.IsTrue(Until(() => dev3.Frames.FramesShown == 1 && dev7.Frames.FramesShown == 1), "フレームが表示されない");
             // PC が明るさを掛けて送る
             var c = host.Options.Config;
-            Assert.AreEqual(LedOutputModel.ApplyBrightness(200, c.BrightnessPerf), dev3.ShownPin(2)[30]);
-            Assert.AreEqual(LedOutputModel.ApplyBrightness(77, c.BrightnessNote), dev7.ShownPin(3)[3]);
+            Assert.AreEqual(LedOutputModel.Encode(200, c.BrightnessPerf, host.Options.Curve), dev3.ShownPin(2)[30]);
+            Assert.AreEqual(LedOutputModel.Encode(77, c.BrightnessNote, host.Options.Curve), dev7.ShownPin(3)[3]);
             Assert.AreEqual(0u, dev7.Frames.FramesForced);
 
             // 表示までの遅れが測れる（PONG に最後の表示フレームが載る）

@@ -21,7 +21,7 @@ namespace Arte.Rhythm.Net
         public double PingIntervalSec = 0.25;
         public double ConfigIntervalSec = 1.0;
         /// <summary>色を LED に送る値にする曲線（SetupProfile.outputCurve）．変えると次のフレームから反映される．</summary>
-        public Hardware.LedOutputModel.OutputCurve Curve = Hardware.LedOutputModel.OutputCurve.Linear;
+        public Hardware.LedOutputModel.OutputCurve Curve = Hardware.LedOutputModel.OutputCurve.Srgb;
         /// <summary>差分と PackBits で通信量を減らす（false は比較用．毎回全ピンをそのまま送る）．</summary>
         public bool Compact = true;
         /// <summary>
