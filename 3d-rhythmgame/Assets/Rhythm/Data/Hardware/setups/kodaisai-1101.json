@@ -23,6 +23,7 @@
   "brightnessPerf": 50,
   "brightnessNote": 50,
   "outputCurve": "linear",
+  "room": { "floor": "carpet-gray", "curtain": "blackout", "curtainRadiusM": 3.0, "curtainHeightM": 3.0 },
   "modules": [
     { "lane": 0, "mugyu": [0.856, 0.938, -0.298], "connectFrom": [0.8555, 0.9767, -0.3082], "connectTo": [0.8496, 1.4554, -0.434] },
     { "lane": 1, "mugyu": [0.849, 1.505, -0.447], "connectFrom": [0.813, 1.4959, -0.4618], "connectTo": [0.3671, 1.3837, -0.6453] },

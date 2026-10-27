@@ -28,6 +28,8 @@ namespace Arte.Rhythm.Hardware
         public ModulePlacement[] modules = Array.Empty<ModulePlacement>();
         /// <summary>置き場所の出どころなどのメモ．</summary>
         public string modulesNote = "";
+        /// <summary>会場の部屋（Viewer で床・暗幕を描くため）．</summary>
+        public Viewer.RoomSettings room = new Viewer.RoomSettings();
     }
 
     /// <summary>配線上のストリップの位置（デバイス・ピン・ピン内の何本目か）．</summary>

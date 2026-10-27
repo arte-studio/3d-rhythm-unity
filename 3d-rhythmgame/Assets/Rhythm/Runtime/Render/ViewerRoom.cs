@@ -1,12 +1,15 @@
 using System.Collections.Generic;
 using Arte.Rhythm.Hardware;
+using Arte.Rhythm.Viewer;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Arte.Rhythm.Render
 {
     /// <summary>
     /// Viewer の部屋: 床，周りの暗幕，LED テープ本体．どれも LED の光だけで照らす（Arte/Viewer/LitByLeds）．
-    /// 光は頂点ごとに計算するので，メッシュを細かく作る．大きさは設営の実測が無いので仮の値（インスペクタで変える）．
+    /// 光は頂点ごとに計算するので，メッシュを細かく作る．
+    /// 床と暗幕の種類・暗幕までの距離は設営データの room（RoomSettings / RoomSurfaces）．F3 か起動引数 -floor で床の種類を切り替えられる．
     /// テープ本体は PerfLayout から作る（外したストリップは作らない）．
     /// </summary>
     [DefaultExecutionOrder(110)]
@@ -15,20 +18,22 @@ namespace Arte.Rhythm.Render
         public LedPreview preview;
         [Tooltip("Arte/Viewer/LitByLeds のマテリアル（床・暗幕・テープで色を変えるので複製して使う）")]
         public Material litMaterial;
-        [Tooltip("暗幕までの距離（m，リングの中心から）")]
-        public float curtainRadius = 3.0f;
-        public float curtainHeight = 3.0f;
-        [Tooltip("床の反射率．会場の床に合わせる")]
-        public Color floorColor = new Color(0.25f, 0.25f, 0.25f);
-        [Tooltip("暗幕の反射率（黒い布はとても低い）")]
-        public Color curtainColor = new Color(0.03f, 0.03f, 0.03f);
+        [Tooltip("床の種類（空なら設営データの room.floor）．carpet-gray / school-white / concrete")]
+        public string floorOverride = "";
         [Tooltip("LED テープ本体（基板）の反射率")]
-        public Color tapeColor = new Color(0.3f, 0.3f, 0.3f);
+        public Color tapeColor = new Color(0.12f, 0.12f, 0.12f);
         public float tapeWidth = 0.010f;
         [Tooltip("床と暗幕の網の細かさ（m）．光の細かさになる")]
         public float gridStep = 0.08f;
 
         readonly List<Object> created = new List<Object>();
+        float curtainRadius, curtainHeight;
+        Material floorMaterial;
+        int floorIndex;
+
+        /// <summary>今の床の種類（表示用）．</summary>
+        public string FloorLabel => RoomSurfaces.Floors[floorIndex].Label;
+        public string CurtainLabel { get; private set; }
 
         void Start()
         {
@@ -38,10 +43,32 @@ namespace Arte.Rhythm.Render
                 enabled = false;
                 return;
             }
-            Part("Floor", Floor(), floorColor, false, 0.05f);
-            Part("Curtain", Curtain(), curtainColor, false, 0.05f);
+            var room = preview.Setup.room ?? new RoomSettings();
+            curtainRadius = room.curtainRadiusM;
+            curtainHeight = room.curtainHeightM;
+            var curtain = RoomSurfaces.Find(RoomSurfaces.Curtains, room.curtain);
+            CurtainLabel = curtain.Label;
+            floorMaterial = Part("Floor", Floor(), Color.gray, false, 0.05f);
+            var args = System.Environment.GetCommandLineArgs();
+            int a = System.Array.IndexOf(args, "-floor");
+            string floor = a >= 0 && a + 1 < args.Length ? args[a + 1] : string.IsNullOrEmpty(floorOverride) ? room.floor : floorOverride;
+            SetFloor(RoomSurfaces.IndexOf(RoomSurfaces.Floors, floor));
+            Part("Curtain", Curtain(), new Color(curtain.R, curtain.G, curtain.B), false, 0.05f);
             // テープ本体は自分の LED のすぐ横なので，近くの光源（まとめた光源の中心は LED から離れている）を弱める
             Part("Tapes", Tapes(preview.Perf), tapeColor, true, 0.4f);
+        }
+
+        void Update()
+        {
+            var kb = Keyboard.current;
+            if (kb != null && kb.f3Key.wasPressedThisFrame && floorMaterial != null) SetFloor((floorIndex + 1) % RoomSurfaces.Floors.Length);
+        }
+
+        public void SetFloor(int index)
+        {
+            floorIndex = index;
+            var f = RoomSurfaces.Floors[index];
+            floorMaterial.SetColor("_BaseColor", new Color(f.R, f.G, f.B));
         }
 
         void OnDestroy()
@@ -49,7 +76,7 @@ namespace Arte.Rhythm.Render
             foreach (var o in created) Destroy(o);
         }
 
-        void Part(string name, Mesh mesh, Color color, bool twoSided, float nearM)
+        Material Part(string name, Mesh mesh, Color color, bool twoSided, float nearM)
         {
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
@@ -61,6 +88,7 @@ namespace Arte.Rhythm.Render
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;
             created.Add(mesh);
             created.Add(mat);
+            return mat;
         }
 
         Mesh Floor()

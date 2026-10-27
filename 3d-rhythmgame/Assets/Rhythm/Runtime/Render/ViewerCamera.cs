@@ -8,7 +8,8 @@ namespace Arte.Rhythm.Render
     /// - 右ボタンを押している間: マウスで見回す，WASD で歩く，Q / E で下 / 上，Shift で速く（Unity のシーンビューと同じ）
     ///   （右ボタンを押している間はキーボードのレーン入力を止める）
     /// - F5: リングの中心・子どもの目の高さ，F6: 中心・大人の目の高さ，F7: リングの外から，F8: 真上から
-    /// VR にするときはこの部品の代わりに XR のカメラを使う（描画は通常のカメラと同じ仕組みで動く）．
+    /// 起動引数 -view child|adult|outside|top で最初の視点を選べる．
+    /// VR にするときはこの部品の代わりに XR のカメラを使う（docs/architecture-v2.md の VR の計画）．
     /// </summary>
     public sealed class ViewerCamera : MonoBehaviour
     {
@@ -19,7 +20,19 @@ namespace Arte.Rhythm.Render
 
         float yaw, pitch;
 
-        void Start() => Preset(adultEyeHeight, 0, 0, -10);
+        void Start()
+        {
+            var args = System.Environment.GetCommandLineArgs();
+            int i = System.Array.IndexOf(args, "-view");
+            string view = i >= 0 && i + 1 < args.Length ? args[i + 1] : "adult";
+            switch (view)
+            {
+                case "child": Preset(childEyeHeight, 0, 0, -5); break;
+                case "outside": PresetAt(new Vector3(0, 1.6f, -2.8f), 0, -5); break;
+                case "top": PresetAt(new Vector3(0, 6.5f, 0), 0, 89); break;
+                default: Preset(adultEyeHeight, 0, 0, -10); break;
+            }
+        }
 
         void Update()
         {

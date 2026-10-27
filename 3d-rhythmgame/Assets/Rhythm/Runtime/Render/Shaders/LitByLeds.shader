@@ -1,6 +1,7 @@
 // Viewer の部屋（床・暗幕・テープ本体）: LedPreview が出す光源（近くの LED をまとめたもの）だけで照らす．
 // 光源は数百個あるので，頂点ごとに計算して面の中は補間する（メッシュを細かくしてある）．画面の大きさによらず軽い．
-// 光源は点光源として，面の向き（cos）と距離の 2 乗で弱まる．LED の向き（テープの正面）は考えない．
+// 光源は LED の正面から cos で弱まり裏には出ない光（WS2812B の視野角 120° = 半値角 ±60°）として，
+// 受ける面の向き（cos）と距離の 2 乗で弱まる．
 Shader "Arte/Viewer/LitByLeds"
 {
     Properties
@@ -24,6 +25,7 @@ Shader "Arte/Viewer/LitByLeds"
 
             StructuredBuffer<float4> _ArteLedLightPos;
             StructuredBuffer<float4> _ArteLedLightColor;
+            StructuredBuffer<float4> _ArteLedLightDir;
             int _ArteLedLightCount;
             float _ArteLedLightScale;
 
@@ -55,9 +57,11 @@ Shader "Arte/Viewer/LitByLeds"
                 {
                     float3 d = _ArteLedLightPos[i].xyz - wpos;
                     float r2 = dot(d, d) + _NearM * _NearM;   // _NearM より近づいても無限に明るくしない
-                    float c = dot(wn, d) * rsqrt(r2);
+                    float inv = rsqrt(r2);
+                    float c = dot(wn, d) * inv;
                     c = _TwoSided > 0.5 ? abs(c) : saturate(c);
-                    sum += _ArteLedLightColor[i].rgb * (c / r2);
+                    float emit = saturate(-dot(_ArteLedLightDir[i].xyz, d) * inv);   // LED の正面からの角度の cos
+                    sum += _ArteLedLightColor[i].rgb * (c * emit / r2);
                 }
                 v2f o;
                 o.pos = TransformWorldToHClip(wpos);

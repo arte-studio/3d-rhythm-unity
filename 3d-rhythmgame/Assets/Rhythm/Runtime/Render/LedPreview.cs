@@ -15,6 +15,7 @@ namespace Arte.Rhythm.Render
     /// - Local: 同じシーンの DeviceLink.Frame を，実機に送るのと同じ計算で LED に送る値にする
     /// - Mirror: 別の PC の LinkHost が送る PIXELS を受け取る（LinkOptions.MirrorTargets → MirrorReceiver）
     ///
+    /// LED はリングの内側を向いていて，正面から横へ cos で暗くなり裏からは見えない（LedSceneModel）．
     /// 部屋を照らす光源（近くの LED をまとめたもの）は global の _ArteLedLight* に入れ，Arte/Viewer/LitByLeds が使う．
     /// 位置は PerfLayout（リングの中心が原点，m）にこの GameObject の Transform を掛ける．全 LED を 1 回の描画で描く．
     /// </summary>
@@ -29,6 +30,8 @@ namespace Arte.Rhythm.Render
         static readonly int LocalToWorldId = Shader.PropertyToID("_LocalToWorld");
         static readonly int LightPosId = Shader.PropertyToID("_ArteLedLightPos");
         static readonly int LightColorId = Shader.PropertyToID("_ArteLedLightColor");
+        static readonly int LightDirId = Shader.PropertyToID("_ArteLedLightDir");
+        static readonly int NormalsId = Shader.PropertyToID("_Normals");
         static readonly int LightCountId = Shader.PropertyToID("_ArteLedLightCount");
         static readonly int LightScaleId = Shader.PropertyToID("_ArteLedLightScale");
 
@@ -47,7 +50,7 @@ namespace Arte.Rhythm.Render
         [Tooltip("LED の光の強さの倍率．LED は小さく強く光るので 1 より大きくしてブルームを効かせる")]
         public float exposure = 6f;
         [Tooltip("床や暗幕を照らす光の強さの倍率")]
-        public float roomLightScale = 0.02f;
+        public float roomLightScale = 0.05f;
         [Tooltip("演出用ストリップ 1 本を何個の光源にまとめるか（部屋を照らす計算の細かさ）")]
         [Range(1, 24)] public int segmentsPerStrip = 6;
 
@@ -55,12 +58,13 @@ namespace Arte.Rhythm.Render
         public HardwareConfig Hardware { get; private set; }
         public PerfLayout Perf { get; private set; }
         public NoteLayout Notes { get; private set; }
+        public SetupProfile Setup { get; private set; }
 
         LedSceneModel model;
         LedFrame output;
-        GraphicsBuffer positions, colors, lightPos, lightColor;
+        GraphicsBuffer positions, normals, colors, lightPos, lightColor, lightDir;
         float[] linear, clusters;
-        Vector4[] colorData, lightPosData, lightColorData;
+        Vector4[] colorData, lightPosData, lightColorData, lightDirData;
         MaterialPropertyBlock props;
         Matrix4x4 lastMatrix;
 
@@ -95,6 +99,7 @@ namespace Arte.Rhythm.Render
                 enabled = false;
                 return;
             }
+            Setup = setup;
             Perf = new PerfLayout(Hardware, setup);
             Notes = new NoteLayout(Hardware, setup);
             int devices = Hardware.devices.count;
@@ -111,9 +116,15 @@ namespace Arte.Rhythm.Render
             for (int k = 0; k < n; k++) pos[k] = new Vector3(model.Positions[k * 3], model.Positions[k * 3 + 1], model.Positions[k * 3 + 2]);
             positions = new GraphicsBuffer(GraphicsBuffer.Target.Structured, n, 12);
             positions.SetData(pos);
+            var nrm = new Vector3[n];
+            for (int k = 0; k < n; k++) nrm[k] = new Vector3(model.Normals[k * 3], model.Normals[k * 3 + 1], model.Normals[k * 3 + 2]);
+            normals = new GraphicsBuffer(GraphicsBuffer.Target.Structured, n, 12);
+            normals.SetData(nrm);
             colors = new GraphicsBuffer(GraphicsBuffer.Target.Structured, n, 16);
             lightPos = new GraphicsBuffer(GraphicsBuffer.Target.Structured, c, 16);
             lightColor = new GraphicsBuffer(GraphicsBuffer.Target.Structured, c, 16);
+            lightDir = new GraphicsBuffer(GraphicsBuffer.Target.Structured, c, 16);
+            lightDirData = new Vector4[c];
             linear = new float[n * 3];
             clusters = new float[c * 3];
             colorData = new Vector4[n];
@@ -127,6 +138,8 @@ namespace Arte.Rhythm.Render
         {
             Mirror?.Dispose();
             positions?.Release();
+            normals?.Release();
+            lightDir?.Release();
             colors?.Release();
             lightPos?.Release();
             lightColor?.Release();
@@ -150,18 +163,25 @@ namespace Arte.Rhythm.Render
             {
                 lastMatrix = m;
                 var cp = model.ClusterPositions;
+                var cn = model.ClusterNormals;
                 for (int i = 0; i < model.ClusterCount; i++)
+                {
                     lightPosData[i] = m.MultiplyPoint3x4(new Vector3(cp[i * 3], cp[i * 3 + 1], cp[i * 3 + 2]));
+                    lightDirData[i] = m.MultiplyVector(new Vector3(cn[i * 3], cn[i * 3 + 1], cn[i * 3 + 2])).normalized;
+                }
                 lightPos.SetData(lightPosData);
+                lightDir.SetData(lightDirData);
             }
             for (int i = 0; i < model.ClusterCount; i++) lightColorData[i] = new Vector4(clusters[i * 3], clusters[i * 3 + 1], clusters[i * 3 + 2], 0);
             lightColor.SetData(lightColorData);
             Shader.SetGlobalBuffer(LightPosId, lightPos);
             Shader.SetGlobalBuffer(LightColorId, lightColor);
+            Shader.SetGlobalBuffer(LightDirId, lightDir);
             Shader.SetGlobalInt(LightCountId, model.ClusterCount);
             Shader.SetGlobalFloat(LightScaleId, roomLightScale);
 
             props.SetBuffer(PositionsId, positions);
+            props.SetBuffer(NormalsId, normals);
             props.SetBuffer(ColorsId, colors);
             props.SetFloat(SizeId, ledSize);
             props.SetMatrix(LocalToWorldId, m);

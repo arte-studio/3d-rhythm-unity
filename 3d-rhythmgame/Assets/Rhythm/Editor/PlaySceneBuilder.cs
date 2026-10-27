@@ -87,7 +87,9 @@ namespace Arte.Rhythm.Editor
             preview.hardwareJson = AssetDatabase.LoadAssetAtPath<TextAsset>(HardwareJson);
             preview.setupJson = AssetDatabase.LoadAssetAtPath<TextAsset>(DefaultSetup);
             AddViewer(preview);
-            preview.gameObject.AddComponent<ViewerHud>().preview = preview;
+            var hud = preview.gameObject.AddComponent<ViewerHud>();
+            hud.preview = preview;
+            hud.room = preview.GetComponent<ViewerRoom>();
             System.IO.Directory.CreateDirectory("Assets/Rhythm/Scenes");
             EditorSceneManager.SaveScene(scene, ViewerScenePath);
             Debug.Log($"[PlaySceneBuilder] {ViewerScenePath}");

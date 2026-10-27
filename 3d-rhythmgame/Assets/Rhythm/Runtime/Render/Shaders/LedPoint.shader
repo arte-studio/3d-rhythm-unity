@@ -1,4 +1,5 @@
 // LedPreview 用: LED 1 個をカメラに向いた小さな円で，光量（リニア，HDR）のまま足し合わせて描く．
+// LED は正面から見ると一番明るく，斜めからは cos で暗く，裏からは見えない（WS2812B の視野角 120°）．
 // 頂点 6 個 = LED 1 個．位置と色は LedPreview が GraphicsBuffer で渡す．
 Shader "Arte/LedPreview/Point"
 {
@@ -18,6 +19,7 @@ Shader "Arte/LedPreview/Point"
 
             StructuredBuffer<float3> _Positions;
             StructuredBuffer<float4> _Colors;
+            StructuredBuffer<float3> _Normals;
             float4x4 _LocalToWorld;
             float _LedSize;
 
@@ -35,6 +37,8 @@ Shader "Arte/LedPreview/Point"
                 uint led = vid / 6;
                 float2 c = kCorners[vid % 6];
                 float3 world = mul(_LocalToWorld, float4(_Positions[led], 1)).xyz;
+                float3 n = normalize(mul((float3x3)_LocalToWorld, _Normals[led]));
+                float facing = saturate(dot(n, normalize(_WorldSpaceCameraPos - world)));
                 // カメラの右と上の向き（ビュー行列の 1・2 行目）
                 float3 right = UNITY_MATRIX_V[0].xyz;
                 float3 up = UNITY_MATRIX_V[1].xyz;
@@ -42,7 +46,7 @@ Shader "Arte/LedPreview/Point"
                 v2f o;
                 o.pos = TransformWorldToHClip(world);
                 o.corner = c;
-                o.color = _Colors[led].rgb;
+                o.color = _Colors[led].rgb * facing;
                 return o;
             }
 

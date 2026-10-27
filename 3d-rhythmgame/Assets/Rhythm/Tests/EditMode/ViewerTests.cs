@@ -44,6 +44,35 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void LedsFaceTheRingCenter()
+        {
+            var model = new LedSceneModel(perf, notes, 8, segmentsPerStrip: 4);
+            for (int k = 0; k < model.LedCount; k += 97)
+            {
+                float x = model.Positions[k * 3], z = model.Positions[k * 3 + 2];
+                float nx = model.Normals[k * 3], ny = model.Normals[k * 3 + 1], nz = model.Normals[k * 3 + 2];
+                Assert.AreEqual(1f, Math.Sqrt(nx * nx + ny * ny + nz * nz), 1e-4);
+                Assert.AreEqual(0f, ny, "水平");
+                Assert.Less(nx * x + nz * z, 0, $"LED {k} は中心を向く");
+            }
+            for (int c = 0; c < model.ClusterCount; c++)
+            {
+                float x = model.ClusterPositions[c * 3], z = model.ClusterPositions[c * 3 + 2];
+                Assert.Less(model.ClusterNormals[c * 3] * x + model.ClusterNormals[c * 3 + 2] * z, 0);
+            }
+        }
+
+        [Test]
+        public void RoomSurfacesHaveThreeFloors()
+        {
+            Assert.AreEqual(3, RoomSurfaces.Floors.Length);
+            Assert.AreEqual("school-white", RoomSurfaces.Find(RoomSurfaces.Floors, "School-White").Name);
+            Assert.AreEqual("carpet-gray", RoomSurfaces.Find(RoomSurfaces.Floors, "unknown").Name, "知らない名前は最初のもの");
+            var setup = HardwareJson.LoadSetup(File.ReadAllText(Path.Combine(TestData.HardwareDir(), "setups", "kodaisai-1101.json")));
+            Assert.AreEqual("blackout", setup.room.curtain);
+        }
+
+        [Test]
         public void SceneModelLinearAndClusters()
         {
             var model = new LedSceneModel(perf, notes, 8, segmentsPerStrip: 4);

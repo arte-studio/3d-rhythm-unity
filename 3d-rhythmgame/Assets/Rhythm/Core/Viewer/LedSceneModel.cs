@@ -10,6 +10,8 @@ namespace Arte.Rhythm.Viewer
     ///
     /// - LED: 演出用は設営で外したストリップを除いた全部，ノーツ用は設営データに置き場所（modules）があるレーンだけ．
     ///   座標は m で，リングの中心が原点，y が上（PerfLayout と同じ）．
+    /// - 向き: LED はリングの内側（中心の縦の軸）へ水平に向けて付けてある（ユーザー確認）．光り方は正面が一番明るく
+    ///   横へ cos で弱まり，裏には出ない（WS2812B は視野角 120°＝半値角 ±60° で，cos の配光と一致する）．
     /// - 光源: 床や暗幕を照らす計算を軽くするため，近くの LED をまとめる（演出用はストリップを segmentsPerStrip 個に分ける，
     ///   むぎゅっとは 1 個，つながるノーツ用テープは 3 個）．まとめた光源の明るさは中の LED の光量の合計．
     /// </summary>
@@ -17,7 +19,7 @@ namespace Arte.Rhythm.Viewer
     {
         public const int ConnectSegments = 3;
 
-        readonly List<float> positions = new List<float>();
+        readonly List<float> positions = new List<float>(), normals = new List<float>();
         readonly List<int> device = new List<int>(), pin = new List<int>(), offset = new List<int>();
         readonly List<bool> swapRG = new List<bool>();
         readonly List<int> clusterStart = new List<int>();   // 光源ごとの最初の LED（次の光源の開始まで）
@@ -26,8 +28,12 @@ namespace Arte.Rhythm.Viewer
         public int ClusterCount => clusterStart.Count;
         /// <summary>LED の位置（x, y, z の順に LedCount × 3）．</summary>
         public float[] Positions { get; }
+        /// <summary>LED の正面の向き（単位ベクトル，LedCount × 3）．</summary>
+        public float[] Normals { get; }
         /// <summary>光源の位置（x, y, z の順に ClusterCount × 3）．</summary>
         public float[] ClusterPositions { get; }
+        /// <summary>光源の正面の向き（ClusterCount × 3）．</summary>
+        public float[] ClusterNormals { get; }
 
         public LedSceneModel(PerfLayout perf, NoteLayout notes, int deviceCount, int segmentsPerStrip = 4)
         {
@@ -41,7 +47,7 @@ namespace Arte.Rhythm.Viewer
                 {
                     if (row * segmentsPerStrip / rows != (row - 1) * segmentsPerStrip / rows || row == 0) clusterStart.Add(LedCount);
                     perf.GetLedPosition(column, row, out float x, out float y, out float z);
-                    Add(x, y, z, s.Address.device, s.Address.pin, (s.Address.slot * rows + perf.WireIndexOf(column, row)) * 3, false);
+                    Add(x, y, z, x, z, s.Address.device, s.Address.pin, (s.Address.slot * rows + perf.WireIndexOf(column, row)) * 3, false);
                 }
             }
             foreach (int lane in notes.Lanes)
@@ -53,7 +59,7 @@ namespace Arte.Rhythm.Viewer
                     for (int col = 0; col < notes.MuguColumns; col++)
                     {
                         ModuleGeometry.MuguLed(place, row, col, notes.MuguRows, notes.MuguColumns, notes.MuguSizeM, out float x, out float y, out float z);
-                        Add(x, y, z, m.device, notes.NoteOutputPin, notes.MuguLedIndex(m.module, row, col) * 3, false);
+                        Add(x, y, z, place.mugyu[0], place.mugyu[2], m.device, notes.NoteOutputPin, notes.MuguLedIndex(m.module, row, col) * 3, false);
                     }
                 }
                 int n = notes.ConnectLeds;
@@ -61,24 +67,39 @@ namespace Arte.Rhythm.Viewer
                 {
                     if (i * ConnectSegments / n != (i - 1) * ConnectSegments / n || i == 0) clusterStart.Add(LedCount);
                     ModuleGeometry.ConnectLed(place, i, n, out float x, out float y, out float z);
-                    Add(x, y, z, m.device, notes.NoteOutputPin, notes.ConnectLedIndex(m.module, i) * 3, notes.ConnectSwapRG);
+                    Add(x, y, z, x, z, m.device, notes.NoteOutputPin, notes.ConnectLedIndex(m.module, i) * 3, notes.ConnectSwapRG);
                 }
             }
             Positions = positions.ToArray();
+            Normals = normals.ToArray();
             ClusterPositions = new float[ClusterCount * 3];
+            ClusterNormals = new float[ClusterCount * 3];
             for (int c = 0; c < ClusterCount; c++)
             {
                 int from = clusterStart[c], to = c + 1 < ClusterCount ? clusterStart[c + 1] : LedCount;
                 for (int k = from; k < to; k++)
-                    for (int a = 0; a < 3; a++) ClusterPositions[c * 3 + a] += Positions[k * 3 + a] / (to - from);
+                {
+                    for (int a = 0; a < 3; a++)
+                    {
+                        ClusterPositions[c * 3 + a] += Positions[k * 3 + a] / (to - from);
+                        ClusterNormals[c * 3 + a] += Normals[k * 3 + a];
+                    }
+                }
+                float len = (float)Math.Sqrt(ClusterNormals[c * 3] * ClusterNormals[c * 3] + ClusterNormals[c * 3 + 2] * ClusterNormals[c * 3 + 2]);
+                for (int a = 0; a < 3; a++) ClusterNormals[c * 3 + a] = len > 1e-6f ? ClusterNormals[c * 3 + a] / len : 0f;
             }
         }
 
-        void Add(float x, float y, float z, int dev, int p, int off, bool swap)
+        // facingX, facingZ: 中心の軸から見た LED（またはモジュール）の位置．正面はその逆向き（中心へ水平）
+        void Add(float x, float y, float z, float facingX, float facingZ, int dev, int p, int off, bool swap)
         {
             positions.Add(x);
             positions.Add(y);
             positions.Add(z);
+            float len = (float)Math.Sqrt(facingX * facingX + facingZ * facingZ);
+            normals.Add(len > 1e-6f ? -facingX / len : 0f);
+            normals.Add(0f);
+            normals.Add(len > 1e-6f ? -facingZ / len : 1f);
             device.Add(dev);
             pin.Add(p);
             offset.Add(off);
