@@ -14,6 +14,8 @@ namespace Arte.Rhythm.Tests
         /// <summary>旧版の譜面などが入っている Assets/Resources．</summary>
         public static string LegacyResourcesDir() => Find(Path.Combine("Assets", "Resources"));
 
+        public static string SongsDir() => Find(Path.Combine("Assets", "Rhythm", "Songs"));
+
         static string Find(string relative)
         {
             foreach (string start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })

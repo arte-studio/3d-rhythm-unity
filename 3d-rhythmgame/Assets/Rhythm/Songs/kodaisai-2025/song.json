@@ -7,7 +7,18 @@
   "lengthSec": 0.0,
   "video": "arte.mp4",
   "videoOffsetSec": -0.017,
-  "tempo": [],
+  "tempo": [
+    {"t":1.759,"bpm":75.98,"beatsPerBar":4}
+  ],
+  "sections": [
+    {"t":0.0,"name":"前奏"},
+    {"t":14.39,"name":"Aメロ"},
+    {"t":27.03,"name":"Bメロ"},
+    {"t":42.82,"name":"サビ1"},
+    {"t":64.93,"name":"サビ前（デクレッシェンド→クレッシェンド）"},
+    {"t":66.51,"name":"サビ2"},
+    {"t":80.73,"name":"最後"}
+  ],
   "notes": [
     {"t":2.26,"lane":2,"type":"touch"},
     {"t":2.26,"lane":6,"type":"touch"},

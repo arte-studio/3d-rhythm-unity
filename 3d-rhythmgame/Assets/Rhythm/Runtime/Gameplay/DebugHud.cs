@@ -76,7 +76,7 @@ namespace Arte.Rhythm.Gameplay
             double now = conductor.SongTime;
             var judge = session.Judge;
             GUI.Label(new Rect(10, 30, 800, 22),
-                $"{now:F2} 秒  スコア {judge.Score}  Perfect {judge.PerfectCount}  Good {judge.GoodCount}  Miss {judge.MissCount}   {last}");
+                $"{now:F2} 秒  {conductor.Data?.SectionAt(now)}  スコア {judge.Score}  Perfect {judge.PerfectCount}  Good {judge.GoodCount}  Miss {judge.MissCount}   {last}");
 
             float top = 60, bottom = Screen.height - 60, width = Mathf.Min(48, (Screen.width - 20f) / laneCount);
             float left = (Screen.width - width * laneCount) / 2;

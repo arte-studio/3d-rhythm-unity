@@ -62,7 +62,16 @@ namespace Arte.Rhythm.Editor
                 new Step { Name = "06-material-inspector", Prepare = MaterialInspector },
                 new Step { Name = "07-song-asset", Prepare = SongAssetInspector },
                 new Step { Name = "08-preview-export", Prepare = PreviewExport },
+                new Step { Name = "10-chart-editor", Prepare = ChartEditor, Wait = 3f },
             };
+            // 起動引数 -docshot-steps 名前,名前 で一部だけ撮る
+            var args = Environment.GetCommandLineArgs();
+            int ai = Array.IndexOf(args, "-docshot-steps");
+            if (ai >= 0 && ai + 1 < args.Length)
+            {
+                var only = new HashSet<string>(args[ai + 1].Split(','));
+                steps = steps.Where(x => only.Contains(x.Name)).ToList();
+            }
             index = 0;
             prepared = false;
             nextTime = EditorApplication.timeSinceStartup + 5;
@@ -268,6 +277,23 @@ namespace Arte.Rhythm.Editor
         {
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("Assets/Rhythm/Songs/kodaisai-2025/kodaisai-2025.asset");
             return Float("UnityEditor.InspectorWindow", new Rect(80, 80, 520, 380));
+        }
+
+        static EditorWindow ChartEditor()
+        {
+            AssetDatabase.OpenAsset(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("Assets/Rhythm/Songs/kodaisai-2025/kodaisai-2025.asset"));
+            var w = Resources.FindObjectsOfTypeAll<ChartEditorWindow>().First();
+            // 曲全体が見えるように縮める
+            var so = new SerializedObject(w);
+            so.FindProperty("pxPerSec").floatValue = 14.5f;
+            so.FindProperty("scrollSec").doubleValue = -1;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            if (!w.docked)
+            {
+                w.position = new Rect(80, 80, 1400, 520);
+                opened.Add(w);
+            }
+            return w;
         }
 
         static EditorWindow PreviewExport()

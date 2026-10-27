@@ -23,6 +23,8 @@ namespace Arte.Rhythm.Editor
     /// 操作:
     ///   クリック = ノーツを置く / 選ぶ（Shift で追加選択），ドラッグ = 移動，右クリック = 削除
     ///   ルーラー（上端）をクリック = カーソル移動，Space = カーソルから再生 / 停止
+    ///   Alt + クリック = 一番近い拍にノーツを置く
+    ///   波形の上で右クリック = 曲の区切り（前奏，A メロなど）を足す・名前を変える・消す．区切りの線をドラッグで動かす
     ///   1〜0, Q〜P = そのレーンにノーツを置く（再生中は再生位置，停止中はカーソル位置）
     ///   B = テンポのタップ（再生中に拍に合わせて4回以上），Delete = 削除，←→ = グリッド1つ移動，↑↓ = レーン移動
     ///   Ctrl+Z / Ctrl+Y = 元に戻す / やり直し，Ctrl+S = 保存，ホイール = スクロール，Ctrl+ホイール = 拡大縮小
@@ -37,6 +39,12 @@ namespace Arte.Rhythm.Editor
             KeyCode.Q, KeyCode.W, KeyCode.E, KeyCode.R, KeyCode.T, KeyCode.Y, KeyCode.U, KeyCode.I, KeyCode.O, KeyCode.P,
         };
         static readonly int[] Divisions = { 1, 2, 3, 4, 6, 8 };
+        static readonly string[] SectionNames = { "前奏", "Aメロ", "Bメロ", "サビ1", "間奏", "サビ前", "サビ2", "最後" };
+        static readonly Color[] SectionColors =
+        {
+            new Color(0.35f, 0.55f, 1f), new Color(0.8f, 0.45f, 1f), new Color(0.3f, 0.85f, 0.8f), new Color(1f, 0.85f, 0.3f),
+            new Color(1f, 0.5f, 0.6f), new Color(0.6f, 1f, 0.5f), new Color(1f, 0.65f, 0.3f), new Color(0.6f, 0.6f, 0.9f),
+        };
         static readonly string[] DivisionLabels = { "1拍", "1/2", "1/3", "1/4", "1/6", "1/8" };
 
         [SerializeField] SongAsset song;
@@ -50,6 +58,11 @@ namespace Arte.Rhythm.Editor
         SongData data;
         TempoMap tempo;
         readonly List<ChartNote> notes = new List<ChartNote>();
+        readonly List<SongSection> sections = new List<SongSection>();
+        int draggingSection = -1;
+        string sectionDragBefore;
+        Vector2 menuPos;
+        Action pendingPopup; // メニューの選択は OnGUI の外で呼ばれるので，次の OnGUI でポップアップを出す
         readonly HashSet<int> selected = new HashSet<int>();
         readonly List<string> undo = new List<string>(), redo = new List<string>();
         bool dirty;
@@ -149,6 +162,8 @@ namespace Arte.Rhythm.Editor
                 data = SongJson.Load(song.songJson.text);
                 tempo = data.TempoMap();
                 notes.AddRange(data.ToChart().Notes);
+                sections.Clear();
+                sections.AddRange(data.Sections.OrderBy(x => x.Time).Select(x => new SongSection { Time = x.Time, Name = x.Name }));
             }
             catch (Exception e)
             {
@@ -163,6 +178,7 @@ namespace Arte.Rhythm.Editor
         {
             if (data == null || song?.songJson == null) return;
             data.SetNotes(notes);
+            data.Sections = sections.OrderBy(x => x.Time).Select(x => new SongSection { Time = Math.Round(x.Time, 3), Name = x.Name }).ToList();
             string path = AssetDatabase.GetAssetPath(song.songJson);
             File.WriteAllText(path, SongJson.Save(data));
             AssetDatabase.ImportAsset(path);
@@ -209,12 +225,26 @@ namespace Arte.Rhythm.Editor
 
         // ---- 編集（元に戻す付き） ----
 
-        string Snapshot() => string.Join(";", notes.Select(n => string.Format(CultureInfo.InvariantCulture, "{0:R},{1},{2}", n.Time, n.Lane, (int)n.Type)));
+        // 元に戻す用: ノーツと区切りを文字列にする（"ノーツ|区切り"）
+        string Snapshot() =>
+            string.Join(";", notes.Select(n => string.Format(CultureInfo.InvariantCulture, "{0:R},{1},{2}", n.Time, n.Lane, (int)n.Type))) + "|" +
+            string.Join(";", sections.Select(x => string.Format(CultureInfo.InvariantCulture, "{0:R},{1}", x.Time, Uri.EscapeDataString(x.Name))));
 
-        void Restore(string s)
+        void Restore(string snapshot)
         {
             notes.Clear();
             selected.Clear();
+            var halves = snapshot.Split('|');
+            sections.Clear();
+            if (halves.Length > 1 && halves[1].Length > 0)
+            {
+                foreach (var part in halves[1].Split(';'))
+                {
+                    var f = part.Split(',');
+                    sections.Add(new SongSection { Time = double.Parse(f[0], CultureInfo.InvariantCulture), Name = Uri.UnescapeDataString(f[1]) });
+                }
+            }
+            string s = halves[0];
             if (s.Length == 0) return;
             foreach (var part in s.Split(';'))
             {
@@ -314,6 +344,12 @@ namespace Arte.Rhythm.Editor
 
         void OnGUI()
         {
+            if (pendingPopup != null && Event.current.type == EventType.Repaint)
+            {
+                var show = pendingPopup;
+                pendingPopup = null;
+                show();
+            }
             DrawToolbar();
             if (data == null)
             {
@@ -337,6 +373,7 @@ namespace Arte.Rhythm.Editor
             DrawLanes();
             DrawGrid();
             DrawWaveform();
+            DrawSections();
             DrawJudgeWindows();
             DrawNotes();
             DrawCursor(cursorSec, new Color(1f, 1f, 1f, 0.6f));
@@ -373,9 +410,14 @@ namespace Arte.Rhythm.Editor
                 var p = data.Tempo.Count > 0 ? data.Tempo[0] : null;
                 GUILayout.Label(p == null ? "テンポ未設定（120 BPM で表示中．再生中に B キーで拍をタップ）" : "テンポ", GUILayout.Width(p == null ? 280 : 40));
                 EditorGUI.BeginChangeCheck();
-                double bpm = EditorGUILayout.DoubleField("BPM", p?.Bpm ?? 120, GUILayout.Width(110));
-                double first = EditorGUILayout.DoubleField("1拍目(秒)", p?.TimeSec ?? 0, GUILayout.Width(140));
-                int bpb = EditorGUILayout.IntField("拍子", p?.BeatsPerBar ?? 4, GUILayout.Width(80));
+                float labelWidth = EditorGUIUtility.labelWidth;
+                EditorGUIUtility.labelWidth = 32;
+                double bpm = EditorGUILayout.DoubleField("BPM", p?.Bpm ?? 120, GUILayout.Width(100));
+                EditorGUIUtility.labelWidth = 70;
+                double first = EditorGUILayout.DoubleField("1小節目(秒)", p?.TimeSec ?? 0, GUILayout.Width(140));
+                EditorGUIUtility.labelWidth = 32;
+                int bpb = EditorGUILayout.IntField("拍子", p?.BeatsPerBar ?? 4, GUILayout.Width(70));
+                EditorGUIUtility.labelWidth = labelWidth;
                 if (EditorGUI.EndChangeCheck() && bpm > 0 && bpb > 0) SetTempo(bpm, first, bpb);
                 if (data.Tempo.Count > 1) GUILayout.Label($"（他 {data.Tempo.Count - 1} 箇所のテンポ変化は song.json で編集）");
                 GUILayout.FlexibleSpace();
@@ -429,7 +471,7 @@ namespace Arte.Rhythm.Editor
         {
             var e = Event.current;
             if (e.type == EventType.KeyDown) HandleKey(e);
-            if (!area.Contains(e.mousePosition) && !dragging) return;
+            if (!area.Contains(e.mousePosition) && !dragging && draggingSection < 0) return;
 
             switch (e.type)
             {
@@ -448,6 +490,20 @@ namespace Arte.Rhythm.Editor
                     mouseDownPos = e.mousePosition;
                     if (e.mousePosition.y < area.y + RulerH + WaveH)
                     {
+                        int near = SectionNear(e.mousePosition.x);
+                        if (e.button == 1)
+                        {
+                            ShowSectionMenu(TimeOf(e.mousePosition.x), near);
+                            e.Use();
+                            break;
+                        }
+                        if (e.button == 0 && near >= 0 && e.mousePosition.y > area.y + RulerH)
+                        {
+                            draggingSection = near;
+                            sectionDragBefore = Snapshot();
+                            e.Use();
+                            break;
+                        }
                         cursorSec = Math.Max(0, SnapTime(TimeOf(e.mousePosition.x)));
                         if (EditorAudio.IsPlaying) EditorAudio.Play(song.audio, cursorSec + data.AudioStartSec);
                         e.Use();
@@ -464,7 +520,8 @@ namespace Arte.Rhythm.Editor
                     if (e.button != 0 || lane < 0 || e.mousePosition.x < area.x + Gutter) break;
                     if (hit < 0)
                     {
-                        double t = SnapTime(TimeOf(e.mousePosition.x));
+                        // Alt を押しながらなら一番近い拍に置く
+                        double t = e.alt ? tempo.Snap(TimeOf(e.mousePosition.x), 1) : SnapTime(TimeOf(e.mousePosition.x));
                         if (t < 0) break;
                         hit = AddNote(t, lane);
                         selected.Clear();
@@ -489,6 +546,13 @@ namespace Arte.Rhythm.Editor
                     break;
 
                 case EventType.MouseDrag:
+                    if (draggingSection >= 0)
+                    {
+                        double t = Math.Max(0, snap ? tempo.Snap(TimeOf(e.mousePosition.x), 1) : Math.Round(TimeOf(e.mousePosition.x), 3));
+                        sections[draggingSection].Time = t;
+                        e.Use();
+                        break;
+                    }
                     if (!dragging) break;
                     {
                         double t = SnapTime(TimeOf(e.mousePosition.x));
@@ -501,6 +565,16 @@ namespace Arte.Rhythm.Editor
                     break;
 
                 case EventType.MouseUp:
+                    if (draggingSection >= 0)
+                    {
+                        draggingSection = -1;
+                        undo.Add(sectionDragBefore);
+                        redo.Clear();
+                        dirty = true;
+                        sections.Sort((a, b) => a.Time.CompareTo(b.Time));
+                        e.Use();
+                        break;
+                    }
                     if (dragging)
                     {
                         dragging = false;
@@ -568,6 +642,109 @@ namespace Arte.Rhythm.Editor
                 selected.Clear();
                 selected.Add(i);
                 e.Use();
+            }
+        }
+
+        // ---- 曲の区切り ----
+
+        /// <summary>画面の x に近い（6px 以内の）区切りの番号．無ければ -1．</summary>
+        int SectionNear(float x)
+        {
+            int best = -1;
+            float bestDx = 6;
+            for (int i = 0; i < sections.Count; i++)
+            {
+                float dx = Mathf.Abs(XOf(sections[i].Time) - x);
+                if (dx < bestDx) { bestDx = dx; best = i; }
+            }
+            return best;
+        }
+
+        void ShowSectionMenu(double at, int near)
+        {
+            menuPos = Event.current.mousePosition;
+            double t = Math.Max(0, snap ? tempo.Snap(at, 1) : Math.Round(at, 3));
+            var menu = new GenericMenu();
+            foreach (var name in SectionNames)
+                menu.AddItem(new GUIContent($"ここから区切りを足す/{name}"), false, () => AddSection(t, name));
+            menu.AddItem(new GUIContent("ここから区切りを足す/その他（名前を入れる）…"), false, () => AskName("", n => AddSection(t, n)));
+            if (near >= 0)
+            {
+                var s = sections[near];
+                menu.AddSeparator("");
+                foreach (var name in SectionNames)
+                    menu.AddItem(new GUIContent($"「{s.Name}」の名前を変える/{name}"), false, () => { RecordUndo(); s.Name = name; });
+                menu.AddItem(new GUIContent($"「{s.Name}」の名前を変える/その他…"), false, () => AskName(s.Name, n => { RecordUndo(); s.Name = n; }));
+                menu.AddItem(new GUIContent($"「{s.Name}」を消す"), false, () => { RecordUndo(); sections.Remove(s); });
+            }
+            menu.ShowAsContext();
+        }
+
+        void AddSection(double t, string name)
+        {
+            RecordUndo();
+            sections.Add(new SongSection { Time = t, Name = name });
+            sections.Sort((a, b) => a.Time.CompareTo(b.Time));
+            Repaint();
+        }
+
+        void AskName(string current, Action<string> done)
+        {
+            pendingPopup = () => PopupWindow.Show(new Rect(menuPos, Vector2.one), new SectionNamePopup(current, n => { done(n); Repaint(); }));
+            Repaint();
+        }
+
+        sealed class SectionNamePopup : PopupWindowContent
+        {
+            string name;
+            readonly Action<string> done;
+
+            public SectionNamePopup(string current, Action<string> done)
+            {
+                name = current;
+                this.done = done;
+            }
+
+            public override Vector2 GetWindowSize() => new Vector2(240, 48);
+
+            public override void OnGUI(Rect rect)
+            {
+                GUI.SetNextControlName("name");
+                name = EditorGUILayout.TextField("名前", name);
+                EditorGUI.FocusTextInControl("name");
+                bool enter = Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
+                if ((GUILayout.Button("決める") || enter) && !string.IsNullOrWhiteSpace(name))
+                {
+                    done(name.Trim());
+                    editorWindow.Close();
+                }
+            }
+        }
+
+        void DrawSections()
+        {
+            if (sections.Count == 0) return;
+            var r = new Rect(area.x + Gutter, area.y + RulerH, area.width - Gutter, WaveH);
+            float lanesBottom = Mathf.Min(area.yMax, YOfLane(LaneCount));
+            var style = new GUIStyle(EditorStyles.miniBoldLabel) { normal = { textColor = Color.white } };
+            for (int i = 0; i < sections.Count; i++)
+            {
+                var s = sections[i];
+                double end = i + 1 < sections.Count ? sections[i + 1].Time : SongLength;
+                float x0 = Mathf.Max(r.x, XOf(s.Time)), x1 = Mathf.Min(r.xMax, XOf(end));
+                if (x1 <= r.x || x0 >= r.xMax) continue;
+                var c = SectionColors[i % SectionColors.Length];
+                EditorGUI.DrawRect(new Rect(x0, r.y, x1 - x0, r.height), new Color(c.r, c.g, c.b, 0.16f));
+                EditorGUI.DrawRect(new Rect(x0, LanesTop, x1 - x0, lanesBottom - LanesTop), new Color(c.r, c.g, c.b, 0.035f));
+                float bx = XOf(s.Time);
+                if (bx >= r.x)
+                {
+                    bool hot = i == draggingSection || (draggingSection < 0 && Mathf.Abs(Event.current.mousePosition.x - bx) < 6 && r.Contains(Event.current.mousePosition));
+                    EditorGUI.DrawRect(new Rect(bx - 1, r.y, hot ? 3 : 2, lanesBottom - r.y), new Color(c.r, c.g, c.b, hot ? 1f : 0.7f));
+                }
+                var label = new Rect(x0 + 4, r.y + 1, Mathf.Max(0, x1 - x0 - 6), 16);
+                EditorGUI.DrawRect(new Rect(label.x - 2, label.y, Mathf.Min(label.width + 4, style.CalcSize(new GUIContent(s.Name)).x + 4), 15), new Color(0, 0, 0, 0.55f));
+                GUI.Label(label, s.Name, style);
             }
         }
 
@@ -700,7 +877,8 @@ namespace Arte.Rhythm.Editor
             double t = double.IsNaN(PlayheadSec) ? cursorSec : PlayheadSec;
             var (bar, beat) = tempo.BarBeatOf(t);
             int unwired = wiredLanes == null ? 0 : notes.Count(n => !wiredLanes.Contains(n.Lane));
-            string msg = $"{t:F3} 秒（{bar} 小節 {beat:F2} 拍）  ノーツ {notes.Count}  選択 {selected.Count}";
+            string sec = sections.LastOrDefault(x => x.Time <= t + 1e-6)?.Name;
+            string msg = $"{t:F3} 秒（{bar} 小節 {beat:F2} 拍{(string.IsNullOrEmpty(sec) ? "" : $"，{sec}")}）  ノーツ {notes.Count}  選択 {selected.Count}";
             if (unwired > 0) msg += $"  ⚠ 配線の無いレーンのノーツ {unwired}（赤）";
             if (!EditorAudio.Available) msg += "  ※この Unity では再生できません";
             GUI.Label(r, msg, EditorStyles.miniLabel);

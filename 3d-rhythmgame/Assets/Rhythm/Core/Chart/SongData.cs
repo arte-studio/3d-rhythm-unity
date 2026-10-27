@@ -16,6 +16,14 @@ namespace Arte.Rhythm.Charts
         [JsonProperty("type")] public string Type = "touch";
     }
 
+    /// <summary>曲の区切り（前奏，A メロなど）．演出・譜面づくりで同じ呼び方を使うための目印．</summary>
+    public sealed class SongSection
+    {
+        /// <summary>この区切りが始まる曲時刻（秒）．次の区切りまで続く．</summary>
+        [JsonProperty("t")] public double Time;
+        [JsonProperty("name")] public string Name = "";
+    }
+
     /// <summary>
     /// 1曲分のデータ（song.json）．譜面・テンポ・同期の補正値・判定ルールをまとめて持つ．
     /// 音声・動画・Timeline のアセットは Unity 側の SongAsset が持ち，ここにはファイル名を参考として書く．
@@ -51,7 +59,22 @@ namespace Arte.Rhythm.Charts
         /// <summary>この曲だけ判定ルールを変える場合に書く．null なら既定（仕様書の判定幅）．</summary>
         [JsonProperty("rules", NullValueHandling = NullValueHandling.Ignore)] public JudgeRules Rules;
 
+        /// <summary>曲の区切り（時刻順）．</summary>
+        [JsonProperty("sections")] public List<SongSection> Sections = new List<SongSection>();
+
         [JsonProperty("notes")] public List<SongNote> Notes = new List<SongNote>();
+
+        /// <summary>曲時刻 t が入っている区切りの名前（区切りが無い・最初の区切りより前なら空）．</summary>
+        public string SectionAt(double t)
+        {
+            string name = "";
+            foreach (var s in Sections.OrderBy(s => s.Time))
+            {
+                if (s.Time > t) break;
+                name = s.Name;
+            }
+            return name;
+        }
 
         [JsonIgnore] public JudgeRules EffectiveRules => Rules ?? new JudgeRules();
 

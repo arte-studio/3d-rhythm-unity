@@ -66,6 +66,29 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void Sections_RoundTripAndLookup()
+        {
+            var song = new SongData();
+            song.Sections.Add(new SongSection { Time = 0, Name = "前奏" });
+            song.Sections.Add(new SongSection { Time = 14.39, Name = "Aメロ" });
+            var back = SongJson.Load(SongJson.Save(song));
+            Assert.AreEqual(2, back.Sections.Count);
+            Assert.AreEqual("Aメロ", back.Sections[1].Name);
+            Assert.AreEqual("前奏", back.SectionAt(14.0));
+            Assert.AreEqual("Aメロ", back.SectionAt(14.39));
+            Assert.AreEqual("", new SongData().SectionAt(3));
+        }
+
+        [Test]
+        public void KodaisaiSongHasTempoAndSections()
+        {
+            var song = SongJson.Load(System.IO.File.ReadAllText(System.IO.Path.Combine(TestData.SongsDir(), "kodaisai-2025", "song.json")));
+            Assert.AreEqual(75.98, song.Tempo[0].Bpm, 0.01);
+            Assert.AreEqual("前奏", song.SectionAt(1));
+            Assert.AreEqual("最後", song.SectionAt(85));
+        }
+
+        [Test]
         public void SongJson_RejectsUnknownKeys()
         {
             Assert.Throws<Newtonsoft.Json.JsonSerializationException>(() =>
