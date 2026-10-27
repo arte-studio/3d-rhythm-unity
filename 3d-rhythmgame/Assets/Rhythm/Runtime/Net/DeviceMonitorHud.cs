@@ -56,6 +56,13 @@ namespace Arte.Rhythm.Net
                     if (GUILayout.Button(id.ToString(), GUILayout.Width(36))) link.Host.AssignId(d.Mac, (byte)id);
                 GUILayout.EndHorizontal();
             }
+            var opt = link.Host.Options;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("色の曲線", GUILayout.Width(80));
+            foreach (Hardware.LedOutputModel.OutputCurve c in System.Enum.GetValues(typeof(Hardware.LedOutputModel.OutputCurve)))
+                if (GUILayout.Toggle(opt.Curve == c, c.ToString(), GUI.skin.button, GUILayout.Width(80))) opt.Curve = c;
+            GUILayout.Label("（Linear = 旧版と同じ，Srgb = 画面の絵に近い見た目）");
+            GUILayout.EndHorizontal();
             if (testPattern != null)
             {
                 GUILayout.BeginHorizontal();

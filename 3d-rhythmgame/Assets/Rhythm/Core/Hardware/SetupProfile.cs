@@ -18,10 +18,12 @@ namespace Arte.Rhythm.Hardware
         public StripAddress[] removedStrips = Array.Empty<StripAddress>();
         /// <summary>ゲーム内レーン番号と，そのレーンのモジュールの対応．ここにないレーンは実機に存在しない．</summary>
         public LaneAssignment[] lanes = Array.Empty<LaneAssignment>();
-        /// <summary>演出用 LED の明るさ（0-255，ファームで (c * (b + 1)) >> 8 として掛ける）．</summary>
+        /// <summary>演出用 LED の明るさ（0-255，PC が (c * (b + 1)) >> 8 として掛けてから送る）．</summary>
         public int brightnessPerf = 50;
         /// <summary>ノーツ用 LED の明るさ（0-255）．</summary>
         public int brightnessNote = 50;
+        /// <summary>色を LED に送る値にする曲線．"linear"（旧版と同じ）か "srgb"（LedOutputModel.OutputCurve）．</summary>
+        public string outputCurve = "linear";
     }
 
     /// <summary>配線上のストリップの位置（デバイス・ピン・ピン内の何本目か）．</summary>

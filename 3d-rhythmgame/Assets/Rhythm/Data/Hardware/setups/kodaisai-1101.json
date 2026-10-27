@@ -21,5 +21,6 @@
     { "lane": 10, "device": 7, "module": 1 }
   ],
   "brightnessPerf": 50,
-  "brightnessNote": 50
+  "brightnessNote": 50,
+  "outputCurve": "linear"
 }

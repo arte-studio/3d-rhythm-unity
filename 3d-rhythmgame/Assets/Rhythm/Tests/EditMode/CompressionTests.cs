@@ -78,10 +78,10 @@ namespace Arte.Rhythm.Tests
             var dst = new byte[256];
             foreach (byte b in new byte[] { 0, 1, 10, 50, 128, 254, 255 })
             {
-                PixelCodec.ApplyBrightness(src, dst, b);
+                PixelCodec.ApplyOutput(src, dst, b, Lin);
                 for (int i = 0; i < 256; i++) Assert.AreEqual(LedOutputModel.ApplyBrightness((byte)i, b), dst[i], $"明るさ {b} 値 {i}");
             }
-            PixelCodec.ApplyBrightness(src, dst, 255);
+            PixelCodec.ApplyOutput(src, dst, 255, Lin);
             CollectionAssert.AreEqual(src, dst, "明るさ最大ならそのまま");
         }
 
@@ -95,6 +95,39 @@ namespace Arte.Rhythm.Tests
             return (new FrameEncoder(), frame, packets, new int[4]);
         }
 
+        const LedOutputModel.OutputCurve Lin = LedOutputModel.OutputCurve.Linear;
+        const LedOutputModel.OutputCurve Srgb = LedOutputModel.OutputCurve.Srgb;
+
+        [Test]
+        public void SrgbCurveConvertsToLight()
+        {
+            // 明るさ最大: 端はそのまま，中間（sRGB 128 ≒ 光量 21.6%）は暗くなる
+            Assert.AreEqual(0, LedOutputModel.Encode(0, 255, Srgb));
+            Assert.AreEqual(255, LedOutputModel.Encode(255, 255, Srgb));
+            Assert.AreEqual(55, LedOutputModel.Encode(128, 255, Srgb));
+            // 明るさ 50: 最大は Linear と同じ 50．暗い色は潰れやすい
+            Assert.AreEqual(50, LedOutputModel.Encode(255, 50, Srgb));
+            Assert.AreEqual(11, LedOutputModel.Encode(128, 50, Srgb));
+            Assert.AreEqual(0, LedOutputModel.Encode(20, 50, Srgb));
+            // 単調に増える
+            for (int b = 0; b < 256; b += 17)
+                for (int c = 1; c < 256; c++)
+                    Assert.GreaterOrEqual(LedOutputModel.Encode((byte)c, b, Srgb), LedOutputModel.Encode((byte)(c - 1), b, Srgb));
+            // Linear は従来と同じ
+            for (int c = 0; c < 256; c++) Assert.AreEqual(LedOutputModel.ApplyBrightness((byte)c, 50), LedOutputModel.Encode((byte)c, 50, Lin));
+            Assert.AreEqual(LedOutputModel.OutputCurve.Srgb, LedOutputModel.ParseCurve("sRGB"));
+            Assert.AreEqual(LedOutputModel.OutputCurve.Linear, LedOutputModel.ParseCurve(null));
+        }
+
+        [Test]
+        public void EncoderUsesCurve()
+        {
+            var (enc, frame, packets, lengths) = MakeEncoder();
+            frame.Pin(0, 0).Fill(128);
+            enc.Encode(frame, 0, 1, Bright255, Srgb, false, 0, packets, lengths);
+            Assert.AreEqual(55, packets[0][ArteProtocol.PixelsHeaderSize]);
+        }
+
         static readonly DeviceConfig Bright255 = new DeviceConfig { BrightnessPerf = 255, BrightnessNote = 255 };
 
         [Test]
@@ -102,14 +135,14 @@ namespace Arte.Rhythm.Tests
         {
             var (enc, frame, packets, lengths) = MakeEncoder();
             // 初回は全ピン
-            Assert.AreEqual(3, enc.Encode(frame, 0, 1, Bright255, true, 0, packets, lengths));
+            Assert.AreEqual(3, enc.Encode(frame, 0, 1, Bright255, Lin, true, 0, packets, lengths));
             Assert.Greater(lengths[0], 0);
             Assert.AreEqual(0, lengths[2], "LED の無いピンは送らない");
             // 何も変わらなければ送らない
-            Assert.AreEqual(0, enc.Encode(frame, 0, 2, Bright255, true, 10_000, packets, lengths));
+            Assert.AreEqual(0, enc.Encode(frame, 0, 2, Bright255, Lin, true, 10_000, packets, lengths));
             // ピン 1 だけ変える → ピン 1 だけ，expectMask もピン 1 だけ
             frame.Pin(0, 1)[5] = 9;
-            Assert.AreEqual(1, enc.Encode(frame, 0, 3, Bright255, true, 20_000, packets, lengths));
+            Assert.AreEqual(1, enc.Encode(frame, 0, 3, Bright255, Lin, true, 20_000, packets, lengths));
             Assert.IsTrue(ArteProtocol.TryReadPixels(packets[1].AsSpan(0, lengths[1]), out var h, out _));
             Assert.AreEqual(1, h.Pin);
             Assert.AreEqual(0b0010, h.ExpectMask);
@@ -121,17 +154,17 @@ namespace Arte.Rhythm.Tests
         public void EncoderRefreshesOnePinAtATime()
         {
             var (enc, frame, packets, lengths) = MakeEncoder();
-            enc.Encode(frame, 0, 1, Bright255, true, 0, packets, lengths);
+            enc.Encode(frame, 0, 1, Bright255, Lin, true, 0, packets, lengths);
             // 0.5 秒たつと，変わっていないピンを 1 本ずつ送り直す（パケットが落ちても直るように）
             int sent = 0;
             for (int i = 0; i < 3; i++)
             {
-                int n = enc.Encode(frame, 0, (ushort)(2 + i), Bright255, true, 600_000 + (ulong)i * 16_000, packets, lengths);
+                int n = enc.Encode(frame, 0, (ushort)(2 + i), Bright255, Lin, true, 600_000 + (ulong)i * 16_000, packets, lengths);
                 Assert.AreEqual(1, n);
                 sent |= Array.FindIndex(lengths, l => l > 0) is int p && p >= 0 ? 1 << p : 0;
             }
             Assert.AreEqual(0b1011, sent, "3 本とも 1 回ずつ");
-            Assert.AreEqual(0, enc.Encode(frame, 0, 9, Bright255, true, 700_000, packets, lengths));
+            Assert.AreEqual(0, enc.Encode(frame, 0, 9, Bright255, Lin, true, 700_000, packets, lengths));
         }
 
         [Test]
@@ -140,7 +173,7 @@ namespace Arte.Rhythm.Tests
             var (enc, frame, packets, lengths) = MakeEncoder();
             for (int i = 0; i < 2; i++)
             {
-                Assert.AreEqual(3, enc.Encode(frame, 0, (ushort)(1 + i), Bright255, false, (ulong)i * 16_000, packets, lengths));
+                Assert.AreEqual(3, enc.Encode(frame, 0, (ushort)(1 + i), Bright255, Lin, false, (ulong)i * 16_000, packets, lengths));
                 Assert.AreEqual(ArteProtocol.PixelsHeaderSize + 480 * 3, lengths[0]);
                 Assert.IsTrue(ArteProtocol.TryReadPixels(packets[0].AsSpan(0, lengths[0]), out var h, out _));
                 Assert.AreEqual(ArteProtocol.EncodingRaw, h.Encoding);
@@ -153,12 +186,12 @@ namespace Arte.Rhythm.Tests
         {
             var (enc, frame, packets, lengths) = MakeEncoder();
             var dim = new DeviceConfig { BrightnessPerf = 10, BrightnessNote = 10 };
-            enc.Encode(frame, 0, 1, dim, true, 0, packets, lengths);
+            enc.Encode(frame, 0, 1, dim, Lin, true, 0, packets, lengths);
             // 明るさ 10 では 0〜23 はどれも 0 になる → 光り方が同じなので送らない
             frame.Pin(0, 0)[0] = 20;
-            Assert.AreEqual(0, enc.Encode(frame, 0, 2, dim, true, 16_000, packets, lengths));
+            Assert.AreEqual(0, enc.Encode(frame, 0, 2, dim, Lin, true, 16_000, packets, lengths));
             frame.Pin(0, 0)[0] = 200;
-            Assert.AreEqual(1, enc.Encode(frame, 0, 3, dim, true, 32_000, packets, lengths));
+            Assert.AreEqual(1, enc.Encode(frame, 0, 3, dim, Lin, true, 32_000, packets, lengths));
             // 送る値は明るさを掛けた後
             Assert.IsTrue(ArteProtocol.TryReadPixels(packets[0].AsSpan(0, lengths[0]), out var h, out var payload));
             var rgb = new byte[480 * 3];

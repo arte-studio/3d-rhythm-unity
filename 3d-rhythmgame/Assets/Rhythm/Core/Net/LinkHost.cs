@@ -20,6 +20,8 @@ namespace Arte.Rhythm.Net
         /// <summary>時刻合わせに使う（AdaptiveRate のときは混み具合を見るため 0.05 秒以下にする）．</summary>
         public double PingIntervalSec = 0.25;
         public double ConfigIntervalSec = 1.0;
+        /// <summary>色を LED に送る値にする曲線（SetupProfile.outputCurve）．変えると次のフレームから反映される．</summary>
+        public Hardware.LedOutputModel.OutputCurve Curve = Hardware.LedOutputModel.OutputCurve.Linear;
         /// <summary>差分と PackBits で通信量を減らす（false は比較用．毎回全ピンをそのまま送る）．</summary>
         public bool Compact = true;
         /// <summary>
@@ -265,7 +267,7 @@ namespace Arte.Rhythm.Net
                 if (!full && d.LastSendUs != 0 && now - d.LastSendUs < (ulong)(0.75e6 / fps)) continue;
                 if (full) d.Encoder.Invalidate();
                 d.LastSendUs = now;
-                d.Encoder.Encode(ledFrame, id, frame, config, compact, now, packets, packetLengths);
+                d.Encoder.Encode(ledFrame, id, frame, config, options.Curve, compact, now, packets, packetLengths);
                 for (int pin = 0; pin < LedFrame.PinsPerDevice; pin++)
                 {
                     if (packetLengths[pin] == 0) continue;

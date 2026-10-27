@@ -105,6 +105,7 @@ namespace Arte.Rhythm.Net
             byte flags = 0;
             if (touchFeedback) flags |= ArteProtocol.FlagTouchFeedback;
             if (selfTestWhenIdle) flags |= ArteProtocol.FlagSelfTest;
+            options.Curve = LedOutputModel.ParseCurve(Setup.outputCurve);
             options.Config = new DeviceConfig
             {
                 BrightnessPerf = (byte)Mathf.Clamp(Setup.brightnessPerf, 0, 255),

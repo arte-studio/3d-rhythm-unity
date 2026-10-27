@@ -1,4 +1,5 @@
 using System;
+using Arte.Rhythm.Hardware;
 
 namespace Arte.Rhythm.Net
 {
@@ -90,19 +91,19 @@ namespace Arte.Rhythm.Net
             return true;
         }
 
-        /// <summary>明るさを掛ける（LedOutputModel.ApplyBrightness と同じ式を表で引く）．</summary>
-        public static void ApplyBrightness(ReadOnlySpan<byte> src, Span<byte> dest, byte brightness)
+        /// <summary>曲線と明るさを掛けて LED に送る値にする（LedOutputModel.Encode と同じ値を表で引く）．</summary>
+        public static void ApplyOutput(ReadOnlySpan<byte> src, Span<byte> dest, byte brightness, LedOutputModel.OutputCurve curve)
         {
-            var table = tables[brightness] ??= BuildTable(brightness);
+            var table = tables[(int)curve * 256 + brightness] ??= BuildTable(brightness, curve);
             for (int i = 0; i < src.Length; i++) dest[i] = table[src[i]];
         }
 
-        static readonly byte[][] tables = new byte[256][];
+        static readonly byte[][] tables = new byte[2 * 256][];
 
-        static byte[] BuildTable(byte brightness)
+        static byte[] BuildTable(byte brightness, LedOutputModel.OutputCurve curve)
         {
             var t = new byte[256];
-            for (int c = 0; c < 256; c++) t[c] = Hardware.LedOutputModel.ApplyBrightness((byte)c, brightness);
+            for (int c = 0; c < 256; c++) t[c] = LedOutputModel.Encode((byte)c, brightness, curve);
             return t;
         }
     }

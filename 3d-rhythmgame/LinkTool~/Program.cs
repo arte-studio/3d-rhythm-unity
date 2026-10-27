@@ -8,11 +8,12 @@ using Arte.Rhythm.Net;
 
 // 実機（ファーム v2）とつないで，テスト表示を送りながら状態を表示する．
 //
-//   dotnet run --project 3d-rhythmgame/LinkTool~ -- <表示> [秒数] [--setup 名前] [--assign MAC 番号] [--brightness 演出 ノーツ] [--fps 送信fps] [--leds 1パケットのLED数] [--raw] [--adaptive]
+//   dotnet run --project 3d-rhythmgame/LinkTool~ -- <表示> [秒数] [--setup 名前] [--assign MAC 番号] [--brightness 演出 ノーツ] [--fps 送信fps] [--leds 1パケットのLED数] [--raw] [--adaptive] [--srgb]
 //     表示: off | heads | canvas | notes | rainbow（既定 heads）
 //     秒数: 0 なら Ctrl+C まで（既定 0）
 //     --raw: 圧縮しない（毎回全ピンをそのまま送る．比較用）
 //     --adaptive: 混み具合を見て送る頻度を下げる（LinkOptions.AdaptiveRate）
+//     --srgb: 色を sRGB とみなして光量に直してから送る（設営データの outputCurve より優先）
 //   例: dotnet run --project 3d-rhythmgame/LinkTool~ -- canvas 30
 //       dotnet run --project 3d-rhythmgame/LinkTool~ -- heads 10 --assign 1C:DB:D4:5B:65:28 5
 static class Program
@@ -27,7 +28,7 @@ static class Program
         int? brightPerf = null, brightNote = null;
         double fps = 60;
         int maxLeds = 0;
-        bool raw = false, adaptive = false;
+        bool raw = false, adaptive = false, srgb = false;
         var positional = 0;
         for (int i = 0; i < args.Length; i++)
         {
@@ -40,6 +41,7 @@ static class Program
                 case "--leds": maxLeds = int.Parse(args[++i]); break;
                 case "--raw": raw = true; break;
                 case "--adaptive": adaptive = true; break;
+                case "--srgb": srgb = true; break;
                 default:
                     if (positional++ == 0) mode = ParseMode(args[i]);
                     else seconds = double.Parse(args[i]);
@@ -68,6 +70,7 @@ static class Program
         var options = new LinkOptions
         {
             HostPort = config.devices.hostPort, DeviceCount = config.devices.count, Compact = !raw, AdaptiveRate = adaptive, MaxSendFps = fps,
+            Curve = srgb ? LedOutputModel.OutputCurve.Srgb : LedOutputModel.ParseCurve(setup.outputCurve),
         };
         options.Config.BrightnessPerf = (byte)(brightPerf ?? setup.brightnessPerf);
         options.Config.BrightnessNote = (byte)(brightNote ?? setup.brightnessNote);
@@ -83,7 +86,7 @@ static class Program
         };
         host.Start();
         Console.WriteLine($"ポート {host.LocalPort} で待受．表示 {mode}，設営 {setup.name}，明るさ {options.Config.BrightnessPerf}/{options.Config.BrightnessNote}，" +
-                          $"{(raw ? "圧縮なし" : "圧縮あり")}{(adaptive ? "，頻度の自動調整あり" : "")}．Ctrl+C で終了");
+                          $"{(raw ? "圧縮なし" : "圧縮あり")}{(adaptive ? "，頻度の自動調整あり" : "")}，曲線 {options.Curve}．Ctrl+C で終了");
 
         bool stop = false;
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; stop = true; };
