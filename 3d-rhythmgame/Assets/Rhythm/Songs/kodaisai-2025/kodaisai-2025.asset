@@ -15,4 +15,4 @@ MonoBehaviour:
   songJson: {fileID: 4900000, guid: 9f0da0481cba124439aae3edd486db41, type: 3}
   audio: {fileID: 8300000, guid: 974ac941e5572f74a991e6b2a6f890ae, type: 3}
   video: {fileID: 32900000, guid: c5addd324ece13240b2f65b7e843b641, type: 3}
-  timeline: {fileID: 0}
+  timeline: {fileID: 11400000, guid: 09b7a9bd8a477724194bbe2d6b3e220c, type: 2}
