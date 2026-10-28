@@ -5,7 +5,7 @@ namespace Arte.Rhythm.Gameplay
     /// <summary>
     /// タッチノーツの判定ルール．既定値は旧仕様書（docs/legacy/SPECIFICATION-v1.md 9.1）の判定幅（2026-10-27 にユーザーが決定．
     /// 今の仕様は docs/SPECIFICATION.md 5 章）．
-    /// 旧版（古代祭 2025-11-01 のシーン設定）の値は Legacy() で作れる．
+    /// 旧版（工大祭 2025-11-01 のシーン設定）の値は Legacy() で作れる．
     ///
     /// d = タッチ時刻 − ノーツ時刻として:
     /// <code>
@@ -43,7 +43,7 @@ namespace Arte.Rhythm.Gameplay
         [JsonIgnore] public double AcceptUntilSec => GoodSec + MissAfterSec;
 
         /// <summary>
-        /// 旧版（古代祭のシーン設定）の判定．Perfect = [-2.0, +0.5] 秒，Good = [-3.0, -2.0) 秒，得点 5/3．
+        /// 旧版（工大祭のシーン設定）の判定．Perfect = [-2.0, +0.5] 秒，Good = [-3.0, -2.0) 秒，得点 5/3．
         /// 遅れ側は MissAfterSec で切れるので，PerfectSec の遅れ側（+0.5〜+2.0）は使われない．
         /// </summary>
         public static JudgeRules Legacy() => new JudgeRules

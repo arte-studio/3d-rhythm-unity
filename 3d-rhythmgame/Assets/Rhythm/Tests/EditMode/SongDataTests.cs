@@ -50,7 +50,7 @@ namespace Arte.Rhythm.Tests
         public void SongJson_RoundTripsLegacyChart()
         {
             string legacy = File.ReadAllText(Path.Combine(TestData.LegacyResourcesDir(), "Kodaisai_NoteData_1101.json"));
-            var song = SongJson.FromLegacy(legacy, "古代祭");
+            var song = SongJson.FromLegacy(legacy, "工大祭");
             string json = SongJson.Save(song);
             var loaded = SongJson.Load(json);
             var a = LegacyChartJson.Parse(legacy).Notes;

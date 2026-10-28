@@ -261,7 +261,7 @@ namespace Arte.Rhythm.Editor
             return w;
         }
 
-        // 曲の Timeline（古代祭版）のクリップ．曲に入れた Timeline なので「小節・拍」の欄が出る
+        // 曲の Timeline（工大祭版）のクリップ．曲に入れた Timeline なので「小節・拍」の欄が出る
         static EditorWindow ClipInspector()
         {
             var song = AssetDatabase.LoadAssetAtPath<Song.SongAsset>("Assets/Rhythm/Songs/kodaisai-2025/kodaisai-2025.asset");
@@ -306,7 +306,7 @@ namespace Arte.Rhythm.Editor
             return w;
         }
 
-        // 曲の Timeline（古代祭版の演出）．一番上に小節と区切りの目印
+        // 曲の Timeline（工大祭版の演出）．一番上に小節と区切りの目印
         static EditorWindow KodaisaiTimeline()
         {
             var song = AssetDatabase.LoadAssetAtPath<Song.SongAsset>("Assets/Rhythm/Songs/kodaisai-2025/kodaisai-2025.asset");

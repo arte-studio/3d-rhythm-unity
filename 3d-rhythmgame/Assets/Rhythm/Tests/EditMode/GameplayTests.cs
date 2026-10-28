@@ -170,7 +170,7 @@ namespace Arte.Rhythm.Tests
             Assert.That(events.Count, Is.EqualTo(chart.Notes.Count(n => n.Type == NoteType.Touch)), "全ノーツが1回ずつ判定される");
         }
 
-        // ---- 判定の境界（旧版 = 古代祭の値） ----
+        // ---- 判定の境界（旧版 = 工大祭の値） ----
 
         static Chart OneNote(double t = 10, int lane = 0) => new Chart(new[] { new ChartNote(t, lane, NoteType.Touch) });
 

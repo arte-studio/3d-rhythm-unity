@@ -10,7 +10,7 @@ using UnityEngine.Timeline;
 namespace Arte.Rhythm.Editor
 {
     /// <summary>
-    /// 古代祭版（kodaisai-2025）の演出の下書きを Timeline に一度だけ並べる（初期の演出仕様書 docs/effects/original-spec.md から）．
+    /// 工大祭版（kodaisai-2025）の演出の下書きを Timeline に一度だけ並べる（初期の演出仕様書 docs/effects/original-spec.md から）．
     /// 並べたあとは普通の Timeline として手で直す．もう一度実行しても，Timeline が既にあれば何もしない（手で直したものを消さない）．
     /// 位置は小節で決めている（曲の区切りは小節の頭: 前奏 0〜8，A メロ 9〜16，B メロ 17〜26，サビ1 27〜40，サビ前 41，サビ2 42〜50，最後 51〜）．
     /// 仕様書との対応は docs/effects/kodaisai-2025.md．

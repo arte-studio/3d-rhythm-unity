@@ -1,4 +1,4 @@
-# 古代祭版（kodaisai-2025）の演出: 仕様書との対応
+# 工大祭版（kodaisai-2025）の演出: 仕様書との対応
 
 大本は初期の演出仕様書（`docs/effects/original-spec.md`）．それを Timeline
 （`3d-rhythmgame/Assets/Rhythm/Effects/kodaisai-2025/kodaisai-2025.playable`，曲の SongAsset の timeline）に下書きとして並べた（2026-10-28）．

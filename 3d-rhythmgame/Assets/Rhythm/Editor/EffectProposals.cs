@@ -13,7 +13,7 @@ using UnityEngine.Timeline;
 namespace Arte.Rhythm.Editor
 {
     /// <summary>
-    /// AI（Claude）が作った古代祭版の演出案 A・B・C を Timeline に組み立てる（docs/effects/ai-proposals.md）．
+    /// AI（Claude）が作った工大祭版の演出案 A・B・C を Timeline に組み立てる（docs/effects/ai-proposals.md）．
     /// 曲の特徴（Effects/kodaisai-2025-ai/music.json．EffectEval~/music_features.py が書く）のアクセントを読んで，
     /// 光らせるものを選んで置く．実行するたびに案のフォルダを作り直す（AI が組み直すためのもの）．
     /// 手で直したい案は，フォルダごと複製してから直す．
