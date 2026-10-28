@@ -20,8 +20,8 @@
     { "lane": 9, "device": 7, "module": 0 },
     { "lane": 10, "device": 7, "module": 1 }
   ],
-  "brightnessPerf": 50,
-  "brightnessNote": 50,
+  "brightnessPerf": 100,
+  "brightnessNote": 100,
   "outputCurve": "srgb",
   "room": { "floor": "carpet-gray", "curtain": "blackout", "curtainRadiusM": 3.0, "curtainHeightM": 3.0 },
   "modules": [
