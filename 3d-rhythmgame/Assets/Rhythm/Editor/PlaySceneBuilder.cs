@@ -110,6 +110,10 @@ namespace Arte.Rhythm.Editor
         static void AddViewer(LedPreview preview)
         {
             preview.material = MaterialAsset("Arte/LedPreview/Point", "LedPoint");
+            // むぎゅっとの半透明の半球（半径 47.5mm）
+            var domes = preview.gameObject.AddComponent<ModuleDomes>();
+            domes.preview = preview;
+            domes.material = MaterialAsset("Arte/Viewer/Dome", "Dome");
             var room = preview.gameObject.AddComponent<ViewerRoom>();
             room.preview = preview;
             room.litMaterial = MaterialAsset("Arte/Viewer/LitByLeds", "LitByLeds");

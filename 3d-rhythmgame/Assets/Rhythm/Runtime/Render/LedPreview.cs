@@ -60,6 +60,9 @@ namespace Arte.Rhythm.Render
         public NoteLayout Notes { get; private set; }
         public SetupProfile Setup { get; private set; }
 
+        /// <summary>LED に送る値（明るさと曲線を掛けたあと．光量に比例）．ModuleDomes が使う．</summary>
+        public LedFrame Output => output;
+
         LedSceneModel model;
         LedFrame output;
         GraphicsBuffer positions, normals, colors, lightPos, lightColor, lightDir;
@@ -104,6 +107,7 @@ namespace Arte.Rhythm.Render
             Notes = new NoteLayout(Hardware, setup);
             int devices = Hardware.devices.count;
             output = LedFrame.FromLayout(Perf, Notes, devices);
+            ModuleDomes.EnsureFor(this);      // むぎゅっとの半球（古いシーンでも出るように）
             if (source == Source.Mirror)
             {
                 Mirror = new MirrorReceiver(output, mirrorPort);

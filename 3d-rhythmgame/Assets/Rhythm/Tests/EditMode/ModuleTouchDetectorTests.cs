@@ -9,8 +9,8 @@ namespace Arte.Rhythm.Tests
     public class ModuleTouchDetectorTests
     {
         // レーン 3 のむぎゅっとが +z 方向 1.2m・高さ 1.0m にある（面は中心 = -z を向く）
-        static ModuleTouchDetector Detector() =>
-            new ModuleTouchDetector(new[] { new ModulePlacement { lane = 3, mugyu = new[] { 0f, 1f, 1.2f } } });
+        static ModuleTouchDetector Detector(TouchShape shape = TouchShape.Box) =>
+            new ModuleTouchDetector(new[] { new ModulePlacement { lane = 3, mugyu = new[] { 0f, 1f, 1.2f } } }) { Shape = shape };
 
         static List<int> Step(ModuleTouchDetector d, params float[] points)
         {
@@ -47,6 +47,20 @@ namespace Arte.Rhythm.Tests
             // 箱の縁（12cm）を少し出入りしても，余裕（3cm）の内なら触れたまま
             Assert.IsEmpty(Step(d, 0.135f, 1, 1.1f));
             Assert.IsEmpty(Step(d, 0.11f, 1, 1.1f));
+        }
+
+        [Test]
+        public void DomeTouchesOnlyAtTheRoundSurface()
+        {
+            // 半球（半径 47.5mm．丸い面は中心 = -z の方を向く）．余裕 1cm なので中心から 57.5mm まで
+            var d = Detector(TouchShape.Dome);
+            Assert.IsEmpty(Step(d, 0, 1, 1.2f - 0.07f), "丸い面の 2cm 手前はまだ");
+            CollectionAssert.AreEqual(new[] { 3 }, Step(d, 0, 1, 1.2f - 0.05f), "丸い面に触れた");
+            Assert.IsEmpty(Step(d, 0, 1, 1.2f - 0.03f), "押し込んでも押し直さない");
+            Assert.IsEmpty(Step(d, 0, 1, 1.2f - 0.12f), "離した");
+            Assert.IsEmpty(Step(d, 0.06f, 1, 1.2f - 0.03f), "横に 6cm（半球の外）");
+            Assert.IsEmpty(Step(d, 0, 1, 1.2f + 0.04f), "裏側（平らな面の 4cm 奥）");
+            CollectionAssert.AreEqual(new[] { 3 }, Step(d, 0.03f, 1.03f, 1.2f - 0.02f), "斜めからでも丸い面に触れればタッチ");
         }
 
         [Test]
