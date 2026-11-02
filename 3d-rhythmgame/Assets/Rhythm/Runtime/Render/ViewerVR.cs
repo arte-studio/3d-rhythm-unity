@@ -23,7 +23,7 @@ namespace Arte.Rhythm.Render
     /// - X / F7: リングの中心に戻る（今いる場所と向きをリングの中心・正面に合わせる）
     /// - Y / F3: 床の種類を切り替える
     /// - 左スティック: 歩く，右スティック: 向きを変える（倒した分だけなめらかに回る．smoothTurn を切ると 30° ずつ）
-    /// - 左の ≡（メニュー）: 曲を最初から始める（Enter），右スティックの押し込み: 一時停止 / 再開（Space），
+    /// - 左の ≡（メニュー）: ホーム画面（VrMenu）を出す / 消す．曲を始める・ゲームを終了するなどはホーム画面から．右スティックの押し込み: 一時停止 / 再開（Space），
     ///   左スティックの押し込み: 演出を切り替える（F9）．Play シーンだけ（Viewer シーンは曲を動かさない）
     /// 将来 VR でゲームを遊ぶときは，コントローラや手の位置をここから取り，ノーツモジュールに触れたらタッチにする．
     /// </summary>
@@ -55,7 +55,7 @@ namespace Arte.Rhythm.Render
         bool childView;
         bool turnReady = true;
         readonly List<InputAction> actions = new List<InputAction>();
-        InputAction childAction, ownAction, recenterAction, floorAction, moveAction, turnAction, startAction, pauseAction, effectsAction;
+        InputAction childAction, ownAction, recenterAction, floorAction, moveAction, turnAction, pauseAction, effectsAction;
         Song.SongConductor conductor;
         Song.SongVisualSync visualSync;
 
@@ -88,6 +88,12 @@ namespace Arte.Rhythm.Render
             SetUpRig();
             SetUpInput();
             Gameplay.VrTouchInput.EnsureInScene();
+            var menu = gameObject.AddComponent<VrMenu>();
+            menu.vr = this;
+            menu.head = cam;
+            menu.rig = rig;
+            var touch = FindFirstObjectByType<Gameplay.VrTouchInput>();
+            menu.lineMaterial = touch != null ? touch.handMaterial : null;
             // 足元の高さを床に合わせる（Floor）．合わせられないランタイムでは頭の高さが 0 になるので，あとで A / B で直す
             var subsystems = new List<XRInputSubsystem>();
             SubsystemManager.GetSubsystems(subsystems);
@@ -126,7 +132,6 @@ namespace Arte.Rhythm.Render
             floorAction = NewAction("<XRController>{LeftHand}/secondaryButton", InputActionType.Button);
             moveAction = NewAction("<XRController>{LeftHand}/thumbstick", InputActionType.Value, "Vector2");
             turnAction = NewAction("<XRController>{RightHand}/thumbstick", InputActionType.Value, "Vector2");
-            startAction = NewAction("<XRController>{LeftHand}/menu", InputActionType.Button);
             pauseAction = NewAction("<XRController>{RightHand}/thumbstickClicked", InputActionType.Button);
             effectsAction = NewAction("<XRController>{LeftHand}/thumbstickClicked", InputActionType.Button);
             conductor = FindFirstObjectByType<Song.SongConductor>();
@@ -148,10 +153,9 @@ namespace Arte.Rhythm.Render
             if (Pressed(childAction) || (kb != null && kb.f5Key.wasPressedThisFrame)) SetChildView(true);
             if (Pressed(ownAction) || (kb != null && kb.f6Key.wasPressedThisFrame)) SetChildView(false);
             if (Pressed(recenterAction) || (kb != null && kb.f7Key.wasPressedThisFrame)) Recenter();
-            if (Pressed(floorAction) && room != null) room.SetFloor((room.FloorIndex + 1) % RoomSurfaces.Floors.Length);
+            if (Pressed(floorAction)) NextFloor();
             if (conductor != null)
             {
-                if (Pressed(startAction)) conductor.Play();
                 if (Pressed(pauseAction) && conductor.IsStarted)
                 {
                     if (conductor.IsPaused) conductor.Resume();
@@ -188,6 +192,15 @@ namespace Arte.Rhythm.Render
         }
 
         static bool Pressed(InputAction a) => a != null && a.WasPressedThisFrame();
+
+        /// <summary>子どもの目の高さで見ているか．</summary>
+        public bool ChildView => childView;
+
+        /// <summary>床の種類を次へ．</summary>
+        public void NextFloor()
+        {
+            if (room != null) room.SetFloor((room.FloorIndex + 1) % RoomSurfaces.Floors.Length);
+        }
 
         /// <summary>子どもの目の高さで見る（true）か，自分の目の高さで見る（false）．</summary>
         public void SetChildView(bool child)

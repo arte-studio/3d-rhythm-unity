@@ -5,7 +5,8 @@
         "Arte.Rhythm.Core",
         "Unity.Timeline",
         "Unity.InputSystem",
-        "Unity.XR.Management"
+        "Unity.XR.Management",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

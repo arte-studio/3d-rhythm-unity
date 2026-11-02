@@ -88,6 +88,7 @@ namespace Arte.Rhythm.Gameplay
                 return;
             }
             var root = layoutRoot != null ? layoutRoot : transform.root;
+            VrMenu.PokePoints.Clear();
             foreach (var h in hands)
             {
                 if (h.detector == null) h.detector = ModuleTouchDetector.FromLayout(link.Notes);
@@ -99,6 +100,7 @@ namespace Arte.Rhythm.Gameplay
                 var tip = rig.TransformPoint(local + rot * (Vector3.forward * tipOffsetM));
                 h.ball.gameObject.SetActive(true);
                 h.ball.position = tip;
+                VrMenu.PokePoints.Add(tip);
                 var p = root.InverseTransformPoint(tip);
                 point[0] = p.x;
                 point[1] = p.y;
