@@ -80,12 +80,14 @@ namespace Arte.Rhythm.Editor
             // 手の認識（HandTracking）は切っておく．Quest Link で手の認識が使えない（hand provider failed to initialize）と，
             // エディタの再生でゲームが 2 フレームで止まり，ヘッドセットが真っ暗のままになった（2026-11-03 に確かめた．Play.exe では止まらない）．
             // 使うときは Meta Quest Link アプリの「ベータ → 開発者ランタイム機能」をオンにしてから，Tools / Arte Rhythm / VR / Enable Hand Tracking
+#if ARTE_XR_HANDS
             var hands = openxr.GetFeature<UnityEngine.XR.Hands.OpenXR.HandTracking>();
             if (hands != null)
             {
                 hands.enabled = false;
                 EditorUtility.SetDirty(hands);
             }
+#endif
             EditorUtility.SetDirty(openxr);
             AssetDatabase.SaveAssets();
             Debug.Log("[VrSetup] OpenXR を設定した（Windows，起動時には始めない，MultiPass，Quest のコントローラ）");
@@ -155,6 +157,7 @@ namespace Arte.Rhythm.Editor
         [MenuItem("Tools/Arte Rhythm/VR/Enable Hand Tracking")]
         static void EnableHandTracking()
         {
+#if ARTE_XR_HANDS
             var openxr = OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Standalone);
             var hands = openxr != null ? openxr.GetFeature<UnityEngine.XR.Hands.OpenXR.HandTracking>() : null;
             if (hands == null) return;
@@ -162,6 +165,9 @@ namespace Arte.Rhythm.Editor
             EditorUtility.SetDirty(hands);
             AssetDatabase.SaveAssets();
             Debug.Log("[VrSetup] 手の認識を有効にした．エディタで VR が真っ暗になったら Set Up OpenXR を実行して切る");
+#else
+            Debug.LogWarning("[VrSetup] XR Hands のパッケージ（com.unity.xr.hands）が入っていない");
+#endif
         }
 
         [MenuItem(PlayInVrMenu)]

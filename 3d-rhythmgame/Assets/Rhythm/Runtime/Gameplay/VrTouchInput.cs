@@ -4,7 +4,9 @@ using Arte.Rhythm.Render;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.XR;
+#if ARTE_XR_HANDS
 using UnityEngine.XR.Hands;
+#endif
 using InputDevices = UnityEngine.XR.InputDevices;
 
 namespace Arte.Rhythm.Gameplay
@@ -137,13 +139,18 @@ namespace Arte.Rhythm.Gameplay
             }
         }
 
+#if ARTE_XR_HANDS
         static XRHandSubsystem handSubsystem;
         static readonly List<XRHandSubsystem> handSubsystems = new List<XRHandSubsystem>();
+#endif
 
-        // 手の認識で人差し指の先（VR の足元の中の座標）
+        // 手の認識で人差し指の先（VR の足元の中の座標）．XR Hands のパッケージがあるときだけ（ARTE_XR_HANDS）
         static bool TryFingerTip(XRNode node, out Vector3 tip)
         {
             tip = default;
+#if !ARTE_XR_HANDS
+            return false;
+#else
             if (handSubsystem == null || !handSubsystem.running)
             {
                 handSubsystems.Clear();
@@ -155,6 +162,7 @@ namespace Arte.Rhythm.Gameplay
             if (!hand.isTracked || !hand.GetJoint(XRHandJointID.IndexTip).TryGetPose(out var pose)) return false;
             tip = pose.position;
             return true;
+#endif
         }
 
         Transform NewBall(Hand h)

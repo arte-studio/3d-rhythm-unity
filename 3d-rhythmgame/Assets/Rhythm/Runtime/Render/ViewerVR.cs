@@ -47,6 +47,9 @@ namespace Arte.Rhythm.Render
         /// <summary>VR で表示しているか．</summary>
         public static bool Active { get; private set; }
 
+        /// <summary>使っている VR の基盤（OpenXR ランタイム）の名前．</summary>
+        public static string RuntimeName { get; private set; } = "";
+
         /// <summary>VR の足元（リグ）．コントローラの位置はこの中の座標で来る（VrTouchInput が使う）．</summary>
         public static Transform Rig { get; private set; }
 
@@ -93,6 +96,12 @@ namespace Arte.Rhythm.Render
 #endif
             manager.StartSubsystems();
             Active = true;
+            // 使っている VR の基盤（OpenXR ランタイム）．Virtual Desktop のランタイム（VirtualDesktopXR）ではコントローラが Unity に来なかった（2026-11-03）
+            RuntimeName = UnityEngine.XR.OpenXR.OpenXRRuntime.name;
+            if (RuntimeName.IndexOf("Oculus", System.StringComparison.OrdinalIgnoreCase) < 0 && RuntimeName.IndexOf("Meta", System.StringComparison.OrdinalIgnoreCase) < 0)
+                Debug.LogWarning($"[ViewerVR] VR の基盤が {RuntimeName}（Meta Quest Link ではない）．コントローラが来ないことがある．Meta Quest Link アプリの「設定 → 一般 → OpenXR ランタイム」で Meta Quest Link を有効にする");
+            else
+                Debug.Log($"[ViewerVR] VR の基盤: {RuntimeName}");
             SetUpRig();
             SetUpInput();
             Debug.Log("[ViewerVR] VR を始める（3/4 視点・ホーム画面を作る）");

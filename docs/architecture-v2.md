@@ -173,6 +173,9 @@ d = タッチ時刻 − ノーツ時刻として，
      PC に Meta Quest Link アプリを入れ，設定 → 一般 → OpenXR ランタイムで「Meta Quest Link を有効にする」．
      Unity の再生でそのままヘッドセットに映る（ビルド不要．Game 画面には片目が出る）．無線の Air Link でも動くが，途切れと区別しにくい．
      開発者モードを入れると Meta Quest Developer Hub で近接センサーを切れる（かぶっていない間も止まらない）
+     **Virtual Desktop は使わない**: Virtual Desktop でつなぐと PC の OpenXR ランタイムが VirtualDesktopXR に変わり，
+     コントローラが Unity に来なかった（2026-11-03）．Meta Quest Link アプリの「設定 → 一般 → OpenXR ランタイム」で Meta Quest Link を有効にする．
+     VR を始めるとランタイムの名前がログとスコアの下に出る（Meta Quest Link でなければ注意が出る）
   2. **始め方**: エディタはメニュー `Tools / Arte Rhythm / VR / Play in VR` にチェックを入れて再生．ビルドは起動引数 `-vr`
      （`Play.exe -vr`，`Viewer.exe -vr`）．ヘッドセットが無ければふつうの画面のまま（ログに理由が出る）
   3. **操作**（`Runtime/Render/ViewerVR.cs`）: 左の ≡ ホーム画面，A / F5 子どもの目の高さ（1.1m に合わせる），B / F6 自分の目の高さ，X / F7 リングの中心・正面に戻る，
@@ -186,7 +189,8 @@ d = タッチ時刻 − ノーツ時刻として，
      むぎゅっとの正面の「触れる箱」（24cm 角，正面 15cm〜奥 10cm．`Core/Gameplay/ModuleTouchDetector.cs`）に手の先が入った瞬間がタッチ．
      触れるとそのコントローラが振動し，手の先に小さな球が出る（`Runtime/Gameplay/VrTouchInput.cs`．入口は `KeyboardTouchInput` と同じ `GameSession.Touch`）．
      古い Play シーンでも ViewerVR が自動で足す．むぎゅっとの置き場所は設営データの `modules`（今は旧版の配置からの仮）．
-     **手の認識**: 仕組みはある（XR Hands．指が見えていれば人差し指の先，見えていなければコントローラ）が，**切ってある**．
+     **手の認識**: 仕組みはある（XR Hands．指が見えていれば人差し指の先，見えていなければコントローラ）が，**パッケージごと外してある**
+     （com.unity.xr.hands を入れると ARTE_XR_HANDS で有効になる）．
      Quest Link で手の認識が使えない（hand provider failed to initialize）と，エディタの再生でゲームが 2 フレームで止まり真っ暗になった（2026-11-03）．
      使うときは Meta Quest Link アプリの「設定 → ベータ → 開発者ランタイム機能」をオンにしてから Tools / Arte Rhythm / VR / Enable Hand Tracking．
      真っ暗になったら Set Up OpenXR を実行して切る．試験: `-executeMethod Arte.Rhythm.Editor.VrSetup.PlayInVrTest`（GUI のエディタで 25 秒 VR 再生）

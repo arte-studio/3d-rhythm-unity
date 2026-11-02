@@ -269,7 +269,7 @@ namespace Arte.Rhythm.Render
             foreach (var d in InputSystem.devices)
                 if (d is UnityEngine.InputSystem.XR.XRController) controllers++;
             string text = $"フレーム {Time.frameCount}　曲 {(conductor != null && conductor.IsStarted ? conductor.SongTime.ToString("F1") + " 秒" : "止まっている")}　" +
-                          $"コントローラ {controllers}　キーボード {(Keyboard.current != null ? "あり" : "なし")}　手前 {(Application.isFocused ? "はい" : "いいえ")}";
+                          $"コントローラ {controllers}（{ViewerVR.RuntimeName}）　キーボード {(Keyboard.current != null ? "あり" : "なし")}　手前 {(Application.isFocused ? "はい" : "いいえ")}";
             hudDiag.text = text;
             if (Time.unscaledTime < diagAt) return;
             diagAt = Time.unscaledTime + 5f;

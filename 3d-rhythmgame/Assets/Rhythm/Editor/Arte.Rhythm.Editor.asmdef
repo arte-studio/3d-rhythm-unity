@@ -23,6 +23,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.xr.hands",
+            "expression": "",
+            "define": "ARTE_XR_HANDS"
+        }
+    ],
     "noEngineReferences": false
 }
