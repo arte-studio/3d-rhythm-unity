@@ -186,8 +186,10 @@ d = タッチ時刻 − ノーツ時刻として，
      むぎゅっとの正面の「触れる箱」（24cm 角，正面 15cm〜奥 10cm．`Core/Gameplay/ModuleTouchDetector.cs`）に手の先が入った瞬間がタッチ．
      触れるとそのコントローラが振動し，手の先に小さな球が出る（`Runtime/Gameplay/VrTouchInput.cs`．入口は `KeyboardTouchInput` と同じ `GameSession.Touch`）．
      古い Play シーンでも ViewerVR が自動で足す．むぎゅっとの置き場所は設営データの `modules`（今は旧版の配置からの仮）．
-     **手の認識**: コントローラを置くと人差し指の先で触れられる（XR Hands．指が見えていれば指，見えていなければコントローラ）．
-     Quest Link で手が出ないときは Meta Quest Link アプリの「設定 → ベータ → 開発者ランタイム機能」をオンにする．
+     **手の認識**: 仕組みはある（XR Hands．指が見えていれば人差し指の先，見えていなければコントローラ）が，**切ってある**．
+     Quest Link で手の認識が使えない（hand provider failed to initialize）と，エディタの再生でゲームが 2 フレームで止まり真っ暗になった（2026-11-03）．
+     使うときは Meta Quest Link アプリの「設定 → ベータ → 開発者ランタイム機能」をオンにしてから Tools / Arte Rhythm / VR / Enable Hand Tracking．
+     真っ暗になったら Set Up OpenXR を実行して切る．試験: `-executeMethod Arte.Rhythm.Editor.VrSetup.PlayInVrTest`（GUI のエディタで 25 秒 VR 再生）
      **ホーム画面**（`Runtime/Render/VrMenu.cs`）: 左の ≡ で出す / 消す．右手の光線とトリガーか，手の先でつついて押す．
      曲を始める，一時停止，演出の切り替え，目の高さ，中心に戻る，床，ゲームを終了（Unity の ■）と操作方法．
      スコアの表示: 正面の上に，スコアと直前の判定（何 ms 早い / 遅いか）．

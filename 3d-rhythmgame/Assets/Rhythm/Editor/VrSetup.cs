@@ -13,7 +13,7 @@ namespace Arte.Rhythm.Editor
     /// <summary>
     /// VR（Meta Quest 3 を Quest Link でつないだ PC VR）の設定．docs/architecture-v2.md の P6．
     /// - Set Up OpenXR: Windows 用に OpenXR を入れ，コントローラ（Quest 3 の Touch Plus と Touch）を使えるようにする．
-    ///   手の認識（XR Hands．Quest Link では Meta Quest Link アプリの「ベータ → 開発者ランタイム機能」が要ることがある）．
+    ///   手の認識（XR Hands）は切っておく（下の SetUp のコメント）．
     ///   起動と同時には VR を始めない（ViewerVR が -vr か下のチェックのときだけ始める）．描き方は両目を 1 回ずつ描く（MultiPass）．
     ///   LED の点の描き方（LedPoint.shader）は頂点番号から四角形を作っているので，両目をまとめて描く方式にはまだ対応していない
     /// - Play in VR: チェックを入れると，エディタの再生で VR が始まる（ヘッドセットに映る．Game 画面には片目が出る）
@@ -67,7 +67,6 @@ namespace Arte.Rhythm.Editor
                      {
                          openxr.GetFeature<MetaQuestTouchPlusControllerProfile>(),
                          openxr.GetFeature<OculusTouchControllerProfile>(),
-                         openxr.GetFeature<UnityEngine.XR.Hands.OpenXR.HandTracking>(),     // 手の認識（コントローラなしで遊ぶ）
                      })
             {
                 if (f == null)
@@ -77,6 +76,15 @@ namespace Arte.Rhythm.Editor
                 }
                 f.enabled = true;
                 EditorUtility.SetDirty(f);
+            }
+            // 手の認識（HandTracking）は切っておく．Quest Link で手の認識が使えない（hand provider failed to initialize）と，
+            // エディタの再生でゲームが 2 フレームで止まり，ヘッドセットが真っ暗のままになった（2026-11-03 に確かめた．Play.exe では止まらない）．
+            // 使うときは Meta Quest Link アプリの「ベータ → 開発者ランタイム機能」をオンにしてから，Tools / Arte Rhythm / VR / Enable Hand Tracking
+            var hands = openxr.GetFeature<UnityEngine.XR.Hands.OpenXR.HandTracking>();
+            if (hands != null)
+            {
+                hands.enabled = false;
+                EditorUtility.SetDirty(hands);
             }
             EditorUtility.SetDirty(openxr);
             AssetDatabase.SaveAssets();
@@ -103,8 +111,8 @@ namespace Arte.Rhythm.Editor
             if (type != null) EditorWindow.GetWindow(type, false, null, true).Focus();
         }
 
-        // Play in VR のときは再生を始めたら Game ビューを前に出す．Game ビューが出ていないとゲームが 1 フレームも進まず，
-        // ヘッドセットが真っ暗のままになった（2026-11-03．エディタで 25 秒に 2 フレーム．Game ビューを出すと 5407 フレーム）
+        // Play in VR のときは再生を始めたら Game ビューを前に出す（片目の映像を PC でも見られるように）．
+        // なお 2026-11-03 にエディタで真っ暗になった本当の原因は手の認識（SetUp のコメント）で，Game ビューではなかった
         [InitializeOnLoadMethod]
         static void WatchPlayMode()
         {
@@ -134,6 +142,19 @@ namespace Arte.Rhythm.Editor
                 EditorApplication.isPlaying = false;
                 EditorApplication.delayCall += () => EditorApplication.Exit(0);
             };
+        }
+
+        /// <summary>手の認識を有効にする（Meta Quest Link の開発者ランタイム機能を入れてから．エディタで真っ暗になったら Set Up OpenXR で切る）．</summary>
+        [MenuItem("Tools/Arte Rhythm/VR/Enable Hand Tracking")]
+        static void EnableHandTracking()
+        {
+            var openxr = OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Standalone);
+            var hands = openxr != null ? openxr.GetFeature<UnityEngine.XR.Hands.OpenXR.HandTracking>() : null;
+            if (hands == null) return;
+            hands.enabled = true;
+            EditorUtility.SetDirty(hands);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[VrSetup] 手の認識を有効にした．エディタで VR が真っ暗になったら Set Up OpenXR を実行して切る");
         }
 
         [MenuItem(PlayInVrMenu)]
