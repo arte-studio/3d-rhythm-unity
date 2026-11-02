@@ -33,6 +33,7 @@ namespace Arte.Rhythm.Render
 
         /// <summary>今の床の種類（表示用）．</summary>
         public string FloorLabel => RoomSurfaces.Floors[floorIndex].Label;
+        public int FloorIndex => floorIndex;
         public string CurtainLabel { get; private set; }
 
         void Start()

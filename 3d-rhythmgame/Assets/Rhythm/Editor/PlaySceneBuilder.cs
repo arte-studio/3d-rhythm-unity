@@ -120,6 +120,8 @@ namespace Arte.Rhythm.Editor
             cam.allowHDR = true;
             cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
             cam.gameObject.AddComponent<ViewerCamera>();
+            // VR（Quest Link）で見る．-vr か Tools / Arte Rhythm / VR / Play in VR のときだけ始まる
+            preview.gameObject.AddComponent<ViewerVR>().room = room;
             var volume = new GameObject("PostProcess").AddComponent<Volume>();
             volume.isGlobal = true;
             volume.sharedProfile = VolumeProfileAsset();

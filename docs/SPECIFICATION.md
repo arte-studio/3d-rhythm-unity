@@ -165,7 +165,7 @@ d = タッチ時刻 − ノーツ時刻（秒）．既定は旧仕様書の判�
 - 暗幕の部屋: 床・暗幕・テープ本体を LED の光だけで照らす．床と暗幕は設営データの `room` で選ぶ
   （床: グレーのカーペット / 白い床（学校）/ コンクリート．暗幕: 一般的な黒い暗幕）．
 - 視点: リングの中心の子ども・大人の目の高さ，外から，真上から．歩いて見回せる．
-- VR（Meta Quest 3）は計画だけ（`docs/architecture-v2.md` の P6）．
+- VR: Meta Quest 3 を Quest Link で PC につないで見る（エディタは Tools / Arte Rhythm / VR / Play in VR，ビルドは `-vr`．`docs/architecture-v2.md` の P6）．VR で遊ぶのはこれから．
 
 ## 11. 制作の道具
 

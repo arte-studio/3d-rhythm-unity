@@ -4,7 +4,8 @@
     "references": [
         "Arte.Rhythm.Core",
         "Unity.Timeline",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.XR.Management"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

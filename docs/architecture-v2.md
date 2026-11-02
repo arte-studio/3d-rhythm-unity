@@ -41,7 +41,7 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 | P3 | 曲データ形式＋Timeline での譜面・演出編集環境＋音楽との同期 | song.json，予約再生と時刻補間，動画/Timeline 同期，譜面エディタ，確認用シーン（`docs/authoring/chart-editor.md`）．演出クリップは P5/P7 |
 | P4 | UDP v2＋ファーム v2（S3 に統一） | プロトコル v2，ファーム v2.1，DeviceLink・接続モニタ・テスト表示，LinkTool~．実機 1 台で接続・時刻合わせ・表示を確認（タッチは未接続） |
 | P5 | LED 描画の GPU 化（ノート PC で 60fps 固定） | 送信の圧縮，明るさを PC で掛ける（ファーム v2.2），色の曲線（linear/srgb），演出用キャンバス（GPU → LED），シミュレーション表示（HDR），ノーツ用 LED（旧版と同じ動き），ノーツモジュールの置き場所（仮） |
-| P6 | Viewer（光の広がり，暗幕の部屋，内側からの視点，VR の準備） | 部屋（床・暗幕・テープ本体を LED の光で照らす），カメラ操作，別 PC へのミラー（Viewer.exe）．VR は未（下記） |
+| P6 | Viewer（光の広がり，暗幕の部屋，内側からの視点，VR の準備） | 部屋（床・暗幕・テープ本体を LED の光で照らす），カメラ操作，別 PC へのミラー（Viewer.exe），VR の表示（Quest Link．下記） |
 | P7 | 演出の制作環境とプレビュー書き出し，美大生向けテンプレート | Timeline の LED 演出トラック，テンプレート 7 種と見本，プレビュー動画の書き出し，手引き（`docs/authoring/led-effects.md`） |
 | P8 | 既存演出の移行，仕様書の更新 | 曲の区切りとテンポ，Timeline を小節・拍で扱う仕組み，工大祭版の演出の下書き（`docs/effects/kodaisai-2025.md`），仕様書 v2（`docs/SPECIFICATION.md`．旧版は `docs/legacy/SPECIFICATION-v1.md`） |
 
@@ -168,16 +168,22 @@ d = タッチ時刻 − ノーツ時刻として，
 - **視点**（`ViewerCamera`）: 右ボタン + マウス / WASD / Q E で歩く．F5 中心・子どもの目（1.1m），F6 中心・大人の目（1.6m），F7 外から，F8 真上から．
   右ボタンを押している間はキーボードのレーン入力を止める
 - **速度**: Play シーン（曲の再生・部屋込み）1920×1080 で，開発用デスクトップ 1 フレーム平均 3.8ms（99% 6.9ms），GC 0
-- **VR（計画．Meta Quest 3 が届いてから実装）**
-  1. 方式: 開発用デスクトップ（RTX 3060）で Viewer を動かし，Quest Link（USB-C ケーブル）か Air Link で Quest 3 に映す PC VR にする．
-     本番のノート PC から `-mirror` でデスクトップへ LED のデータを送るので，ゲームの PC には負荷がかからない．
-     Quest 3 単体で動かす（Android ビルド）のは，描画の負荷と Wi-Fi でのミラー受信を確かめてから考える
-  2. Unity: XR Plugin Management + OpenXR（Meta Quest の機能グループ）．URP の設定で HDR・ブルームは残し，描画は single-pass instanced
-  3. シェーダー: `LedPoint.shader` は頂点番号から四角形を作っているので，single-pass instanced では両目分を描けるように
-     インスタンス番号で目を選ぶ（`unity_StereoEyeIndex`）か，multi-pass にする．`LitByLeds.shader` は普通のメッシュなのでステレオ用のマクロを足すだけ
-  4. 視点: `ViewerCamera` の代わりに XR Origin（頭の位置はヘッドセット）．床の高さを合わせ，コントローラで F5〜F8 と同じ視点に移動・床の種類を切り替え
-  5. 速度: 両目で 2064×2208 × 2，72〜90Hz．デスクトップの今の値（1080p で 3.8ms）からは余裕がある見込みだが，ブルームの解像度を下げるなど調整する
-  6. 確認すること: 暗幕の部屋の暗さ（Quest 3 の LCD の黒の浮き），LED の眩しさ（トーンマップ），実際の大きさ（1m が 1m に見えるか）
+- **VR（表示は 2026-11-02 に作った．Meta Quest 3 を PC につなぐ PC VR．SteamVR は対象にしない）**
+  1. **つなぎ方（デバッグしやすい順）**: 開発用デスクトップ（RTX 3060）に USB-C ケーブル（USB 3）で **Quest Link**．
+     PC に Meta Quest Link アプリを入れ，設定 → 一般 → OpenXR ランタイムで「Meta Quest Link を有効にする」．
+     Unity の再生でそのままヘッドセットに映る（ビルド不要．Game 画面には片目が出る）．無線の Air Link でも動くが，途切れと区別しにくい．
+     開発者モードを入れると Meta Quest Developer Hub で近接センサーを切れる（かぶっていない間も止まらない）
+  2. **始め方**: エディタはメニュー `Tools / Arte Rhythm / VR / Play in VR` にチェックを入れて再生．ビルドは起動引数 `-vr`
+     （`Play.exe -vr`，`Viewer.exe -vr`）．ヘッドセットが無ければふつうの画面のまま（ログに理由が出る）
+  3. **操作**（`Runtime/Render/ViewerVR.cs`）: A / F5 子どもの目の高さ（1.1m に合わせる），B / F6 自分の目の高さ，X / F7 リングの中心・正面に戻る，
+     Y / F3 床の種類，左スティックで歩く，右スティックで 30° ずつ向きを変える．始めにリングの中心に立つ
+  4. **設定**（`Editor/VrSetup.cs`．`Tools / Arte Rhythm / VR / Set Up OpenXR (Quest Link)`）: Windows 用に OpenXR，起動時には始めない，
+     Quest のコントローラ（Touch Plus，Touch）．描き方は両目を 1 回ずつ描く **MultiPass**（`LedPoint.shader` が頂点番号から四角形を作っていて，
+     両目をまとめて描く single-pass instanced にはまだ対応していないため．重ければ対応する）
+  5. **本番と分けて見る**: 本番のノート PC から `-mirror` でデスクトップへ LED を送り，デスクトップで `Viewer.exe -vr`．ゲームの PC には負荷がかからない
+  6. **これから**: VR でゲームを遊ぶ（ノーツモジュールの位置に当たり判定を置き，手かコントローラが触れたらそのレーンのタッチにする．
+     `KeyboardTouchInput` と同じ入口）．確かめること: 暗幕の部屋の暗さ（Quest 3 の LCD の黒の浮き），LED の眩しさ（トーンマップ），
+     実際の大きさ（1m が 1m に見えるか），速さ（両目 2064×2208 × 2，72〜90Hz）
 
 ## P7: 演出の制作環境
 
