@@ -6,14 +6,39 @@ using Arte.Rhythm.Net;
 
 namespace Arte.Rhythm.Gameplay
 {
+    /// <summary>案内（ノーツが来ることとタイミング）の見せ方．</summary>
+    public enum NoteApproach
+    {
+        /// <summary>
+        /// 拍で案内する（2026-11-03 ユーザー決定）: ノーツ時刻の approachBeats 拍前から，
+        /// むぎゅっとの外周の四角が中心へ縮み（中心の 2×2 は薄く点けておく．閉じた瞬間がノーツ時刻），
+        /// つながるノーツ用テープの遠い端から光の粒が走ってむぎゅっとの側の端に着き，1 拍ごとに光が強まる（最後の 1 拍は色を変える）．
+        /// </summary>
+        Beats,
+        /// <summary>旧版: ノーツ時刻の SpawnLeadSec 前から青の点滅（openBlinkPeriodSec．ノーツ時刻にちょうど点く位相）．何回目かを数えないと分かりにくかった</summary>
+        Blink,
+    }
+
     /// <summary>ノーツ用 LED の見た目の設定．色は旧仕様書（docs/legacy/SPECIFICATION-v1.md 7.1），速さなどは旧版の値（docs/SPECIFICATION.md 6 章）．</summary>
     [Serializable]
     public sealed class NoteLedStyle
     {
-        /// <summary>案内（タイミング案内）は青の点滅．</summary>
+        public NoteApproach approach = NoteApproach.Beats;
+        /// <summary>案内の色（青）．</summary>
         public byte[] openColor = { 0, 0, 255 };
-        /// <summary>点滅の周期．ノーツ時刻にちょうど点く位相にそろえる．</summary>
+        /// <summary>Blink: 点滅の周期．ノーツ時刻にちょうど点く位相にそろえる．</summary>
         public float openBlinkPeriodSec = 0.5f;
+        /// <summary>Beats: 何拍前から案内するか．</summary>
+        public float approachBeats = 3f;
+        /// <summary>Beats: 最後の 1 拍の色（水色）．</summary>
+        public byte[] approachLastColor = { 0, 200, 255 };
+        /// <summary>Beats: 中心の 2×2（閉じる先）の明るさ（0〜1）．</summary>
+        public float approachTargetLevel = 0.25f;
+        /// <summary>Beats: 拍で強まった光が戻る速さ（大きいほど早く戻る）と，戻った先の明るさ（0〜1）．</summary>
+        public float approachPulseDecay = 4f;
+        public float approachPulseMin = 0.55f;
+        /// <summary>Beats: テープを走る光の粒の尾の長さ（個）．</summary>
+        public float approachTailLeds = 5f;
         public byte[] perfectColor = { 0, 255, 0 };     // 緑
         public byte[] goodColor = { 255, 255, 0 };      // 黄
         public byte[] missColor = { 255, 0, 0 };        // 赤
@@ -69,6 +94,7 @@ namespace Arte.Rhythm.Gameplay
         readonly int[] lanes;               // 実機にあるレーン
         readonly byte[][] mugu;             // [lane] むぎゅっとの LED × 3 バイト（行 × 列の順）
         readonly byte[][] connect;          // [lane] 30 × 3 バイト（R と G を入れ替える前）
+        readonly byte[][] approachConnect;  // [lane] テープを走る光の粒（毎フレーム描き直す．connect に明るい方で重ねる）
         readonly double[] trailStart;       // [lane] NaN = 流れていない
         readonly byte[][] trailColor;
         readonly double[] judgedAt;         // [lane] NaN = 判定色を出していない
@@ -88,6 +114,7 @@ namespace Arte.Rhythm.Gameplay
             foreach (int l in lanes) laneCount = Math.Max(laneCount, l + 1);
             mugu = new byte[laneCount][];
             connect = new byte[laneCount][];
+            approachConnect = new byte[laneCount][];
             trailColor = new byte[laneCount][];
             trailStart = new double[laneCount];
             judgedColor = new byte[laneCount][];
@@ -97,6 +124,7 @@ namespace Arte.Rhythm.Gameplay
             {
                 mugu[l] = new byte[layout.MuguLeds * Channels];
                 connect[l] = new byte[layout.ConnectLeds * Channels];
+                approachConnect[l] = new byte[layout.ConnectLeds * Channels];
                 trailColor[l] = new byte[Channels];
                 judgedColor[l] = new byte[Channels];
             }
@@ -104,6 +132,17 @@ namespace Arte.Rhythm.Gameplay
         }
 
         public NoteLedStyle Style => style;
+
+        /// <summary>曲のテンポ（Beats の案内の 1 拍の長さに使う）．無ければ 120BPM．</summary>
+        public TempoMap Tempo { get; set; }
+
+        double SecPerBeatAt(double t)
+        {
+            if (Tempo == null) return 0.5;
+            const double dt = 0.01;
+            double beats = Tempo.BeatOf(t) - Tempo.BeatOf(t - dt);
+            return beats > 1e-9 ? dt / beats : 0.5;
+        }
 
         /// <summary>曲の始めに呼ぶ（全部消える）．</summary>
         public void Reset()
@@ -149,7 +188,12 @@ namespace Arte.Rhythm.Gameplay
         {
             for (int l = 0; l < laneCount; l++)
                 if (!double.IsNaN(judgedAt[l])) PaintJudged(l, realtime);
-            if (chart != null && judge != null) PaintOpenNotes(chart, judge, songTime);
+            for (int l = 0; l < laneCount; l++) Array.Clear(approachConnect[l], 0, approachConnect[l].Length);
+            if (chart != null && judge != null)
+            {
+                if (style.approach == NoteApproach.Beats) PaintApproach(chart, judge, songTime);
+                else PaintOpenNotes(chart, judge, songTime);
+            }
             if (playing && style.connectSweep) PaintSweep(deltaTime);
             for (int l = 0; l < laneCount; l++)
                 if (!double.IsNaN(trailStart[l])) PaintTrail(l, realtime);
@@ -227,6 +271,72 @@ namespace Arte.Rhythm.Gameplay
             }
         }
 
+        readonly HashSet<int> approachPainted = new HashSet<int>();
+
+        // 拍で案内する（NoteApproach.Beats）
+        void PaintApproach(Chart chart, TouchJudge judge, double songTime)
+        {
+            var notes = chart.Notes;
+            while (openCursor < notes.Count && (notes[openCursor].Type != NoteType.Touch || judge.ResultOf(openCursor) != null)) openCursor++;
+            approachPainted.Clear();
+            for (int i = openCursor; i < notes.Count && notes[i].Time - 10 <= songTime; i++)
+            {
+                if (notes[i].Type != NoteType.Touch || judge.ResultOf(i) != null || !Has(notes[i].Lane)) continue;
+                double beat = SecPerBeatAt(notes[i].Time);
+                double window = style.approachBeats * beat;
+                double before = notes[i].Time - songTime;          // ノーツ時刻まであと何秒
+                if (before > window) continue;
+                int lane = notes[i].Lane;
+                // 同じレーンに続けてノーツがあるときは先のものを描く（後のものは前のノーツの判定のあと）
+                if (!approachPainted.Add(lane)) continue;
+                double remain = Math.Max(0, before) / window;        // 1 → 0（ノーツ時刻で 0．過ぎたら 0 のまま）
+                double beatsBefore = before / beat;                  // ノーツ時刻まであと何拍
+                // 拍の頭（ノーツ時刻から 1 拍ずつ数えたところ）からどれだけ過ぎたか（拍に対する割合）
+                double phase = beatsBefore > 0 ? Math.Ceiling(beatsBefore) - beatsBefore : Math.Min(1, -beatsBefore);
+                float pulse = style.approachPulseMin + (1 - style.approachPulseMin) * (float)Math.Exp(-phase * style.approachPulseDecay);
+                var color = beatsBefore <= 1 ? style.approachLastColor : style.openColor;
+                PaintShrinkingSquare(mugu[lane], (float)remain, pulse, color);
+                PaintComet(approachConnect[lane], (float)remain, pulse, color);
+            }
+        }
+
+        // 外周の四角が中心へ縮む．remain = 1 で外周（8×8 の縁），0 で中心の 2×2．中心はいつも薄く点ける
+        void PaintShrinkingSquare(byte[] dest, float remain, float pulse, byte[] color)
+        {
+            int rows = layout.MuguRows, cols = layout.MuguColumns;
+            float cx = (cols - 1) / 2f, cy = (rows - 1) / 2f;
+            float outer = Math.Max(cx, cy);                 // 縁の距離（8×8 なら 3.5）
+            const float inner = 0.5f;                       // 中心の 2×2 の距離
+            float ring = inner + (outer - inner) * remain;
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    float d = Math.Max(Math.Abs(c - cx), Math.Abs(r - cy));      // 中心からの四角い距離
+                    float k = Clamp01(1f - Math.Abs(d - ring) / 0.8f) * pulse;
+                    if (d <= inner + 1e-3f) k = Math.Max(k, style.approachTargetLevel);
+                    int i = (r * cols + c) * Channels;
+                    for (int ch = 0; ch < Channels; ch++) dest[i + ch] = ToByte(color[ch] / 255f * k);
+                }
+            }
+        }
+
+        // つながるノーツ用テープの遠い端（最後の LED）から，むぎゅっとの側の端（0 番目）へ光の粒が走る．remain = 0 で 0 番目に着く
+        void PaintComet(byte[] dest, float remain, float pulse, byte[] color)
+        {
+            int n = layout.ConnectLeds;
+            float head = (n - 1) * remain;
+            float tail = Math.Max(0.5f, style.approachTailLeds);
+            for (int i = 0; i < n; i++)
+            {
+                float behind = i - head;                         // 頭より遠い側が尾
+                float k = behind < -0.5f ? 0 : behind <= 0.5f ? 1f : (float)Math.Exp(-(behind - 0.5f) / tail * 2.5f);
+                k *= pulse;
+                for (int ch = 0; ch < Channels; ch++)
+                    dest[i * Channels + ch] = Math.Max(dest[i * Channels + ch], ToByte(color[ch] / 255f * k));
+            }
+        }
+
         // 旧 RunTouchJudgeTrail と同じ計算（float，Color → Color32 の丸めも同じ）
         void PaintTrail(int lane, double realtime)
         {
@@ -299,13 +409,17 @@ namespace Arte.Rhythm.Gameplay
                 if (conStart + layout.ConnectLeds * Channels > pin.Length) continue;
                 mugu[lane].AsSpan().CopyTo(pin.Slice(muguStart));
                 var con = connect[lane];
+                var over = approachConnect[lane];
                 bool swap = layout.ConnectSwapRG;
                 for (int i = 0; i < layout.ConnectLeds; i++)
                 {
-                    byte r = con[i * Channels], g = con[i * Channels + 1];
+                    // テープを走る光の粒は，色相の演出や判定のあとの光に明るい方で重ねる
+                    byte r = Math.Max(con[i * Channels], over[i * Channels]);
+                    byte g = Math.Max(con[i * Channels + 1], over[i * Channels + 1]);
+                    byte b = Math.Max(con[i * Channels + 2], over[i * Channels + 2]);
                     pin[conStart + i * Channels] = swap ? g : r;
                     pin[conStart + i * Channels + 1] = swap ? r : g;
-                    pin[conStart + i * Channels + 2] = con[i * Channels + 2];
+                    pin[conStart + i * Channels + 2] = b;
                 }
             }
         }

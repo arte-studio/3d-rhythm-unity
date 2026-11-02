@@ -42,11 +42,71 @@ namespace Arte.Rhythm.Tests
             return (chart, new TouchJudge(chart, new JudgeRules()));
         }
 
+        static NoteLedStyle Blink() => new NoteLedStyle { approach = NoteApproach.Blink };
+
+        // むぎゅっと（8×8）の行 r・列 c
+        byte[] MuguAt(int device, int module, int r, int c) => Pixel(device, notes.MuguLedIndex(module, 0, 0) + r * notes.MuguColumns + c);
+
+        [Test]
+        public void BeatsApproachShrinksSquareAndRunsComet()
+        {
+            // テンポなし（120BPM，1 拍 0.5 秒）なので 3 拍前 = 1.5 秒前から
+            var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes);
+            r.Render(chart, judge, 8.49, 0, 0.016f, false, frame);
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "3 拍前より前は消えている");
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 3, 3));
+
+            // 3 拍前: 外周（角）が明るく，中心は薄く，テープは遠い端に粒
+            r.Render(chart, judge, 8.5, 0, 0.016f, false, frame);
+            Assert.Greater(MuguAt(3, 1, 0, 0)[2], 200, "外周の角");
+            Assert.AreEqual(0, MuguAt(3, 1, 0, 0)[0]);
+            Assert.That(MuguAt(3, 1, 3, 3)[2], Is.InRange(50, 80), "中心の 2×2 は薄く（25%）");
+            Assert.Greater(Con(3, 1, notes.ConnectLeds - 1)[2], 200, "テープの遠い端");
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(3, 1, 0), "むぎゅっとの側の端はまだ");
+
+            // ノーツ時刻の直前: 四角は中心に閉じ，最後の 1 拍は水色，粒はむぎゅっとの側の端に
+            r.Render(chart, judge, 9.999, 0, 0.016f, false, frame);
+            var center = MuguAt(3, 1, 3, 3);
+            Assert.Greater(center[1], 80, "最後の 1 拍は水色（緑の成分がある）");
+            Assert.Greater(center[2], 100);
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "外周は消えた");
+            // テープは R と G を入れ替えて書く
+            Assert.Greater(Con(3, 1, 0)[0] + Con(3, 1, 0)[1], 100, "むぎゅっとの側の端に着いた");
+        }
+
+        [Test]
+        public void BeatsApproachPulsesOnEachBeatCountedFromNote()
+        {
+            var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes);
+            // 粒の頭（テープの何番目か = 29 × 残りの割合）の明るさで比べる．
+            // 9.0 秒はノーツ時刻から 1 拍ずつ数えた拍の頭（あと 2 拍）なので一番明るい．9.3 秒は拍の途中なので暗い
+            r.Render(chart, judge, 9.0, 0, 0.016f, false, frame);
+            int onBeat = Con(3, 1, 19)[2];
+            r.Render(chart, judge, 9.3, 0, 0.016f, false, frame);
+            int midBeat = Con(3, 1, 14)[2];
+            Assert.AreEqual(255, onBeat);
+            Assert.That(midBeat, Is.InRange(130, 170), "拍の途中は 55〜60% くらいまで戻る");
+        }
+
+        [Test]
+        public void BeatsApproachFollowsTempo()
+        {
+            // 60BPM（1 拍 1 秒）なら 3 秒前から
+            var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes) { Tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 60, BeatsPerBar = 4 } }) };
+            r.Render(chart, judge, 6.9, 0, 0.016f, false, frame);
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0));
+            r.Render(chart, judge, 7.05, 0, 0.016f, false, frame);
+            Assert.Greater(MuguAt(3, 1, 0, 0)[2], 100);
+        }
+
         [Test]
         public void OpenNoteBlinksBlueFromSpawnLead()
         {
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes);
+            var r = new NoteLedRenderer(notes, Blink());
             r.Render(chart, judge, 6.99, 0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Mugu(3, 1), "3 秒前より前は消えている");
             // ノーツ時刻にちょうど点く位相: 7.0 秒は 6 周期前なので点灯，7.3 秒は消灯
@@ -66,7 +126,7 @@ namespace Arte.Rhythm.Tests
         public void PerfectShowsRainbowThenFadesGreen()
         {
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch), new ChartNote(20, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes);
+            var r = new NoteLedRenderer(notes, Blink());
             var events = new List<JudgeEvent>();
             judge.Touch(4, 10.01, events);
             Assert.AreEqual(JudgeResult.Perfect, events[0].Result);
@@ -97,7 +157,7 @@ namespace Arte.Rhythm.Tests
         public void GoodIsYellowAndMissIsRed()
         {
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch), new ChartNote(10, 9, NoteType.Touch));
-            var r = new NoteLedRenderer(notes);
+            var r = new NoteLedRenderer(notes, Blink());
             var events = new List<JudgeEvent>();
             judge.Touch(4, 10.1, events);
             judge.Advance(10.2, events);
@@ -113,7 +173,7 @@ namespace Arte.Rhythm.Tests
         public void NextNoteOpeningWinsOverFade()
         {
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch), new ChartNote(12, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes);
+            var r = new NoteLedRenderer(notes, Blink());
             var events = new List<JudgeEvent>();
             judge.Touch(4, 10.1, events);
             r.OnJudged(events[0], 0);
@@ -124,7 +184,7 @@ namespace Arte.Rhythm.Tests
         [Test]
         public void ConnectSweepPaintsAllLanesByTime()
         {
-            var r = new NoteLedRenderer(notes);
+            var r = new NoteLedRenderer(notes, Blink());
             // 0.1 秒: 色相 210/360 + 0.05 = 0.6333 → HSV(0.6333, 1, 1) = (0, 0.2, 1) → (0, 51, 255)．R と G を入れ替えて (51, 0, 255)
             // 60 個/秒なので 0.1 秒で 6 個
             r.Render(null, null, 0, 0, 0.1f, true, frame);
@@ -163,7 +223,7 @@ namespace Arte.Rhythm.Tests
         {
             // レーン 12 は kodaisai-1101 に無い（旧版でも LED に出なかった）
             var (chart, judge) = Make(new ChartNote(10, 12, NoteType.Touch));
-            var r = new NoteLedRenderer(notes);
+            var r = new NoteLedRenderer(notes, Blink());
             r.Render(chart, judge, 9.0, 0, 0.016f, false, frame);
             for (int d = 0; d < 8; d++)
                 foreach (byte v in frame.Pin(d, notes.NoteOutputPin).ToArray()) Assert.AreEqual(0, v);

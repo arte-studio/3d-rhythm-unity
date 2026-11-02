@@ -43,7 +43,11 @@ namespace Arte.Rhythm.Render
             }
         }
 
-        void OnStarted(double fromSec) => painter.Reset();
+        void OnStarted(double fromSec)
+        {
+            painter.Reset();
+            painter.Tempo = conductor.Data?.TempoMap();
+        }
 
         void OnEnded() => painter.OnSongEnded();
 
