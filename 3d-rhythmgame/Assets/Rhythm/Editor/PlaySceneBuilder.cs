@@ -73,6 +73,12 @@ namespace Arte.Rhythm.Editor
             preview.source = LedPreview.Source.Local;
             preview.link = link;
             AddViewer(preview);
+            // VR でノーツモジュールに触れて遊ぶ（VR のときだけ動く）
+            var vrTouch = root.AddComponent<VrTouchInput>();
+            vrTouch.session = session;
+            vrTouch.link = link;
+            vrTouch.layoutRoot = preview.transform;
+            vrTouch.handMaterial = MaterialAsset("Universal Render Pipeline/Unlit", "VrHand");
 
             System.IO.Directory.CreateDirectory("Assets/Rhythm/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);

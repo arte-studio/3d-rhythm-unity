@@ -47,6 +47,9 @@ namespace Arte.Rhythm.Render
         /// <summary>VR で表示しているか．</summary>
         public static bool Active { get; private set; }
 
+        /// <summary>VR の足元（リグ）．コントローラの位置はこの中の座標で来る（VrTouchInput が使う）．</summary>
+        public static Transform Rig { get; private set; }
+
         Transform rig;
         Camera cam;
         bool childView;
@@ -84,6 +87,7 @@ namespace Arte.Rhythm.Render
             Active = true;
             SetUpRig();
             SetUpInput();
+            Gameplay.VrTouchInput.EnsureInScene();
             // 足元の高さを床に合わせる（Floor）．合わせられないランタイムでは頭の高さが 0 になるので，あとで A / B で直す
             var subsystems = new List<XRInputSubsystem>();
             SubsystemManager.GetSubsystems(subsystems);
@@ -101,6 +105,7 @@ namespace Arte.Rhythm.Render
             var desktop = cam.GetComponent<ViewerCamera>();
             if (desktop != null) desktop.enabled = false;
             rig = new GameObject("VR Rig（足元）").transform;
+            Rig = rig;
             rig.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             cam.transform.SetParent(rig, false);
             cam.transform.localPosition = Vector3.zero;
@@ -211,6 +216,7 @@ namespace Arte.Rhythm.Render
             actions.Clear();
             if (!Active) return;
             Active = false;
+            Rig = null;
             var manager = XRGeneralSettings.Instance != null ? XRGeneralSettings.Instance.Manager : null;
             if (manager != null && manager.activeLoader != null)
             {
