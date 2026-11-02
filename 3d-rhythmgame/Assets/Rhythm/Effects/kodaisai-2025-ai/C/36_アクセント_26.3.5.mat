@@ -25,10 +25,11 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Decay: 0.5
+    - _Decay: 0.6
     - _Shape: 3
     - _Speed: 2.5
     - _Start: 0.62
+    - _Trail: 0.35
     - _Width: 0.2
     m_Colors:
     - _Center: {r: 0, g: 1, b: 0, a: 0}

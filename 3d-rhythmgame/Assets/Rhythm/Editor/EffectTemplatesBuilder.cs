@@ -23,6 +23,8 @@ namespace Arte.Rhythm.Editor
             "SpiralRise", "StarFall", "Starfield", "SoftPulse", "RotateWipe", "BottomWave",
             // AI の演出案のために足したもの（docs/effects/ai-proposals.md）
             "Hit", "Aurora", "Constellation", "Beam",
+            // VR で見た感想から（周波数ごとに下から波．2026-11-03）
+            "SpectrumWave",
         };
 
         [MenuItem("Tools/Arte Rhythm/Create LED Effect Templates")]

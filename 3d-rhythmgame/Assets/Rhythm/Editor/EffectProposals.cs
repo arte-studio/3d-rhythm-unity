@@ -157,14 +157,9 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Direction", 1);
                 m.SetFloat("_Scroll", 0.012f);
             });
-            // A メロ② 下に波々（音量で高さが変わる）
-            Clip(wave, "BottomWave", "下の波", B(AMelo), B(BMelo), LedCanvas.Blend.Add, 0.8f, Beats(2), Beats(4), m =>
-            {
-                m.SetColor("_ColorA", Pink);
-                m.SetColor("_ColorB", Blue);
-                m.SetFloat("_Base", 0.03f);
-                m.SetFloat("_Amp", 0.3f);
-            });
+            // A メロ② 下に波々（仕様書「アクセントやボリュームで下に波々，強いピンク〜青」）．音量だけでなく周波数ごとの大きさで下から波が出る
+            // （もっと音楽のリズムに合わせたい．2026-11-03 ユーザー）．低い音（真ん中）がピンク，高い音（両端）が青
+            Spectrum(wave, "下の波々（周波数）", B(AMelo), B(BMelo), Pink, Blue, 0.35f, 0.9f, 3, 0, Beats(2), Beats(4));
             // 星座（曲名「星座になれたら」）: A メロの後半で 1 つ描く
             Clip(figure, "Constellation", "星座", B(13), B(BMelo + 1), LedCanvas.Blend.Add, 1, 0, Beats(4), m =>
             {
@@ -191,6 +186,8 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Direction", 0);
                 m.SetFloat("_Scroll", 0.06f);
             });
+            Bass(wave, "低い音の波", B(BMelo), B(Chorus1), Mul(Blue, 0.8f), Purple, 0.25f, 0.8f);
+            Spectrum(wave, "サビの音の波", B(Chorus1), B(Pre), new Color(0.2f, 0.5f, 1f), White, 0.3f, 0.6f, 3, 0, 0, Beats(2));
             Clip(stars, "StarFall", "流れ星（しだれ桜）", B(Chorus1), B(Pre), LedCanvas.Blend.Add, 1, 0, 0, m =>
             {
                 m.SetColor("_ColorHead", White);
@@ -223,6 +220,7 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Direction", 1);
                 m.SetFloat("_Scroll", 0.08f);
             });
+            Spectrum(wave, "サビ2の音の波", B(Chorus2), B(End), Pink, new Color(1f, 0.75f, 0.3f), 0.4f, 0.7f, 3, 0.02f, 0, Beats(4));
             Clip(stars, "StarFall", "たくさんの流れ星", B(Chorus2), B(End), LedCanvas.Blend.Add, 1, 0, 0, m =>
             {
                 m.SetColor("_ColorHead", White);
@@ -278,6 +276,7 @@ namespace Arte.Rhythm.Editor
         {
             var sky = tl.CreateTrack<LedEffectTrack>("空");
             var aurora = tl.CreateTrack<LedEffectTrack>("オーロラ");
+            var wave = tl.CreateTrack<LedEffectTrack>("音の波");
             var stars = tl.CreateTrack<LedEffectTrack>("星");
             var figure = tl.CreateTrack<LedEffectTrack>("星座");
             var motion = tl.CreateTrack<LedEffectTrack>("光の動き");
@@ -315,6 +314,8 @@ namespace Arte.Rhythm.Editor
             });
             // B メロ: オーロラが青く高くなり，星をつないで星座を描く（曲名）
             // v4 では青が暗く見えにくかった（青は同じ値でも暗く見える）．明るい青にして強める
+            // 静かな物語の中でも曲に合わせて動く: オーロラの下で低い音が波打つ（2026-11-03）
+            Bass(wave, "低い音の波", B(BMelo), B(25), Mul(Blue, 0.7f), Purple, 0.2f, 0.7f);
             Clip(aurora, "Aurora", "青いオーロラ", B(BMelo), B(25), LedCanvas.Blend.Add, 1f, Beats(4), Beats(4), m =>
             {
                 m.SetColor("_ColorA", new Color(0.2f, 0.5f, 1f));
@@ -347,6 +348,8 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Direction", 0);
                 m.SetFloat("_Mirror", 0);
             });
+            // 日の出の炎: 周波数ごとの大きさで下から伸びる橙〜黄の光
+            Spectrum(wave, "日の出の炎", B(Chorus1), B(Pre), new Color(1f, 0.3f, 0.05f), new Color(1f, 0.85f, 0.3f), 0.35f, 0.8f, 3, 0, 0, Beats(2));
             Clip(motion, "Hit", "日の出の光", B(Chorus1), B(Chorus1 + 2), LedCanvas.Blend.Add, 0.5f, 0, 0, m =>
             {
                 m.SetColor("_Color", LightYellow);
@@ -427,6 +430,7 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Speed", 0.03f);
                 m.SetFloat("_Level", 0.4f);
             });
+            Spectrum(wave, "朝の炎", B(Chorus2), B(End), new Color(1f, 0.35f, 0.1f), Pink, 0.45f, 0.85f, 3, 0.015f, 0, Beats(4));
             Clip(stars, "StarFall", "たくさんの流れ星", B(Chorus2), B(End), LedCanvas.Blend.Add, 0.9f, 0, 0, m =>
             {
                 m.SetColor("_ColorHead", White);
@@ -515,13 +519,8 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Speed", 1.2f);
                 m.SetFloat("_Width", 0.25f);
             });
-            Clip(floor, "BottomWave", "下の波", B(AMelo), B(BMelo), LedCanvas.Blend.Add, 0.6f, 0, 0, m =>
-            {
-                m.SetColor("_ColorA", Pink);
-                m.SetColor("_ColorB", Blue);
-                m.SetFloat("_Base", 0.02f);
-                m.SetFloat("_Amp", 0.25f);
-            });
+            // 周波数ごとの大きさで下から波（2026-11-03 ユーザー．案C ではこれを主役に）
+            Spectrum(floor, "音の波（A メロ）", B(AMelo), B(BMelo), Pink, Blue, 0.5f, 1f, 3, 0, Beats(2), 0);
             // B メロ: 暗い青へ．回る光が 3 本になり，加速していく
             Clip(sky, "Gradient", "暗い青の土台", B(BMelo), B(Chorus1), LedCanvas.Blend.Normal, 1, Beats(4), 0, m =>
             {
@@ -529,6 +528,7 @@ namespace Arte.Rhythm.Editor
                 m.SetColor("_ColorB", Mul(DeepBlue, 0.7f));
                 m.SetFloat("_Direction", 0);
             });
+            Spectrum(floor, "音の波（B メロ）", B(BMelo), B(Chorus1), Blue, PaleBlue, 0.45f, 0.9f, 3, -0.01f, 0, Beats(1));
             Clip(beam, "Beam", "回る光（3 本）", B(BMelo), B(22), LedCanvas.Blend.Add, 0.6f, Beats(2), 0, m =>
             {
                 m.SetColor("_Color", Blue);
@@ -565,6 +565,7 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Twist", 0.25f);
                 m.SetFloat("_Trail", 0.3f);
             });
+            Spectrum(floor, "音の波（サビ1）", B(Chorus1), B(Pre), new Color(0.2f, 0.8f, 1f), Pink, 0.6f, 1f, 3, 0, 0, Beats(1));
             Clip(stars, "StarFall", "流れ星", B(Chorus1), B(Pre), LedCanvas.Blend.Add, 0.7f, 0, 0, m =>
             {
                 m.SetColor("_ColorHead", White);
@@ -624,6 +625,8 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Speed", 1.4f);
                 m.SetFloat("_Width", 0.2f);
             });
+            // サビ1 との違い: 波が一周を回る
+            Spectrum(floor, "回る音の波（サビ2）", B(Chorus2), B(End), Pink, new Color(0.2f, 0.85f, 1f), 0.65f, 1f, 3, 0.03f, 0, Beats(4));
             Clip(stars, "StarFall", "流れ星（多く）", B(Chorus2), B(End), LedCanvas.Blend.Add, 0.8f, 0, 0, m =>
             {
                 m.SetColor("_ColorHead", White);
@@ -682,6 +685,33 @@ namespace Arte.Rhythm.Editor
 
         static Color Mul(Color c, float k) => new Color(c.r * k, c.g * k, c.b * k, 1);
 
+        /// <summary>周波数ごとの大きさで下から伸びる光（SpectrumWave）．真ん中が低い音（low の色），両端が高い音（high の色）．</summary>
+        static void Spectrum(TrackAsset track, string name, double from, double to, Color low, Color high, float height, float opacity,
+                             int copies, float scroll, double easeIn, double easeOut)
+        {
+            Clip(track, "SpectrumWave", name, from, to, LedCanvas.Blend.Add, opacity, easeIn, easeOut, m =>
+            {
+                m.SetColor("_ColorLow", low);
+                m.SetColor("_ColorHigh", high);
+                m.SetFloat("_Copies", copies);
+                m.SetFloat("_Height", height);
+                m.SetFloat("_Scroll", scroll);
+            });
+        }
+
+        /// <summary>低い音（バスドラム・ベース）で高さが変わる下の波（BottomWave の高さを低い音で）．</summary>
+        static void Bass(TrackAsset track, string name, double from, double to, Color a, Color b, float amp, float opacity)
+        {
+            Clip(track, "BottomWave", name, from, to, LedCanvas.Blend.Add, opacity, Beats(2), Beats(2), m =>
+            {
+                m.SetColor("_ColorA", a);
+                m.SetColor("_ColorB", b);
+                m.SetFloat("_Base", 0.02f);
+                m.SetFloat("_Amp", amp);
+                m.SetFloat("_Source", 1);
+            });
+        }
+
         static void Stars(Material m, float density, float brightness, float every, float depth)
         {
             m.SetColor("_ColorA", White);
@@ -699,6 +729,8 @@ namespace Arte.Rhythm.Editor
             var mat = new Material(EffectTemplatesBuilder.Template(template)) { name = name };
             setup(mat);
             AssetDatabase.CreateAsset(mat, $"{dir}/{++matCount:D2}_{Safe(name)}.mat");
+            // サビの頭で始まるものは 1 拍かけて入る（流れ星などがサビの頭でいっせいに現れると，0.1 秒で光の量が跳ねて眩しかった．v7）
+            if (easeIn <= 0 && (Math.Abs(start - B(Chorus1)) < 1e-3 || Math.Abs(start - B(Chorus2)) < 1e-3)) easeIn = EaseInBright;
             var clip = track.CreateClip<LedEffectClip>();
             clip.displayName = name;
             clip.start = start;

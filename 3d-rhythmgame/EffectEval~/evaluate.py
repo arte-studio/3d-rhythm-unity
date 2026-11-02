@@ -297,6 +297,13 @@ def main():
     glare_n = int((np.diff(np.r_[0, (jump > 0.08).astype(int)]) == 1).sum())
     R['glare_max_jump'] = float(glare)
     R['glare_count'] = glare_n
+    starts = np.where(np.diff(np.r_[0, (jump > 0.08).astype(int)]) == 1)[0]
+    glare_at = []
+    for st in starts[:12]:
+        tsec = st / fps + meta.get('from', 0)
+        bb = (tsec - t0) / P
+        glare_at.append(f"{int(np.floor(bb / bpb)) + 1}.{bb % bpb + 1:.1f}（{tsec:.1f}s，+{jump[st:st + k + 1].max():.2f}）")
+    R['glare_at'] = glare_at
     safe = whole <= 3 and region <= 3 and red <= 3
     rep.append('## 1. 安全（光の点滅）\n')
     rep.append(f"- 全体の点滅: 1 秒に最大 {whole:.1f} 回，1/4 の範囲: {region:.1f} 回，赤の点滅: {red:.1f} 回 → "
@@ -304,6 +311,8 @@ def main():
     rep.append(f"- 光の量の平均 {R['mean_brightness']:.3f}，最大 {R['max_brightness']:.3f}（全部の LED が白で 1）")
     rep.append(f"- 眩しさ: 0.1 秒で全体の光の量が最大 {glare:.2f} 跳ね上がる．0.08 を超える跳ねが {glare_n} 回 → "
                + ('OK' if glare_n == 0 else '**フラッシュのような光がある**（眩しい．全体を一度に光らせず，動く光や柔らかい変化にする）') + chr(10))
+    if glare_at:
+        rep.append('  - 眩しい跳ね（小節.拍）: ' + '，'.join(glare_at) + chr(10))
 
     # 2. 音と光の同期
     vo = F['vonset']

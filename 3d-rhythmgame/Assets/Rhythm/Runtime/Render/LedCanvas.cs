@@ -34,6 +34,10 @@ namespace Arte.Rhythm.Render
         static readonly int BeatId = Shader.PropertyToID("_ArteBeat");
         static readonly int BarId = Shader.PropertyToID("_ArteBar");
         static readonly int LevelId = Shader.PropertyToID("_ArteLevel");
+        static readonly int SpectrumId = Shader.PropertyToID("_ArteSpectrum");
+        static readonly int BassId = Shader.PropertyToID("_ArteBass");
+        static readonly int MidId = Shader.PropertyToID("_ArteMid");
+        static readonly int TrebleId = Shader.PropertyToID("_ArteTreble");
         static readonly int SizeId = Shader.PropertyToID("_ArteCanvasSize");
         static readonly int PositionTexId = Shader.PropertyToID("_ArtePositionTex");
         static readonly int DstId = Shader.PropertyToID("_Dst");
@@ -70,6 +74,8 @@ namespace Arte.Rhythm.Render
         TempoMap tempo;
         int beatsPerBar = 4;
         LoudnessEnvelope loudness;
+        SpectrumEnvelope spectrum;
+        readonly float[] spectrumNow = new float[SpectrumEnvelope.BandCount];
         SongAsset loudnessSong;
 
         void Start()
@@ -155,6 +161,7 @@ namespace Arte.Rhythm.Render
             }
             double beat = (tempo ?? DefaultTempo).BeatOf(t);
             Shader.SetGlobalFloat(LevelId, Loudness()?.At(t) ?? 0f);
+            SetSpectrum(t);
             Shader.SetGlobalFloat(TimeId, (float)t);
             Shader.SetGlobalFloat(BeatId, (float)beat);
             Shader.SetGlobalFloat(BarId, (float)(beat / beatsPerBar));
@@ -173,13 +180,33 @@ namespace Arte.Rhythm.Render
             if (song == null || song == loudnessSong) return loudness;
             loudnessSong = song;
             loudness = null;
+            spectrum = null;
             tempo = null;
             var clip = song.audio;
             if (clip == null || clip.loadType != AudioClipLoadType.DecompressOnLoad || !clip.LoadAudioData()) return null;
             var samples = new float[clip.samples * clip.channels];
             if (!clip.GetData(samples, 0)) return null;
             loudness = LoudnessEnvelope.FromSamples(samples, clip.channels, clip.frequency, conductor.Data?.AudioStartSec ?? 0);
+            spectrum = SpectrumEnvelope.FromSamples(samples, clip.channels, clip.frequency, conductor.Data?.AudioStartSec ?? 0);
             return loudness;
+        }
+
+        // 曲の周波数ごとの大きさ（_ArteSpectrum[16]．0 番が低い音）と，低音・中音・高音（_ArteBass / _ArteMid / _ArteTreble）
+        void SetSpectrum(double t)
+        {
+            if (spectrum != null && loudnessSong != null) spectrum.At(t, spectrumNow);
+            else System.Array.Clear(spectrumNow, 0, spectrumNow.Length);
+            Shader.SetGlobalFloatArray(SpectrumId, spectrumNow);
+            Shader.SetGlobalFloat(BassId, Average(0, 4));
+            Shader.SetGlobalFloat(MidId, Average(4, 10));
+            Shader.SetGlobalFloat(TrebleId, Average(10, SpectrumEnvelope.BandCount));
+        }
+
+        float Average(int from, int to)
+        {
+            float sum = 0;
+            for (int b = from; b < to; b++) sum += spectrumNow[b];
+            return sum / (to - from);
         }
 
         static void Clear(RenderTexture rt)

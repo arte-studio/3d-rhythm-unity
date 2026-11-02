@@ -28,6 +28,7 @@ Material:
     - _Amp: 0.25
     - _Base: 0.02
     - _ColorSpeed: 0.02
+    - _Source: 0
     - _Speed: 0.05
     - _Waves: 6
     m_Colors:

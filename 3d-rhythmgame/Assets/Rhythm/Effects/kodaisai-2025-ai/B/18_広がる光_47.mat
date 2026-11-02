@@ -29,9 +29,10 @@ Material:
     - _Shape: 3
     - _Speed: 1.2
     - _Start: 0.62999964
+    - _Trail: 0.35
     - _Width: 0.15
     m_Colors:
     - _Center: {r: 0, g: 1, b: 0, a: 0}
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 1, g: 0.92, b: 0.6, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

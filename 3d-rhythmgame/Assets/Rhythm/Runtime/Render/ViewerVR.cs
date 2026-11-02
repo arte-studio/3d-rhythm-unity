@@ -22,7 +22,7 @@ namespace Arte.Rhythm.Render
     /// - B / F6: 自分の目の高さで見る
     /// - X / F7: リングの中心に戻る（今いる場所と向きをリングの中心・正面に合わせる）
     /// - Y / F3: 床の種類を切り替える
-    /// - 左スティック: 歩く，右スティック: 30° ずつ向きを変える
+    /// - 左スティック: 歩く，右スティック: 向きを変える（倒した分だけなめらかに回る．smoothTurn を切ると 30° ずつ）
     /// - 左の ≡（メニュー）: 曲を最初から始める（Enter），右スティックの押し込み: 一時停止 / 再開（Space），
     ///   左スティックの押し込み: 演出を切り替える（F9）．Play シーンだけ（Viewer シーンは曲を動かさない）
     /// 将来 VR でゲームを遊ぶときは，コントローラや手の位置をここから取り，ノーツモジュールに触れたらタッチにする．
@@ -36,7 +36,11 @@ namespace Arte.Rhythm.Render
         public float childEyeHeight = 1.1f;
         [Tooltip("歩く速さ（m/秒）")]
         public float moveSpeed = 1.0f;
-        [Tooltip("右スティックで向きを変える角度")]
+        [Tooltip("右スティックでなめらかに向きを変える（切ると snapTurnDeg ずつ）")]
+        public bool smoothTurn = true;
+        [Tooltip("なめらかに回るときの一番速い速さ（度/秒）")]
+        public float turnSpeedDeg = 90f;
+        [Tooltip("smoothTurn を切ったとき，右スティックで向きを変える角度")]
         public float snapTurnDeg = 30f;
         public ViewerRoom room;
 
@@ -161,7 +165,13 @@ namespace Arte.Rhythm.Render
                 rig.position += (fwd * move.y + right * move.x) * (moveSpeed * Time.unscaledDeltaTime);
             }
             float turn = turnAction.ReadValue<Vector2>().x;
-            if (turnReady && Mathf.Abs(turn) > 0.7f)
+            if (smoothTurn)
+            {
+                // 30° ずつ切り替えると回転がカクカクした（2026-11-03 ユーザー）．倒した分だけ回す（小さく倒すとゆっくり）
+                float t = Mathf.Abs(turn) < 0.15f ? 0 : Mathf.Sign(turn) * Mathf.Pow((Mathf.Abs(turn) - 0.15f) / 0.85f, 1.5f);
+                if (t != 0) rig.RotateAround(cam.transform.position, Vector3.up, t * turnSpeedDeg * Time.unscaledDeltaTime);
+            }
+            else if (turnReady && Mathf.Abs(turn) > 0.7f)
             {
                 rig.RotateAround(cam.transform.position, Vector3.up, Mathf.Sign(turn) * snapTurnDeg);
                 turnReady = false;

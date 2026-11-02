@@ -29,6 +29,7 @@ Material:
     - _Shape: 1
     - _Speed: 0.5
     - _Start: 0
+    - _Trail: 0.35
     - _Width: 0.12
     m_Colors:
     - _Center: {r: 0, g: 1, b: 0, a: 0}

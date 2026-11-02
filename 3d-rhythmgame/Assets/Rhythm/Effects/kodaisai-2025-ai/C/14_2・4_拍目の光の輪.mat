@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: "12_\u56DE\u308B\u5149\uFF08\u767D\uFF09"
-  m_Shader: {fileID: 4800000, guid: cbbc8860b8fd8d943b12c0c97b6718ef, type: 3}
+  m_Name: "14_2\u30FB4_\u62CD\u76EE\u306E\u5149\u306E\u8F2A"
+  m_Shader: {fileID: 4800000, guid: 76eb45284977a64498f5ff4344badc59, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -25,12 +25,12 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Count: 2
-    - _Speed: 0.125
-    - _Trail: 0.3
-    - _Twist: 0.25
-    - _Width: 0.15
+    - _Every: 2
+    - _Offset: 1
+    - _Speed: 2.5
+    - _Width: 0.3
     m_Colors:
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Center: {r: 0, g: 0, b: 0, a: 0}
+    - _Color: {r: 0.65, g: 0.75, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

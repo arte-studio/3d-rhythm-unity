@@ -11,6 +11,7 @@ Shader "Arte/LED/Hit"
         _Width ("帯の太さ（全体に対する割合．形 4 は m）", Float) = 0.25
         _Start ("始まる角度（形 3．一周を 1）", Range(0, 1)) = 0
         _Center ("波紋の中心（形 4．m）", Vector) = (0, 1, 0, 0)
+        _Trail ("通ったあとに残る光（形 1〜3．0 = 残さない）", Range(0, 1)) = 0.35
     }
     SubShader
     {
@@ -23,7 +24,7 @@ Shader "Arte/LED/Hit"
             #include "../ArteLed.cginc"
 
             float4 _Color, _Center;
-            float _Shape, _Decay, _Speed, _Width, _Start;
+            float _Shape, _Decay, _Speed, _Width, _Start, _Trail;
 
             float4 frag(ArteV2f i) : SV_Target
             {
@@ -48,7 +49,7 @@ Shader "Arte/LED/Hit"
                     float front = t * _Speed;
                     // 先頭は太さ _Width で明るく，通ったあとは残光
                     float head = saturate(1 - abs(x - front) / max(_Width, 1e-3));
-                    float trail = x < front ? 0.35 : 0;
+                    float trail = x < front ? _Trail : 0;
                     k = max(head, trail);
                 }
                 else

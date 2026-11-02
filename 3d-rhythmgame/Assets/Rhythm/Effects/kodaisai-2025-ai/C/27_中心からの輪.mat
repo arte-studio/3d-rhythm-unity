@@ -26,6 +26,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _Every: 1
+    - _Offset: 0
     - _Speed: 1.4
     - _Width: 0.2
     m_Colors:

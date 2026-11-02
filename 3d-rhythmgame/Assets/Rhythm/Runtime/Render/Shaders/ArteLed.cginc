@@ -11,6 +11,10 @@ float _ArteBeat;          // 拍（曲のテンポから．テンポが無けれ
 float _ArteBar;           // 小節（小数）
 float4 _ArteCanvasSize;   // (列数, LED 数, 1/列数, 1/LED 数)
 float _ArteLevel;         // 曲の音量（0〜1．曲の音声から求めた値．大きい音で 1 近く）
+float _ArteSpectrum[16];  // 周波数ごとの大きさ（0〜1．0 番が低い音 40Hz，15 番が高い音 12kHz．対数で等分．帯ごとにそろえてある）
+float _ArteBass;          // 低い音（帯 0〜3．約 40〜170Hz．バスドラム・ベース）の大きさ（0〜1）
+float _ArteMid;           // 中くらいの音（帯 4〜9．約 170Hz〜1.4kHz．歌・ピアノ・スネアの胴）
+float _ArteTreble;        // 高い音（帯 10〜15．約 1.4〜12kHz．シンバル・ハイハット・歌の子音）
 sampler2D _ArtePositionTex;
 
 // クリップの値（LedEffectClip が入れる．Timeline 以外で使うときは 0）
@@ -60,6 +64,15 @@ float ArteHash(float2 p)
     float3 p3 = frac(float3(p.xyx) * 0.1031);
     p3 += dot(p3, p3.yzx + 33.33);
     return frac((p3.x + p3.y) * p3.z);
+}
+
+// 周波数ごとの大きさを 0〜1 の位置で引く（0 = 一番低い音，1 = 一番高い音．帯の間はなめらかにつなぐ）
+float ArteSpectrumAt(float x)
+{
+    float f = saturate(x) * 15;
+    int a = (int)floor(f);
+    int b = min(a + 1, 15);
+    return lerp(_ArteSpectrum[a], _ArteSpectrum[b], f - a);
 }
 
 float3 ArteScreenToLinear(float3 c)

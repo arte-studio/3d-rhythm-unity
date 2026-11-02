@@ -25,13 +25,14 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Decay: 0.35
-    - _Shape: 0
+    - _Decay: 0.9
+    - _Shape: 4
     - _Speed: 3
     - _Start: 0
-    - _Width: 0.25
+    - _Trail: 0.35
+    - _Width: 0.35
     m_Colors:
     - _Center: {r: 0, g: 1, b: 0, a: 0}
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0.65, g: 0.75, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
