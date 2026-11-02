@@ -159,7 +159,7 @@ namespace Arte.Rhythm.Editor
             return mat;
         }
 
-        // LED の光のにじみ（ブルーム）と，明るい光が白く飛びすぎないトーンマップ
+        // LED の光のにじみ（ブルーム）．トーンマップは使わない（明るい色が白に飛ぶので，LedPoint.shader で色を保って明るさを抑える）
         static VolumeProfile VolumeProfileAsset()
         {
             string path = $"{RenderDir}/LedPreviewVolume.asset";
@@ -167,11 +167,11 @@ namespace Arte.Rhythm.Editor
             if (profile != null) return profile;
             profile = ScriptableObject.CreateInstance<VolumeProfile>();
             var bloom = profile.Add<Bloom>(true);
-            bloom.threshold.Override(0.8f);
+            bloom.threshold.Override(0.5f);
             bloom.intensity.Override(1.5f);
             bloom.scatter.Override(0.75f);
             var tone = profile.Add<Tonemapping>(true);
-            tone.mode.Override(TonemappingMode.ACES);
+            tone.mode.Override(TonemappingMode.None);
             AssetDatabase.CreateAsset(profile, path);
             foreach (var c in profile.components) AssetDatabase.AddObjectToAsset(c, profile);
             AssetDatabase.SaveAssets();

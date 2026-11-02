@@ -966,7 +966,7 @@ MonoBehaviour:
     m_Duration: 22.111081863648323
     m_TimeScale: 1
     m_ParentTrack: {fileID: -3752428410649468896}
-    m_EaseInDuration: 0
+    m_EaseInDuration: 0.3948407475651487
     m_EaseOutDuration: 0
     m_BlendInDuration: -1
     m_BlendOutDuration: -1
@@ -1104,7 +1104,7 @@ MonoBehaviour:
     m_Duration: 12.634903922084757
     m_TimeScale: 1
     m_ParentTrack: {fileID: -3752428410649468896}
-    m_EaseInDuration: 0
+    m_EaseInDuration: 0.3948407475651487
     m_EaseOutDuration: 0
     m_BlendInDuration: -1
     m_BlendOutDuration: -1

@@ -30,7 +30,7 @@ Material:
     - _Mirror: 1
     - _Scroll: 0.05
     m_Colors:
-    - _ColorA: {r: 1, g: 1, b: 1, a: 1}
-    - _ColorB: {r: 0.7, g: 0.8, b: 1, a: 1}
+    - _ColorA: {r: 0.55, g: 0.7, b: 1, a: 1}
+    - _ColorB: {r: 0.15, g: 0.25, b: 0.7, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

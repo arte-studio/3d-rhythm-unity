@@ -182,11 +182,12 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Clockwise", 0);
             });
             Clip(stars, "Starfield", "またたく星", B(BMelo), B(Chorus1), LedCanvas.Blend.Add, 1, 0, 0, m => Stars(m, 0.035f, 1.3f, 1, 0.5f));
-            // サビ1: 白基調（眩しすぎない明るさで上下に模様）．星が一気に落ちる（しだれ桜）
-            Clip(sky, "Gradient", "白の空", B(Chorus1), B(Pre), LedCanvas.Blend.Normal, 1, 0, 0, m =>
+            // サビ1: 仕様書は白基調だが，VR で見ると全体が白っぽくなって流れ星が見えなかった（2026-11-03 ユーザー）．
+            // 明るい青と淡い水色にして，白い流れ星が浮いて見えるようにする
+            Clip(sky, "Gradient", "青と水色の空", B(Chorus1), B(Pre), LedCanvas.Blend.Normal, 1, EaseInBright, 0, m =>
             {
-                m.SetColor("_ColorA", new Color(0.75f, 0.78f, 0.85f));
-                m.SetColor("_ColorB", new Color(0.35f, 0.45f, 0.8f));
+                m.SetColor("_ColorA", new Color(0.3f, 0.55f, 0.95f));
+                m.SetColor("_ColorB", new Color(0.08f, 0.14f, 0.55f));
                 m.SetFloat("_Direction", 0);
                 m.SetFloat("_Scroll", 0.06f);
             });
@@ -198,27 +199,27 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Speed", 0.3f);
                 m.SetFloat("_Tail", 0.3f);
             });
-            Clip(pulse, "BeatPulse", "拍の光", B(Chorus1), B(Pre), LedCanvas.Blend.Add, 0.18f, 0, 0, m =>
+            // 拍で全体がぱっと光るのは眩しい（2026-11-03 ユーザー）．全体を少しだけ暗くして戻す柔らかい点滅にする
+            Clip(pulse, "SoftPulse", "拍の柔らかい点滅", B(Chorus1), B(Pre), LedCanvas.Blend.Multiply, 1, 0, 0, m =>
             {
-                m.SetColor("_Color", White);
                 m.SetFloat("_Every", 2);
-                m.SetFloat("_Decay", 6);
+                m.SetFloat("_Depth", 0.25f);
             });
             // サビ前: 暗くして，下から上へ（仮に紫 → 白）
             Clip(sky, "Solid", "サビ前の暗さ", B(Pre), B(Chorus2), LedCanvas.Blend.Normal, 1, 0, 0, m => m.SetColor("_Color", DarkBlue));
             Clip(change, "SpiralRise", "下から上へ", B(Pre), B(Chorus2), LedCanvas.Blend.Normal, 1, 0, 0, m =>
             {
                 m.SetColor("_ColorA", Purple);
-                m.SetColor("_ColorB", new Color(0.85f, 0.85f, 0.9f));
+                m.SetColor("_ColorB", Pink);
                 m.SetFloat("_Turns", 0);
                 m.SetFloat("_Change", 0.6f);
             });
             // サビ2: 1 回目より派手に（流れ星を多く速く，毎拍の光）
-            Clip(sky, "Gradient", "白と薄黄の空", B(Chorus2), B(End), LedCanvas.Blend.Normal, 1, 0, 0, m =>
+            // 白っぽさをやめ（2026-11-03），紫と金色が一周を回る空にする．黄色は暗くするとオリーブ色に濁るので，金色は明るく飽和させる（v3）
+            Clip(sky, "Gradient", "紫と金色の空", B(Chorus2), B(End), LedCanvas.Blend.Normal, 1, EaseInBright, 0, m =>
             {
-                // 薄い黄色を暗くするとオリーブ色に見えた（v3）．暗くせず白に近い暖色にする
-                m.SetColor("_ColorA", new Color(0.8f, 0.8f, 0.82f));
-                m.SetColor("_ColorB", new Color(0.95f, 0.88f, 0.7f));
+                m.SetColor("_ColorA", new Color(0.45f, 0.15f, 0.8f));
+                m.SetColor("_ColorB", new Color(1f, 0.6f, 0.15f));
                 m.SetFloat("_Direction", 1);
                 m.SetFloat("_Scroll", 0.08f);
             });
@@ -230,12 +231,14 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Speed", 0.45f);
                 m.SetFloat("_Tail", 0.35f);
             });
-            // 毎拍だと全体の点滅が 1 秒に 2.5 回になり，アクセントと重なると 3 回を超えた（v1）．2 拍ごとにして，代わりに強めに
-            Clip(pulse, "BeatPulse", "2 拍ごとの光", B(Chorus2), B(End), LedCanvas.Blend.Add, 0.28f, 0, 0, m =>
+            // 全体のフラッシュはやめ（2026-11-03 ユーザー），中心から広がる光の輪で拍を見せる（1 か所ずつ光が通るので眩しくない）
+            Clip(pulse, "Ripple3D", "拍の光の輪", B(Chorus2), B(End), LedCanvas.Blend.Add, 0.45f, 0, 0, m =>
             {
-                m.SetColor("_Color", White);
+                m.SetColor("_Color", LightYellow);
+                m.SetVector("_Center", new Vector4(0, 1, 0, 0));
                 m.SetFloat("_Every", 2);
-                m.SetFloat("_Decay", 6);
+                m.SetFloat("_Speed", 1.2f);
+                m.SetFloat("_Width", 0.2f);
             });
             // 最後: 暗い青に星．最後の音で星を明るく，伸びる音でだんだん暗く
             Clip(sky, "Gradient", "夜の青", B(End), songEnd, LedCanvas.Blend.Normal, 1, 0, songEnd - B(End + 2), m =>
@@ -255,14 +258,17 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Brightness", 1.3f);
                 m.SetColor("_LineColor", PaleBlue);
             });
-            // 音のアクセントで全体が点滅（仕様書でも「??」．際立つアクセントだけ，控えめに）
-            // 拍で光らせているサビには置かない（拍の光と重なると全体の点滅が 1 秒に 3 回になった．v2）
+            // 音のアクセント（仕様書でも「??」）．全体の点滅は眩しいので（2026-11-03 ユーザー），リングの中心から広がる光の波にする．
+            // 拍で光らせているサビには置かない（拍の光と重なると点滅が 1 秒に 3 回になった．v2）
             Accents(accent, B(AMelo), B(End + 2), minSalience: 3.5, minGapBeats: 8, max: 10, skip: new[] { (B(Chorus1), B(Pre)), (B(Chorus2), B(End)) }, make: a => ("Hit", m =>
             {
-                m.SetColor("_Color", White);
-                m.SetFloat("_Shape", 0);
-                m.SetFloat("_Decay", 0.35f);
-            }, 0.3f));
+                m.SetColor("_Color", PaleBlue);
+                m.SetFloat("_Shape", 4);
+                m.SetVector("_Center", new Vector4(0, 1, 0, 0));
+                m.SetFloat("_Speed", 3f);
+                m.SetFloat("_Width", 0.35f);
+                m.SetFloat("_Decay", 0.9f);
+            }, 0.4f));
         }
 
         // ================= 案 B: 夜明け（物語として．静かな夜 → 夜明け → 日の出 → また夜） =================
@@ -333,17 +339,17 @@ namespace Arte.Rhythm.Editor
             });
             // 25〜26 小節: 光がすっと引いて，サビの直前（26 小節の 4 拍目）は暗転
             Clip(dark, "Solid", "暗転", B(26, 4), B(Chorus1), LedCanvas.Blend.Normal, 1, Beats(0.5), 0, m => m.SetColor("_Color", Black));
-            // サビ1: 日の出．下が暖かく上が白い空．光の面が下から上へ（1 小節ごと），流れ星
-            Clip(sky, "Gradient", "日の出の空", B(Chorus1), B(Pre), LedCanvas.Blend.Normal, 1, 0, 0, m =>
+            // サビ1: 日の出．下が橙，上が青い空（白っぽくならないよう色をはっきり．2026-11-03）．光の面が下から上へ（1 小節ごと），流れ星
+            Clip(sky, "Gradient", "日の出の空", B(Chorus1), B(Pre), LedCanvas.Blend.Normal, 1, EaseInBright, 0, m =>
             {
-                m.SetColor("_ColorA", Mul(Warm, 0.75f));
-                m.SetColor("_ColorB", new Color(0.55f, 0.65f, 0.9f));
+                m.SetColor("_ColorA", new Color(0.95f, 0.42f, 0.1f));
+                m.SetColor("_ColorB", new Color(0.12f, 0.3f, 0.85f));
                 m.SetFloat("_Direction", 0);
                 m.SetFloat("_Mirror", 0);
             });
-            Clip(motion, "Hit", "日の出の光", B(Chorus1), B(Chorus1 + 2), LedCanvas.Blend.Add, 0.9f, 0, 0, m =>
+            Clip(motion, "Hit", "日の出の光", B(Chorus1), B(Chorus1 + 2), LedCanvas.Blend.Add, 0.5f, 0, 0, m =>
             {
-                m.SetColor("_Color", White);
+                m.SetColor("_Color", LightYellow);
                 m.SetFloat("_Shape", 1);
                 m.SetFloat("_Speed", 0.9f);
                 m.SetFloat("_Width", 0.3f);
@@ -376,32 +382,34 @@ namespace Arte.Rhythm.Editor
             Clip(motion, "SpiralRise", "せり上がる光", B(Pre, 3), B(Chorus2), LedCanvas.Blend.Add, 1, 0, 0, m =>
             {
                 m.SetColor("_ColorA", Pink);
-                m.SetColor("_ColorB", White);
+                m.SetColor("_ColorB", new Color(1f, 0.55f, 0.2f));
                 m.SetFloat("_Turns", 1);
                 m.SetFloat("_Change", 0.5f);
                 m.SetFloat("_Edge", 0.08f);
             });
             // サビ2: 2 度目の日の出はもっと大きく．空いっぱいのオーロラと流れ星，中心から広がる光
-            Clip(sky, "Gradient", "朝の空", B(Chorus2), B(End), LedCanvas.Blend.Normal, 1, 0, 0, m =>
+            Clip(sky, "Gradient", "朝の空", B(Chorus2), B(End), LedCanvas.Blend.Normal, 1, EaseInBright, 0, m =>
             {
-                m.SetColor("_ColorA", Mul(Warm, 0.8f));
-                m.SetColor("_ColorB", new Color(0.6f, 0.7f, 0.95f));
+                m.SetColor("_ColorA", new Color(1f, 0.5f, 0.15f));
+                m.SetColor("_ColorB", new Color(0.3f, 0.12f, 0.7f));
                 m.SetFloat("_Direction", 0);
                 m.SetFloat("_Mirror", 0);
             });
-            // サビ1 との違い（繰り返しと変化）: 始まりに全体がぱっと明るくなり，2 小節ごとに光が左右へ広がる
-            Clip(motion, "Hit", "2 度目の日の出", B(Chorus2), B(Chorus2 + 2), LedCanvas.Blend.Add, 0.8f, 0, 0, m =>
+            // サビ1 との違い（繰り返しと変化）: 始まりに光が下から昇り（全体のフラッシュは眩しいのでやめた．2026-11-03），2 小節ごとに光が左右へ広がる
+            Clip(motion, "Hit", "2 度目の日の出", B(Chorus2), B(Chorus2 + 2), LedCanvas.Blend.Add, 0.55f, 0, 0, m =>
             {
                 m.SetColor("_Color", LightYellow);
-                m.SetFloat("_Shape", 0);
+                m.SetFloat("_Shape", 1);
+                m.SetFloat("_Speed", 1.2f);
+                m.SetFloat("_Width", 0.35f);
                 m.SetFloat("_Decay", 2.0f);
             });
             for (int bar = Chorus2 + 2; bar < End; bar += 2)
             {
                 int b = bar;
-                Clip(motion, "Hit", $"広がる光 {b}", B(b), B(b + 1), LedCanvas.Blend.Add, 0.45f, 0, 0, m =>
+                Clip(motion, "Hit", $"広がる光 {b}", B(b), B(b + 1), LedCanvas.Blend.Add, 0.4f, 0, 0, m =>
                 {
-                    m.SetColor("_Color", White);
+                    m.SetColor("_Color", LightYellow);
                     m.SetFloat("_Shape", 3);
                     m.SetFloat("_Start", (b * 0.29f) % 1f);
                     m.SetFloat("_Speed", 1.2f);
@@ -412,7 +420,7 @@ namespace Arte.Rhythm.Editor
             Clip(aurora, "Aurora", "朝のオーロラ", B(Chorus2), B(End), LedCanvas.Blend.Add, 0.6f, 0, Beats(4), m =>
             {
                 m.SetColor("_ColorA", Pink);
-                m.SetColor("_ColorB", White);
+                m.SetColor("_ColorB", Purple);
                 m.SetFloat("_Low", 0.3f);
                 m.SetFloat("_High", 1f);
                 m.SetFloat("_Folds", 7);
@@ -429,7 +437,7 @@ namespace Arte.Rhythm.Editor
             });
             Clip(motion, "Ripple3D", "広がる光", B(Chorus2), B(End), LedCanvas.Blend.Add, 0.3f, 0, 0, m =>
             {
-                m.SetColor("_Color", White);
+                m.SetColor("_Color", Pink);
                 m.SetVector("_Center", new Vector4(0, 1, 0, 0));
                 m.SetFloat("_Every", 4);
                 m.SetFloat("_Speed", 0.6f);
@@ -540,16 +548,17 @@ namespace Arte.Rhythm.Editor
             });
             // サビ1: 白と青．2 本の光が逆向きに回り，2・4 拍目で光る．流れ星
             // v3 では土台が明るい薄紫で，回る光が埋もれた．土台を暗い青にして光を目立たせる
-            Clip(sky, "Gradient", "サビの土台", B(Chorus1), B(Pre), LedCanvas.Blend.Normal, 1, 0, 0, m =>
+            Clip(sky, "Gradient", "サビの土台", B(Chorus1), B(Pre), LedCanvas.Blend.Normal, 1, EaseInBright, 0, m =>
             {
                 m.SetColor("_ColorA", new Color(0.12f, 0.2f, 0.55f));
                 m.SetColor("_ColorB", new Color(0.04f, 0.06f, 0.3f));
                 m.SetFloat("_Direction", 1);
                 m.SetFloat("_Scroll", 0.05f);
             });
-            Clip(beam, "Beam", "回る光（白）", B(Chorus1), B(Pre), LedCanvas.Blend.Add, 1f, 0, 0, m =>
+            // 白い光は VR で白っぽく見えすぎた（2026-11-03）．水色にする
+            Clip(beam, "Beam", "回る光（水色）", B(Chorus1), B(Pre), LedCanvas.Blend.Add, 1f, 0, 0, m =>
             {
-                m.SetColor("_Color", White);
+                m.SetColor("_Color", new Color(0.3f, 0.75f, 1f));
                 m.SetFloat("_Count", 2);
                 m.SetFloat("_Width", 0.15f);
                 m.SetFloat("_Speed", 1f / 8);
@@ -564,7 +573,7 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Speed", 0.35f);
                 m.SetFloat("_Tail", 0.25f);
             });
-            Backbeat(beat, B(Chorus1), B(Pre), 0.3f, PaleBlue);
+            Backbeat(beat, B(Chorus1), B(Pre), 0.6f, PaleBlue);
             // サビ前: 光が下から積み上がる（1 拍ごとに 1 段．クレッシェンド）
             Clip(sky, "Solid", "サビ前の暗さ", B(Pre), B(Chorus2), LedCanvas.Blend.Normal, 1, 0, 0, m => m.SetColor("_Color", Mul(DarkBlue, 0.6f)));
             for (int k = 0; k < 8; k++)
@@ -582,16 +591,16 @@ namespace Arte.Rhythm.Editor
             }
             // サビ2: いちばん派手に．4 本の光が回り，中心から毎拍の輪，2・4 拍目の光
             // サビ1 との違い: 土台を紫に，白とピンクの光が逆向きに回って交差する
-            Clip(sky, "Gradient", "サビ2の土台", B(Chorus2), B(End), LedCanvas.Blend.Normal, 1, 0, 0, m =>
+            Clip(sky, "Gradient", "サビ2の土台", B(Chorus2), B(End), LedCanvas.Blend.Normal, 1, EaseInBright, 0, m =>
             {
                 m.SetColor("_ColorA", new Color(0.3f, 0.08f, 0.45f));
                 m.SetColor("_ColorB", new Color(0.08f, 0.08f, 0.35f));
                 m.SetFloat("_Direction", 1);
                 m.SetFloat("_Scroll", -0.06f);
             });
-            Clip(beam, "Beam", "回る光（白 3 本）", B(Chorus2), B(End), LedCanvas.Blend.Add, 1f, 0, 0, m =>
+            Clip(beam, "Beam", "回る光（水色 3 本）", B(Chorus2), B(End), LedCanvas.Blend.Add, 1f, 0, 0, m =>
             {
-                m.SetColor("_Color", White);
+                m.SetColor("_Color", new Color(0.2f, 0.85f, 1f));
                 m.SetFloat("_Count", 3);
                 m.SetFloat("_Width", 0.14f);
                 m.SetFloat("_Speed", 1f / 6);
@@ -623,7 +632,7 @@ namespace Arte.Rhythm.Editor
                 m.SetFloat("_Speed", 0.45f);
                 m.SetFloat("_Tail", 0.3f);
             });
-            Backbeat(beat, B(Chorus2), B(End), 0.35f, White);
+            Backbeat(beat, B(Chorus2), B(End), 0.6f, Pink);
             // 最後: 光がゆっくりになって止まり，星空に
             Clip(sky, "Gradient", "夜の土台", B(End), songEnd, LedCanvas.Blend.Normal, 1, 0, songEnd - B(End + 2), m =>
             {
@@ -648,13 +657,13 @@ namespace Arte.Rhythm.Editor
                 float start = (float)((a.bar * 0.37) % 1.0);
                 return ("Hit", m =>
                 {
-                    m.SetColor("_Color", a.band == "low" ? Pink : White);
+                    m.SetColor("_Color", a.band == "low" ? Pink : PaleBlue);
                     m.SetFloat("_Shape", shape);
                     m.SetFloat("_Speed", shape == 3 ? 2.5f : 2.2f);
                     m.SetFloat("_Width", 0.2f);
                     m.SetFloat("_Start", start);
-                    m.SetFloat("_Decay", 0.5f);
-                }, 0.8f);
+                    m.SetFloat("_Decay", 0.6f);
+                }, 0.5f);
             });
         }
 
@@ -662,6 +671,12 @@ namespace Arte.Rhythm.Editor
 
         /// <summary>小節（と拍．1 始まり）の時刻．</summary>
         static double B(int bar, double beat = 1) => tempo.TimeOfBarBeat(bar, beat);
+
+        /// <summary>
+        /// 明るい場面（サビ）に入るときは 1 拍かけて明るくする．一瞬で明るくなると眩しい（2026-11-03 ユーザー．
+        /// 評価の「眩しさ」で，暗い場面からサビへの切り替わりが 0.1 秒で 0.45 跳ねていた）．
+        /// </summary>
+        static double EaseInBright => Beats(1);
 
         static double Beats(double n) => n * 60.0 / tempo.Points[0].Bpm;
 
@@ -699,14 +714,19 @@ namespace Arte.Rhythm.Editor
 
         static string Safe(string s) => string.Concat(s.Select(c => Path.GetInvalidFileNameChars().Contains(c) || c == ' ' ? '_' : c));
 
-        /// <summary>2・4 拍目に短い光（全体の点滅は 1 秒に 1.3 回）．</summary>
+        /// <summary>
+        /// 2・4 拍目に，床の中心から光の輪が広がる．全体がぱっと光るフラッシュ（BeatPulse）は眩しいので使わない（2026-11-03 ユーザー）．
+        /// </summary>
         static void Backbeat(TrackAsset track, double from, double to, float opacity, Color color)
         {
-            Clip(track, "BeatPulse", "2・4 拍目", from - Beats(1), to, LedCanvas.Blend.Add, opacity, Beats(1), 0, m =>
+            Clip(track, "Ripple3D", "2・4 拍目の光の輪", from, to, LedCanvas.Blend.Add, opacity, 0, 0, m =>
             {
                 m.SetColor("_Color", color);
+                m.SetVector("_Center", new Vector4(0, 0, 0, 0));
                 m.SetFloat("_Every", 2);
-                m.SetFloat("_Decay", 7);
+                m.SetFloat("_Offset", 1);
+                m.SetFloat("_Speed", 2.5f);
+                m.SetFloat("_Width", 0.3f);
             });
         }
 

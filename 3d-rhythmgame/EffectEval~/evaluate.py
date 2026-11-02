@@ -289,11 +289,21 @@ def main():
     R['flash_red_per_s'] = red
     R['mean_brightness'] = float(F['bright'].mean())
     R['max_brightness'] = float(F['bright'].max())
+    # 眩しさ: 全体の光の量が 0.1 秒（3 フレーム）でどれだけ跳ね上がるか．フラッシュのような演出は眩しいので良くない
+    # （2026-11-03 ユーザー）．0.08 を超える跳ねを「眩しい跳ね」として数える
+    k = max(1, int(round(0.1 * fps)))
+    jump = F['bright'][k:] - F['bright'][:-k]
+    glare = jump.max() if len(jump) else 0
+    glare_n = int((np.diff(np.r_[0, (jump > 0.08).astype(int)]) == 1).sum())
+    R['glare_max_jump'] = float(glare)
+    R['glare_count'] = glare_n
     safe = whole <= 3 and region <= 3 and red <= 3
     rep.append('## 1. 安全（光の点滅）\n')
     rep.append(f"- 全体の点滅: 1 秒に最大 {whole:.1f} 回，1/4 の範囲: {region:.1f} 回，赤の点滅: {red:.1f} 回 → "
                + ('**OK**（3 回以下）' if safe else '**NG: 3 回を超える**（光過敏性発作の目安．子どもが見るので必ず直す）'))
-    rep.append(f"- 光の量の平均 {R['mean_brightness']:.3f}，最大 {R['max_brightness']:.3f}（全部の LED が白で 1）\n")
+    rep.append(f"- 光の量の平均 {R['mean_brightness']:.3f}，最大 {R['max_brightness']:.3f}（全部の LED が白で 1）")
+    rep.append(f"- 眩しさ: 0.1 秒で全体の光の量が最大 {glare:.2f} 跳ね上がる．0.08 を超える跳ねが {glare_n} 回 → "
+               + ('OK' if glare_n == 0 else '**フラッシュのような光がある**（眩しい．全体を一度に光らせず，動く光や柔らかい変化にする）') + chr(10))
 
     # 2. 音と光の同期
     vo = F['vonset']

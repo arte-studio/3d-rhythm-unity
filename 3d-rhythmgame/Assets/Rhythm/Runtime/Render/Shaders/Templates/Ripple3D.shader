@@ -8,6 +8,7 @@ Shader "Arte/LED/Ripple3D"
         _Every ("何拍ごとに出すか", Float) = 2
         _Speed ("広がる速さ（m / 拍）", Float) = 1.5
         _Width ("輪の太さ（m）", Float) = 0.25
+        _Offset ("ずらす拍（1 で 1 拍遅く出す）", Float) = 0
     }
     SubShader
     {
@@ -20,12 +21,12 @@ Shader "Arte/LED/Ripple3D"
             #include "../ArteLed.cginc"
 
             float4 _Color, _Center;
-            float _Every, _Speed, _Width;
+            float _Every, _Speed, _Width, _Offset;
 
             float4 frag(ArteV2f i) : SV_Target
             {
                 float4 p = ArtePosition(i.uv);
-                float r = ArteBeatPhase(_Every) * _Every * _Speed;
+                float r = frac((_ArteBeat - _Offset) / max(_Every, 1e-3)) * _Every * _Speed;
                 float d = abs(distance(p.xyz, _Center.xyz) - r);
                 float k = saturate(1 - d / max(_Width, 1e-3)) * p.w;
                 return float4(_Color.rgb * k, k);

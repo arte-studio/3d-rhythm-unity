@@ -1,6 +1,8 @@
 // LedPreview 用: LED 1 個をカメラに向いた小さな円で，光量（リニア，HDR）のまま足し合わせて描く．
 // LED は正面から見ると一番明るく，斜めからは cos で暗く，裏からは見えない（WS2812B の視野角 120°）．
 // 頂点 6 個 = LED 1 個．位置と色は LedPreview が GraphicsBuffer で渡す．
+// 明るい LED は色を保ったまま明るさだけを抑える（3 色の最大で割って縮める）．ACES のトーンマップでは明るい青やピンクが
+// 白に飛び，サビの演出が白っぽく見えた（2026-11-03 VR で確かめた）．トーンマップは使わない（LedPreviewVolume）．
 Shader "Arte/LedPreview/Point"
 {
     SubShader
@@ -55,7 +57,10 @@ Shader "Arte/LedPreview/Point"
                 // 中心が強く，縁で消える円
                 float r2 = dot(i.corner, i.corner);
                 float a = saturate(1 - r2);
-                return half4(i.color * a * a, 0);
+                float3 c = i.color * a * a;
+                float m = max(c.r, max(c.g, c.b));
+                c *= m > 1e-5 ? (1 - exp(-m)) / m : 0;     // 色相を保つ肩（明るさ 0〜∞ を 0〜1 に）
+                return half4(c, 0);
             }
             ENDHLSL
         }
