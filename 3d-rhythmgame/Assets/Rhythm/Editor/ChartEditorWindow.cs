@@ -199,7 +199,7 @@ namespace Arte.Rhythm.Editor
                     RecordUndo();
                     if (choice == 0)
                         for (int i = 0; i < notes.Count; i++)
-                            notes[i] = new ChartNote(Math.Max(0, TempoMap.Retime(notes[i].Time, savedTempo, newTempo)), notes[i].Lane, notes[i].Type);
+                            notes[i] = new ChartNote(Math.Max(0, TempoMap.Retime(notes[i].Time, savedTempo, newTempo)), notes[i].Lane, notes[i].Type, notes[i].Flow);
                     foreach (var sec in sections) sec.Time = Math.Max(0, TempoMap.Retime(sec.Time, savedTempo, newTempo));
                     int moved = song.timeline != null ? SongTimelineSync.Retime(song.timeline, savedTempo, newTempo) : 0;
                     Debug.Log($"[ChartEditor] テンポに合わせて動かした: {(choice == 0 ? $"ノーツ {notes.Count}，" : "")}区切り {sections.Count}，演出 {moved}");
@@ -257,7 +257,7 @@ namespace Arte.Rhythm.Editor
 
         // 元に戻す用: ノーツと区切りを文字列にする（"ノーツ|区切り"）
         string Snapshot() =>
-            string.Join(";", notes.Select(n => string.Format(CultureInfo.InvariantCulture, "{0:R},{1},{2}", n.Time, n.Lane, (int)n.Type))) + "|" +
+            string.Join(";", notes.Select(n => string.Format(CultureInfo.InvariantCulture, "{0:R},{1},{2},{3}", n.Time, n.Lane, (int)n.Type, n.Flow))) + "|" +
             string.Join(";", sections.Select(x => string.Format(CultureInfo.InvariantCulture, "{0:R},{1}", x.Time, Uri.EscapeDataString(x.Name))));
 
         void Restore(string snapshot)
@@ -279,7 +279,7 @@ namespace Arte.Rhythm.Editor
             foreach (var part in s.Split(';'))
             {
                 var f = part.Split(',');
-                notes.Add(new ChartNote(double.Parse(f[0], CultureInfo.InvariantCulture), int.Parse(f[1]), (NoteType)int.Parse(f[2])));
+                notes.Add(new ChartNote(double.Parse(f[0], CultureInfo.InvariantCulture), int.Parse(f[1]), (NoteType)int.Parse(f[2]), f.Length > 3 ? int.Parse(f[3]) : 0));
             }
         }
 
@@ -335,7 +335,7 @@ namespace Arte.Rhythm.Editor
             if (selected.Any(i => notes[i].Lane + dLane < 0)) return;
             RecordUndo();
             foreach (int i in selected)
-                notes[i] = new ChartNote(Math.Max(0, notes[i].Time + dt), notes[i].Lane + dLane, notes[i].Type);
+                notes[i] = new ChartNote(Math.Max(0, notes[i].Time + dt), notes[i].Lane + dLane, notes[i].Type, notes[i].Flow);
         }
 
         // ---- 座標 ----
@@ -689,7 +689,7 @@ namespace Arte.Rhythm.Editor
                         double dt = t - dragStartSec;
                         int dl = Mathf.Max(0, LaneOf(e.mousePosition.y)) - dragStartLane;
                         if (selected.Any(i => dragOriginal[i].Lane + dl < 0 || dragOriginal[i].Time + dt < 0)) { e.Use(); break; }
-                        foreach (int i in selected) notes[i] = new ChartNote(dragOriginal[i].Time + dt, dragOriginal[i].Lane + dl, dragOriginal[i].Type);
+                        foreach (int i in selected) notes[i] = new ChartNote(dragOriginal[i].Time + dt, dragOriginal[i].Lane + dl, dragOriginal[i].Type, dragOriginal[i].Flow);
                         e.Use();
                     }
                     break;

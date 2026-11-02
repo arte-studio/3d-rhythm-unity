@@ -14,6 +14,8 @@ namespace Arte.Rhythm.Charts
         /// <summary>レーン番号（0始まり．編集画面では1始まりで表示する）．</summary>
         [JsonProperty("lane")] public int Lane;
         [JsonProperty("type")] public string Type = "touch";
+        /// <summary>どの流れか（0〜2．0 は書かない）．ChartNote.Flow．</summary>
+        [JsonProperty("flow", DefaultValueHandling = DefaultValueHandling.Ignore)] public int Flow;
     }
 
     /// <summary>曲の区切り（前奏，A メロなど）．演出・譜面づくりで同じ呼び方を使うための目印．</summary>
@@ -80,13 +82,16 @@ namespace Arte.Rhythm.Charts
 
         public TempoMap TempoMap() => new TempoMap(Tempo);
 
-        public Chart ToChart() => new Chart(Notes.Select(n => new ChartNote(n.Time, n.Lane, ParseType(n.Type))));
+        public Chart ToChart() => new Chart(Notes.Select(n => new ChartNote(n.Time, n.Lane, ParseType(n.Type), n.Flow)));
+
+        /// <summary>遊ぶ人数（1〜3）に合わせて，流れ 0〜players−1 のノーツだけの譜面．</summary>
+        public Chart ToChart(int players) => new Chart(ToChart().Notes.Where(n => n.Flow < Math.Max(1, players)));
 
         /// <summary>譜面を書き戻す（時刻順に並べ，時刻はミリ秒の1/10で丸める）．</summary>
         public void SetNotes(IEnumerable<ChartNote> notes)
         {
             Notes = new Chart(notes).Notes
-                .Select(n => new SongNote { Time = Math.Round(n.Time, 4), Lane = n.Lane, Type = TypeName(n.Type) })
+                .Select(n => new SongNote { Time = Math.Round(n.Time, 4), Lane = n.Lane, Type = TypeName(n.Type), Flow = n.Flow })
                 .ToList();
         }
 

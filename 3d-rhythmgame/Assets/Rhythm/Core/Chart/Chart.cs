@@ -20,15 +20,21 @@ namespace Arte.Rhythm.Charts
         public readonly double Time;
         public readonly int Lane;
         public readonly NoteType Type;
+        /// <summary>
+        /// どの流れのノーツか（0〜2）．譜面は 3 本の流れ（それぞれ同じむぎゅっとか隣へ動いていく）でできていて，
+        /// 遊ぶ人数（1〜3 人）に合わせて流れを選ぶ（GameSession.players）．
+        /// </summary>
+        public readonly int Flow;
 
-        public ChartNote(double time, int lane, NoteType type)
+        public ChartNote(double time, int lane, NoteType type, int flow = 0)
         {
             Time = time;
             Lane = lane;
             Type = type;
+            Flow = flow;
         }
 
-        public override string ToString() => $"{Type} lane {Lane} @ {Time:F3}s";
+        public override string ToString() => $"{Type} lane {Lane} flow {Flow} @ {Time:F3}s";
     }
 
     /// <summary>

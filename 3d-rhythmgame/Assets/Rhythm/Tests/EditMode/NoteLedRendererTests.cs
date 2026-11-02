@@ -52,7 +52,7 @@ namespace Arte.Rhythm.Tests
         {
             // テンポなし（120BPM，1 拍 0.5 秒）なので 3 拍前 = 1.5 秒前から
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes);
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
             r.Render(chart, judge, 8.49, 0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "3 拍前より前は消えている");
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 3, 3));
@@ -110,11 +110,42 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void ApproachFillBrightensTowardNoteWithoutSquare()
+        {
+            var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes);                // 既定は四角なし
+            r.Render(chart, judge, 8.5, 0, 0.016f, false, frame);
+            int start = Mugu(3, 1, 0)[2];
+            CollectionAssert.AreEqual(Mugu(3, 1, 0), Mugu(3, 1, 27), "むぎゅっと全体が同じ色");
+            r.Render(chart, judge, 9.5, 0, 0.016f, false, frame);  // あと 1 拍（拍の頭）
+            Assert.Greater(Mugu(3, 1, 0)[1] + Mugu(3, 1, 0)[2], start, "ノーツ時刻に近いほど明るい（最後の 1 拍は水色）");
+        }
+
+        [Test]
+        public void CometUsesOnlyTheSameFlowAndWrapsAroundTheRing()
+        {
+            // 流れ 1: レーン 14 → レーン 0（輪で隣）．流れ 0 のレーン 1 は同じ時刻の前にあっても使わない
+            int last = 0;
+            foreach (int l in notes.Lanes) last = System.Math.Max(last, l);
+            var (chart, judge) = Make(new ChartNote(9.5, 1, NoteType.Touch, 0), new ChartNote(9.5, last, NoteType.Touch, 1),
+                                      new ChartNote(10, 0, NoteType.Touch, 1));
+            var r = new NoteLedRenderer(notes);
+            var events = new List<JudgeEvent>();
+            judge.Touch(1, 9.5, events);
+            judge.Touch(last, 9.5, events);
+            notes.TryGetModule(last, out var mLast);
+            int n = notes.ConnectLeds;
+            r.Render(chart, judge, 8.6, 0, 0.016f, false, frame);
+            Assert.Greater(Con(mLast.device, mLast.module, 1)[2], Con(mLast.device, mLast.module, n - 2)[2],
+                "レーン 0 の案内は，最後のレーンのテープ（最後 → 0）を最後のレーンの側から流れる");
+        }
+
+        [Test]
         public void BeatsApproachFollowsTempo()
         {
             // 60BPM（1 拍 1 秒）なら 3 秒前から
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes) { Tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 60, BeatsPerBar = 4 } }) };
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true }) { Tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 60, BeatsPerBar = 4 } }) };
             r.Render(chart, judge, 6.9, 0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0));
             r.Render(chart, judge, 7.05, 0, 0.016f, false, frame);

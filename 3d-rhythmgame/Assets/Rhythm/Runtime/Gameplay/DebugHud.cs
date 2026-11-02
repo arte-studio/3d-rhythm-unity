@@ -54,6 +54,8 @@ namespace Arte.Rhythm.Gameplay
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb == null) return;
             if (kb.enterKey.wasPressedThisFrame) conductor.Play();
+            // F10: 遊ぶ人数（1〜3．譜面の流れの数．次に曲を始めたときに効く）
+            if (kb.f10Key.wasPressedThisFrame && session != null) session.players = session.players % 3 + 1;
             if (kb.spaceKey.wasPressedThisFrame)
             {
                 if (conductor.IsPaused) conductor.Resume();
@@ -70,7 +72,7 @@ namespace Arte.Rhythm.Gameplay
         void OnGUI()
         {
             if (conductor == null || session == null) return;
-            GUI.Label(new Rect(10, 10, 800, 22), "Enter = 最初から再生，Space = 一時停止 / 再開，← → = 5 秒戻る / 進む，1〜0・Q〜P = レーン 1〜20 をタッチ，F9 = 演出を切り替え" +
+            GUI.Label(new Rect(10, 10, 800, 22), "Enter = 最初から再生，Space = 一時停止 / 再開，← → = 5 秒戻る / 進む，1〜0・Q〜P = レーン 1〜20 をタッチ，F9 = 演出を切り替え，F10 = 人数（今 " + (session != null ? session.players : 0) + " 人）" +
                 (SongVisualSync.CurrentEffects != null ? $"（今: {SongVisualSync.CurrentEffects}）" : ""));
             if (!conductor.IsStarted || session.Judge == null) return;
 

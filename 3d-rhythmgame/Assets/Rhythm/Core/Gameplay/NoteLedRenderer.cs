@@ -40,6 +40,13 @@ namespace Arte.Rhythm.Gameplay
         public float approachPulseMin = 0.55f;
         /// <summary>Beats: テープを走る光の粒の尾の長さ（個）．</summary>
         public float approachTailLeds = 5f;
+        /// <summary>
+        /// Beats: むぎゅっとに縮む四角を出す．切ると，むぎゅっと全体が拍で光り，ノーツ時刻に向けてだんだん明るくなる
+        /// （2026-11-03 ユーザー: 縮む四角は見えない．一旦なし）．
+        /// </summary>
+        public bool approachSquare = false;
+        /// <summary>Beats: 四角を出さないとき，案内の始めの明るさ（0〜1．ノーツ時刻で 1）．</summary>
+        public float approachFillStart = 0.3f;
         public byte[] perfectColor = { 0, 255, 0 };     // 緑
         public byte[] goodColor = { 255, 255, 0 };      // 黄
         public byte[] missColor = { 255, 0, 0 };        // 赤
@@ -296,11 +303,16 @@ namespace Arte.Rhythm.Gameplay
                 double phase = beatsBefore > 0 ? Math.Ceiling(beatsBefore) - beatsBefore : Math.Min(1, -beatsBefore);
                 float pulse = style.approachPulseMin + (1 - style.approachPulseMin) * (float)Math.Exp(-phase * style.approachPulseDecay);
                 var color = beatsBefore <= 1 ? style.approachLastColor : style.openColor;
-                PaintShrinkingSquare(mugu[lane], (float)remain, pulse, color);
-                // 光の粒を流すテープ: すぐ前のノーツが隣のレーンなら，その間のテープを前のむぎゅっとから流す
-                // （テープ k はむぎゅっと k から k+1 へ伸び，0 番目の LED が k の側）
+                if (style.approachSquare) PaintShrinkingSquare(mugu[lane], (float)remain, pulse, color);
+                else
+                {
+                    float k = (style.approachFillStart + (1 - style.approachFillStart) * (1 - (float)remain)) * pulse;
+                    Fill(mugu[lane], ToByte(color[0] / 255f * k), ToByte(color[1] / 255f * k), ToByte(color[2] / 255f * k));
+                }
+                // 光の粒を流すテープ: 同じ流れのすぐ前のノーツが隣のむぎゅっとなら，その間のテープを前のむぎゅっとから流す
+                // （テープ k はむぎゅっと k から次の k+1 へ伸び，0 番目の LED が k の側．むぎゅっとは輪で，最後の次は最初）
                 int prev = PreviousAdjacentLane(notes, i, lane, window);
-                if (prev == lane - 1 && Has(prev)) PaintComet(approachConnect[prev], (float)remain, pulse, color, towardEnd: true);
+                if (prev >= 0 && NextLane(prev) == lane && Has(prev)) PaintComet(approachConnect[prev], (float)remain, pulse, color, towardEnd: true);
                 else PaintComet(approachConnect[lane], (float)remain, pulse, color, towardEnd: false);
             }
         }
@@ -326,16 +338,26 @@ namespace Arte.Rhythm.Gameplay
             }
         }
 
-        // すぐ前のノーツ（この window の間に始まったもの）のうち，隣のレーン（lane ± 1）のもの．無ければ -1．後ろのほど優先
-        static int PreviousAdjacentLane(IReadOnlyList<ChartNote> notes, int index, int lane, double window)
+        // むぎゅっとの輪の次（最後のレーンの次は最初のレーン）
+        int NextLane(int lane)
+        {
+            int i = Array.IndexOf(lanes, lane);
+            return i < 0 ? -1 : lanes[(i + 1) % lanes.Length];
+        }
+
+        bool Adjacent(int a, int b) => a != b && (NextLane(a) == b || NextLane(b) == a);
+
+        // 同じ流れ（ChartNote.Flow）のすぐ前のノーツ（window の 1.5 倍の間に始まったもの）が隣のむぎゅっとなら，そのレーン．無ければ -1
+        int PreviousAdjacentLane(IReadOnlyList<ChartNote> notes, int index, int lane, double window)
         {
             double t = notes[index].Time;
+            int flow = notes[index].Flow;
             for (int j = index - 1; j >= 0 && j >= index - 12; j--)
             {
                 double dt = t - notes[j].Time;
-                if (dt < 1e-3) continue;                 // 同じ時刻のノーツ（同時押し）は流れの前ではない
+                if (dt < 1e-3 || notes[j].Flow != flow) continue;   // 同じ時刻のノーツ（同時押し）やほかの流れは前ではない
                 if (dt > window * 1.5) break;
-                if (Math.Abs(notes[j].Lane - lane) == 1) return notes[j].Lane;
+                return Adjacent(notes[j].Lane, lane) ? notes[j].Lane : -1;
             }
             return -1;
         }

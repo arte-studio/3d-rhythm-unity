@@ -29,7 +29,7 @@ namespace Arte.Rhythm.Render
         Font font;
 
         Canvas menu, hud;
-        Text hudScore, hudJudge, hudInfo, effectsLabel, viewLabel, pauseLabel, startLabel;
+        Text hudScore, hudJudge, hudInfo, effectsLabel, viewLabel, pauseLabel, startLabel, playersLabel;
         readonly List<(RectTransform rect, Image image, Action action)> buttons = new List<(RectTransform, Image, Action)>();
         InputAction toggleAction;
 
@@ -124,7 +124,11 @@ namespace Arte.Rhythm.Render
             viewLabel = Button(root, "子どもの目の高さにする", new Vector2(245, 80), () => vr?.SetChildView(!vr.ChildView));
             Button(root, "リングの中心に戻る", new Vector2(-245, -20), () => vr?.Recenter());
             Button(root, "床を変える", new Vector2(245, -20), () => vr?.NextFloor());
-            var quit = Button(root, "ゲームを終了する", new Vector2(0, -120), Quit);
+            playersLabel = Button(root, "人数", new Vector2(-245, -120), () =>
+            {
+                if (session != null) session.players = session.players % 3 + 1;
+            });
+            var quit = Button(root, "ゲームを終了する", new Vector2(245, -120), Quit);
             quit.color = new Color(1f, 0.7f, 0.7f);
             Label(root,
                 "左の ≡: この画面を出す / 消す　　光線を向けてトリガー，手でつつく，または 1.5 秒見つめて押す\n" +
@@ -289,6 +293,7 @@ namespace Arte.Rhythm.Render
             effectsLabel.text = $"演出を切り替える（今: {SongVisualSync.CurrentEffects}）";
             viewLabel.text = vr != null && vr.ChildView ? "自分の目の高さにする" : "子どもの目の高さにする";
             startLabel.text = conductor != null && conductor.IsStarted ? "曲を最初から" : "曲を始める";
+            playersLabel.text = session != null ? $"人数: {session.players} 人（曲を始めると変わる）" : "人数";
 
             // 頭の位置が取れてから目の前に置く（VR を始めた直後は頭の位置がまだ 0 で，床の高さに出てしまった）
             if (!placed)

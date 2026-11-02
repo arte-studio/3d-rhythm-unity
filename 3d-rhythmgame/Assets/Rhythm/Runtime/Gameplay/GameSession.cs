@@ -22,6 +22,16 @@ namespace Arte.Rhythm.Gameplay
         [Tooltip("曲の終わりにタッチの記録を保存する")]
         public bool saveReplay = true;
 
+        [Tooltip("遊ぶ人数（1〜3）．譜面の 3 本の流れのうち，この数だけを出す（2026-11-03 ユーザー決定）．起動引数 -players N でも変えられる．曲を始めるときに効く")]
+        [Range(1, 3)] public int players = 3;
+
+        void Awake()
+        {
+            var args = Environment.GetCommandLineArgs();
+            int i = Array.IndexOf(args, "-players");
+            if (i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out int n)) players = Math.Max(1, Math.Min(3, n));
+        }
+
         /// <summary>判定が確定した（Perfect/Good/Miss）．</summary>
         public event Action<JudgeEvent> Judged;
 
@@ -53,7 +63,7 @@ namespace Arte.Rhythm.Gameplay
 
         void OnStarted(double fromSec)
         {
-            Chart = conductor.Data.ToChart();
+            Chart = conductor.Data.ToChart(players);
             Judge = new TouchJudge(Chart, conductor.Data.EffectiveRules);
             Log = new TouchLog { ChartName = conductor.song != null ? conductor.song.name : "" };
             while (pending.TryDequeue(out _)) { }
