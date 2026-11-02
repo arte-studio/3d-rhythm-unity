@@ -62,6 +62,56 @@ namespace Arte.Rhythm.Render
         Song.SongConductor conductor;
         Song.SongVisualSync visualSync;
 
+        /// <summary>手の認識を使っているか（起動引数 -vr-hands のときだけ）．</summary>
+        public static bool HandTrackingOn { get; private set; }
+
+        // 手の認識を使うかを OpenXR を読み込む前に決める（有効かどうかは読み込む前にしか変えられない．終わったら元に戻す）
+        void ChooseHandTracking()
+        {
+#if ARTE_XR_HANDS
+            var hands = UnityEngine.XR.OpenXR.OpenXRSettings.Instance != null
+                ? UnityEngine.XR.OpenXR.OpenXRSettings.Instance.GetFeature<UnityEngine.XR.Hands.OpenXR.HandTracking>() : null;
+            if (hands == null) return;
+            string runtime = ActiveRuntimeJson();
+            // 手の認識は試すときだけ（起動引数 -vr-hands）．Virtual Desktop でも Meta Quest Link でも hand provider failed to initialize で手は来ず，
+            // エディタではゲームが 2 フレームで止まった（2026-11-03）
+            bool want = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-vr-hands") >= 0;
+            handsWasEnabled = hands.enabled;
+            hands.enabled = want;
+            HandTrackingOn = want;
+            Debug.Log($"[ViewerVR] VR の基盤（設定）: {runtime}．手の認識: {(want ? "使う（-vr-hands）" : "使わない")}");
+#endif
+        }
+
+        bool? handsWasEnabled;
+
+        // PC の VR の基盤（OpenXR ランタイム）の設定ファイルの場所．環境変数 XR_RUNTIME_JSON か，レジストリの ActiveRuntime
+        static string ActiveRuntimeJson()
+        {
+            string env = System.Environment.GetEnvironmentVariable("XR_RUNTIME_JSON");
+            if (!string.IsNullOrEmpty(env)) return env;
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            try
+            {
+                var buffer = new System.Text.StringBuilder(1024);
+                int size = buffer.Capacity * 2;
+                const uint HKLM = 0x80000002, RRF_RT_REG_SZ = 0x2;
+                if (RegGetValue(new System.IntPtr(unchecked((int)HKLM)), @"SOFTWARE\Khronos\OpenXR\1", "ActiveRuntime", RRF_RT_REG_SZ, System.IntPtr.Zero, buffer, ref size) == 0)
+                    return buffer.ToString();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[ViewerVR] VR の基盤の設定を読めない: {e.Message}");
+            }
+#endif
+            return "";
+        }
+
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+        [System.Runtime.InteropServices.DllImport("advapi32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        static extern int RegGetValue(System.IntPtr hkey, string subKey, string value, uint flags, System.IntPtr type, System.Text.StringBuilder data, ref int size);
+#endif
+
         static bool Wanted()
         {
 #if UNITY_EDITOR
@@ -81,6 +131,7 @@ namespace Arte.Rhythm.Render
             }
             var manager = settings.Manager;
             Debug.Log("[ViewerVR] VR を始める（1/4 OpenXR を読み込む）");
+            ChooseHandTracking();
             if (manager.activeLoader == null) yield return manager.InitializeLoader();
             if (manager.activeLoader == null)
             {
@@ -245,6 +296,14 @@ namespace Arte.Rhythm.Render
         {
             foreach (var a in actions) a.Dispose();
             actions.Clear();
+#if ARTE_XR_HANDS
+            // 手の認識の設定を元に戻す（エディタでは設定のファイルに残ってしまうので）
+            if (handsWasEnabled.HasValue && UnityEngine.XR.OpenXR.OpenXRSettings.Instance != null)
+            {
+                var hands = UnityEngine.XR.OpenXR.OpenXRSettings.Instance.GetFeature<UnityEngine.XR.Hands.OpenXR.HandTracking>();
+                if (hands != null) hands.enabled = handsWasEnabled.Value;
+            }
+#endif
             if (!Active) return;
             Active = false;
             Rig = null;

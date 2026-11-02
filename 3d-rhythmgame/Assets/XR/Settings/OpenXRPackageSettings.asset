@@ -435,6 +435,7 @@ MonoBehaviour:
   - {fileID: 4090519100448640291}
   - {fileID: 713955428053194865}
   - {fileID: -1414401497088821797}
+  - {fileID: 8568846912186871882}
   - {fileID: -8206794910353867114}
   - {fileID: 1403843976211322762}
   - {fileID: -7116653826499840864}
@@ -445,6 +446,7 @@ MonoBehaviour:
   - {fileID: -4711148751281452246}
   - {fileID: -3091807724320191214}
   - {fileID: -7404875537361011919}
+  - {fileID: -6289371421195491438}
   m_renderMode: 0
   m_autoColorSubmissionMode: 1
   m_colorSubmissionModes:

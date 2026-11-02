@@ -44,6 +44,9 @@ namespace Arte.Rhythm.Gameplay
 
         readonly List<Hand> hands = new List<Hand>();
 
+        /// <summary>手の認識で見えている手の数（VR の中の様子の表示用）．</summary>
+        public static int TrackedHands { get; private set; }
+
         /// <summary>
         /// シーンにゲーム（GameSession）があって VrTouchInput が無ければ足す（古い Play シーンでもそのまま VR で遊べるように．ViewerVR が呼ぶ）．
         /// </summary>
@@ -95,6 +98,7 @@ namespace Arte.Rhythm.Gameplay
             }
             var root = layoutRoot != null ? layoutRoot : transform.root;
             VrMenu.PokePoints.Clear();
+            int tracked = 0;
             foreach (var h in hands)
             {
                 if (h.detector == null) h.detector = ModuleTouchDetector.FromLayout(link.Notes);
@@ -104,6 +108,7 @@ namespace Arte.Rhythm.Gameplay
                 if (TryFingerTip(h.node, out var finger))
                 {
                     tip = rig.TransformPoint(finger);
+                    tracked++;
                 }
                 else if (h.tracked.IsPressed())
                 {
@@ -137,6 +142,7 @@ namespace Arte.Rhythm.Gameplay
                 if (h.material != null)
                     h.material.color = h.detector.Touching.Count > 0 ? new Color(0.9f, 1f, 0.9f) : new Color(0.35f, 0.35f, 0.45f);
             }
+            TrackedHands = tracked;
         }
 
 #if ARTE_XR_HANDS
