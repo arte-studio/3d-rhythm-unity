@@ -189,16 +189,16 @@ namespace Arte.Rhythm.Tests
             Assert.That(judge.ResultOf(0), Is.EqualTo(expected));
         }
 
-        // 既定 = 仕様書 9.1（Perfect ±50ms，Good ±150ms）
-        [TestCase(-0.16, null)]
-        [TestCase(-0.149, JudgeResult.Good)]
-        [TestCase(-0.06, JudgeResult.Good)]
-        [TestCase(-0.049, JudgeResult.Perfect)]
+        // 既定（2026-11-03 ユーザー決定: Perfect ±100ms，Good ±250ms．以前は旧仕様書 9.1 の ±50 / ±150ms）
+        [TestCase(-0.26, null)]
+        [TestCase(-0.249, JudgeResult.Good)]
+        [TestCase(-0.11, JudgeResult.Good)]
+        [TestCase(-0.099, JudgeResult.Perfect)]
         [TestCase(0.0, JudgeResult.Perfect)]
-        [TestCase(0.049, JudgeResult.Perfect)]
-        [TestCase(0.1, JudgeResult.Good)]
-        [TestCase(0.149, JudgeResult.Good)]
-        [TestCase(0.16, JudgeResult.Miss)]
+        [TestCase(0.099, JudgeResult.Perfect)]
+        [TestCase(0.2, JudgeResult.Good)]
+        [TestCase(0.249, JudgeResult.Good)]
+        [TestCase(0.26, JudgeResult.Miss)]
         public void Judge_SpecWindows(double offset, JudgeResult? expected)
         {
             var judge = new TouchJudge(OneNote(), new JudgeRules());

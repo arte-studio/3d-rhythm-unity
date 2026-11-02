@@ -3,8 +3,8 @@ using Newtonsoft.Json;
 namespace Arte.Rhythm.Gameplay
 {
     /// <summary>
-    /// タッチノーツの判定ルール．既定値は旧仕様書（docs/legacy/SPECIFICATION-v1.md 9.1）の判定幅（2026-10-27 にユーザーが決定．
-    /// 今の仕様は docs/SPECIFICATION.md 5 章）．
+    /// タッチノーツの判定ルール．既定値は Perfect ±0.1 秒，Good ±0.25 秒（2026-11-03 にユーザーが決定．VR で遊ぶと
+    /// 旧仕様書（docs/legacy/SPECIFICATION-v1.md 9.1）の ±0.05 / ±0.15 秒では厳しすぎた．本番と VR で共通．今の仕様は docs/SPECIFICATION.md 5 章）．
     /// 旧版（工大祭 2025-11-01 のシーン設定）の値は Legacy() で作れる．
     ///
     /// d = タッチ時刻 − ノーツ時刻として:
@@ -19,13 +19,13 @@ namespace Arte.Rhythm.Gameplay
     public sealed class JudgeRules
     {
         /// <summary>|d| がこれ以下なら Perfect．</summary>
-        [JsonProperty("perfectSec")] public double PerfectSec = 0.05;
+        [JsonProperty("perfectSec")] public double PerfectSec = 0.1;
 
         /// <summary>|d| がこれ以下なら Good．判定の受付開始も -GoodSec．</summary>
-        [JsonProperty("goodSec")] public double GoodSec = 0.15;
+        [JsonProperty("goodSec")] public double GoodSec = 0.25;
 
         /// <summary>ノーツ時刻からこれだけ過ぎてもタッチが無ければ Miss．</summary>
-        [JsonProperty("missAfterSec")] public double MissAfterSec = 0.15;
+        [JsonProperty("missAfterSec")] public double MissAfterSec = 0.25;
 
         /// <summary>同じレーンへの連続タッチを無視する時間（旧 touchInputCooldown）．</summary>
         [JsonProperty("laneCooldownSec")] public double LaneCooldownSec = 0.1;

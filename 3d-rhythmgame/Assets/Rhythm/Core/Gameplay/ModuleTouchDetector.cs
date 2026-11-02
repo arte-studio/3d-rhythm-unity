@@ -38,7 +38,7 @@ namespace Arte.Rhythm.Gameplay
         /// <summary>面より奥に何 m まで触れたことにするか（手が面を突き抜けても触れたまま）．</summary>
         public float BackM = 0.10f;
         /// <summary>出たことにするときの余裕（m）．</summary>
-        public float ReleaseMarginM = 0.03f;
+        public float ReleaseMarginM = 0.05f;      // 半球は小さく，3cm では縁で手がぶれて二重にタッチした（2026-11-03．0.4 秒以内の二重が 17 回）
 
         readonly struct Box
         {

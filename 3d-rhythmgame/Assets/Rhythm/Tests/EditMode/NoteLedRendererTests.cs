@@ -178,12 +178,12 @@ namespace Arte.Rhythm.Tests
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch), new ChartNote(10, 9, NoteType.Touch));
             var r = new NoteLedRenderer(notes, Blink());
             var events = new List<JudgeEvent>();
-            judge.Touch(4, 10.1, events);
-            judge.Advance(10.2, events);
+            judge.Touch(4, 10.2, events);
+            judge.Advance(10.3, events);
             Assert.AreEqual(JudgeResult.Good, events[0].Result);
             Assert.AreEqual(JudgeResult.Miss, events[1].Result);
             foreach (var e in events) r.OnJudged(e, 0);
-            r.Render(chart, judge, 10.2, 0, 0.016f, false, frame);
+            r.Render(chart, judge, 10.3, 0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 255, 255, 0 }, Mugu(3, 1));
             CollectionAssert.AreEqual(new byte[] { 255, 0, 0 }, Mugu(7, 0), "レーン 9 = デバイス 7 のモジュール 0");
         }
