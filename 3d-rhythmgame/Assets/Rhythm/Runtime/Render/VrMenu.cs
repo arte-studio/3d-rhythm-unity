@@ -42,6 +42,10 @@ namespace Arte.Rhythm.Render
         }
         readonly List<Pointer> pointers = new List<Pointer>();
         bool placed, loggedHover;
+        int gazeButton = -1;
+        float gazeSince, diagAt;
+        Text hudDiag;
+        const float GazeSec = 1.5f;
         int lastFound = -1;
         float shownAt;
         readonly List<InputAction> actions = new List<InputAction>();
@@ -123,7 +127,7 @@ namespace Arte.Rhythm.Render
             var quit = Button(root, "ゲームを終了する", new Vector2(0, -120), Quit);
             quit.color = new Color(1f, 0.7f, 0.7f);
             Label(root,
-                "左の ≡: この画面を出す / 消す　　右の光線を向けてトリガー，または手でつついて押す\n" +
+                "左の ≡: この画面を出す / 消す　　光線を向けてトリガー，手でつつく，または 1.5 秒見つめて押す\n" +
                 "A: 子どもの目の高さ　B: 自分の目の高さ　X: 中心に戻る　Y: 床\n" +
                 "左スティック: 歩く　右スティック: 向きを変える　右スティックを押す: 一時停止　左スティックを押す: 演出を切り替える",
                 new Vector2(0, -260), 22, FontStyle.Normal, new Vector2(960, 150));
@@ -135,6 +139,8 @@ namespace Arte.Rhythm.Render
             hudJudge = Label(hud.transform, "", new Vector2(0, 55), 64, FontStyle.Bold, new Vector2(680, 90));
             hudScore = Label(hud.transform, "", new Vector2(0, -20), 30, FontStyle.Normal, new Vector2(680, 50));
             hudInfo = Label(hud.transform, "", new Vector2(0, -75), 22, FontStyle.Normal, new Vector2(680, 40));
+            hudDiag = Label(hud.transform, "", new Vector2(0, -105), 16, FontStyle.Normal, new Vector2(680, 26));
+            hudDiag.color = new Color(0.6f, 0.6f, 0.65f);
         }
 
         Canvas NewCanvas(string name, Vector2 size, Color? background = null)
@@ -227,6 +233,7 @@ namespace Arte.Rhythm.Render
             if (head == null) return;
             if (toggleAction.WasPressedThisFrame()) ShowMenu(!MenuVisible);
             UpdateHud();
+            UpdateDiagnostics();
             if (MenuVisible) UpdateMenu();
             else foreach (var p in pointers) p.laser.enabled = false;
         }
@@ -253,6 +260,20 @@ namespace Arte.Rhythm.Render
             hudInfo.text = conductor != null && conductor.IsStarted
                 ? $"{conductor.SongTime:F0} 秒　{section}　演出: {SongVisualSync.CurrentEffects}{(conductor.IsPaused ? "　（一時停止中）" : "")}"
                 : "左の ≡ でホーム画面";
+        }
+
+        // 様子を 5 秒ごとにログに書き，スコアの下にも小さく出す（押せない・始まらないときに何が来ていないかを調べるため）
+        void UpdateDiagnostics()
+        {
+            int controllers = 0;
+            foreach (var d in InputSystem.devices)
+                if (d is UnityEngine.InputSystem.XR.XRController) controllers++;
+            string text = $"フレーム {Time.frameCount}　曲 {(conductor != null && conductor.IsStarted ? conductor.SongTime.ToString("F1") + " 秒" : "止まっている")}　" +
+                          $"コントローラ {controllers}　キーボード {(Keyboard.current != null ? "あり" : "なし")}　手前 {(Application.isFocused ? "はい" : "いいえ")}";
+            hudDiag.text = text;
+            if (Time.unscaledTime < diagAt) return;
+            diagAt = Time.unscaledTime + 5f;
+            Debug.Log($"[VrMenu] {text}　ホーム画面 {(MenuVisible ? "出ている" : "消えている")}");
         }
 
         void UpdateMenu()
@@ -323,6 +344,28 @@ namespace Arte.Rhythm.Render
                 p.wasDown = down;
             }
             for (int i = 0; i < buttons.Count; i++) buttons[i].image.color = i == hovered ? ButtonHover : ButtonColor;
+
+            // 見つめて押す（コントローラも手も使えないとき．ボタンを 1.5 秒見つめると押す．押すまでの間はボタンの色が変わっていく）
+            int gaze = -1;
+            var eye = new Ray(head.transform.position, head.transform.forward);
+            if (plane.Raycast(eye, out float gd) && gd < 3f) gaze = ButtonAt(eye.GetPoint(gd));
+            if (gaze != gazeButton)
+            {
+                gazeButton = gaze;
+                gazeSince = Time.unscaledTime;
+            }
+            if (gaze >= 0)
+            {
+                float t = (Time.unscaledTime - gazeSince) / GazeSec;
+                if (gaze != hovered) buttons[gaze].image.color = Color.Lerp(ButtonColor, new Color(0.35f, 0.6f, 0.4f), Mathf.Clamp01(t));
+                if (t >= 1)
+                {
+                    Debug.Log($"[VrMenu] 見つめて押した（{gaze}）");
+                    gazeSince = Time.unscaledTime + 1f;     // 続けて押さない
+                    buttons[gaze].action();
+                    return;
+                }
+            }
 
             // 手の先でつつく（板から 2cm 以内に入ったら押す．続けて押さないよう 0.5 秒あける）
             pokeCooldown -= Time.unscaledDeltaTime;

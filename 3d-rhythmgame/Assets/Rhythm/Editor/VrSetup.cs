@@ -135,8 +135,15 @@ namespace Arte.Rhythm.Editor
                     SessionState.SetFloat("Arte.VrTest.Start", (float)EditorApplication.timeSinceStartup);
                     return;
                 }
+                var conductor = UnityEngine.Object.FindFirstObjectByType<Arte.Rhythm.Song.SongConductor>();
+                // 8 秒たったら曲を始める（ホーム画面の「曲を始める」と同じ）
+                if (EditorApplication.timeSinceStartup - start > 8 && conductor != null && !conductor.IsStarted)
+                {
+                    Debug.Log("[VrSetup] 曲を始める");
+                    conductor.Play();
+                }
                 if (EditorApplication.timeSinceStartup - start < 25) return;
-                Debug.Log($"[VrSetup] 試験の終わり（{Time.frameCount} フレーム）");
+                Debug.Log($"[VrSetup] 試験の終わり（{Time.frameCount} フレーム，曲 {(conductor != null && conductor.IsStarted ? conductor.SongTime.ToString("F1") + " 秒" : "始まっていない")}）");
                 SessionState.SetBool("Arte.VrTest", false);
                 EditorPrefs.SetBool(ViewerVR.EditorPrefsKey, SessionState.GetBool("Arte.VrTest.Before", false));
                 EditorApplication.isPlaying = false;

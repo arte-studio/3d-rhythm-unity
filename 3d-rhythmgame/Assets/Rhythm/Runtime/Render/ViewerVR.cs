@@ -85,6 +85,12 @@ namespace Arte.Rhythm.Render
                 yield break;
             }
             Debug.Log("[ViewerVR] VR を始める（2/4 表示と入力を動かす）");
+            // ヘッドセットをかぶると Unity が手前のアプリでなくなることがあり，Input System の既定では入力の機器が止まる
+            // （コントローラが 0 個のまま，Enter も効かなかった．2026-11-03）．VR のときは手前でなくても入力を受け取る
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+#if UNITY_EDITOR
+            InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+#endif
             manager.StartSubsystems();
             Active = true;
             SetUpRig();
