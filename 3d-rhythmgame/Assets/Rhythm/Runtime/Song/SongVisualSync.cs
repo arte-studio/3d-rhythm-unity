@@ -75,7 +75,13 @@ namespace Arte.Rhythm.Song
         {
             // F9: 曲の別の演出（SongAsset.effectVariants）に切り替える
             var kb = UnityEngine.InputSystem.Keyboard.current;
-            if (kb == null || !kb.f9Key.wasPressedThisFrame || director == null || conductor == null || conductor.song == null) return;
+            if (kb != null && kb.f9Key.wasPressedThisFrame) NextEffects();
+        }
+
+        /// <summary>曲の別の演出（SongAsset.effectVariants）に切り替える（F9．VR では左スティックの押し込み）．</summary>
+        public void NextEffects()
+        {
+            if (director == null || conductor == null || conductor.song == null) return;
             var effects = conductor.song.AllEffects();
             if (effects.Count < 2) return;
             int i = effects.FindIndex(e => e == director.playableAsset);

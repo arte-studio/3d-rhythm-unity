@@ -23,6 +23,8 @@ namespace Arte.Rhythm.Render
     /// - X / F7: リングの中心に戻る（今いる場所と向きをリングの中心・正面に合わせる）
     /// - Y / F3: 床の種類を切り替える
     /// - 左スティック: 歩く，右スティック: 30° ずつ向きを変える
+    /// - 左の ≡（メニュー）: 曲を最初から始める（Enter），右スティックの押し込み: 一時停止 / 再開（Space），
+    ///   左スティックの押し込み: 演出を切り替える（F9）．Play シーンだけ（Viewer シーンは曲を動かさない）
     /// 将来 VR でゲームを遊ぶときは，コントローラや手の位置をここから取り，ノーツモジュールに触れたらタッチにする．
     /// </summary>
     [DefaultExecutionOrder(105)]
@@ -46,7 +48,9 @@ namespace Arte.Rhythm.Render
         bool childView;
         bool turnReady = true;
         readonly List<InputAction> actions = new List<InputAction>();
-        InputAction childAction, ownAction, recenterAction, floorAction, moveAction, turnAction;
+        InputAction childAction, ownAction, recenterAction, floorAction, moveAction, turnAction, startAction, pauseAction, effectsAction;
+        Song.SongConductor conductor;
+        Song.SongVisualSync visualSync;
 
         static bool Wanted()
         {
@@ -113,6 +117,11 @@ namespace Arte.Rhythm.Render
             floorAction = NewAction("<XRController>{LeftHand}/secondaryButton", InputActionType.Button);
             moveAction = NewAction("<XRController>{LeftHand}/thumbstick", InputActionType.Value, "Vector2");
             turnAction = NewAction("<XRController>{RightHand}/thumbstick", InputActionType.Value, "Vector2");
+            startAction = NewAction("<XRController>{LeftHand}/menu", InputActionType.Button);
+            pauseAction = NewAction("<XRController>{RightHand}/thumbstickClicked", InputActionType.Button);
+            effectsAction = NewAction("<XRController>{LeftHand}/thumbstickClicked", InputActionType.Button);
+            conductor = FindFirstObjectByType<Song.SongConductor>();
+            visualSync = FindFirstObjectByType<Song.SongVisualSync>();
         }
 
         InputAction NewAction(string binding, InputActionType type, string control = null)
@@ -131,6 +140,16 @@ namespace Arte.Rhythm.Render
             if (Pressed(ownAction) || (kb != null && kb.f6Key.wasPressedThisFrame)) SetChildView(false);
             if (Pressed(recenterAction) || (kb != null && kb.f7Key.wasPressedThisFrame)) Recenter();
             if (Pressed(floorAction) && room != null) room.SetFloor((room.FloorIndex + 1) % RoomSurfaces.Floors.Length);
+            if (conductor != null)
+            {
+                if (Pressed(startAction)) conductor.Play();
+                if (Pressed(pauseAction) && conductor.IsStarted)
+                {
+                    if (conductor.IsPaused) conductor.Resume();
+                    else conductor.Pause();
+                }
+            }
+            if (Pressed(effectsAction) && visualSync != null) visualSync.NextEffects();
 
             var move = moveAction.ReadValue<Vector2>();
             if (move.sqrMagnitude > 0.04f)
