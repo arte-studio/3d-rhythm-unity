@@ -31,8 +31,19 @@ namespace Arte.Rhythm.Render
         Canvas menu, hud;
         Text hudScore, hudJudge, hudInfo, effectsLabel, viewLabel, pauseLabel, startLabel;
         readonly List<(RectTransform rect, Image image, Action action)> buttons = new List<(RectTransform, Image, Action)>();
-        LineRenderer laser;
-        InputAction toggleAction, clickAction, aimPos, aimRot;
+        InputAction toggleAction;
+
+        // 光線を出す手（右と左．どちらのトリガーでも押せる）
+        sealed class Pointer
+        {
+            public InputAction aimPos, aimRot, gripPos, gripRot, trigger;
+            public LineRenderer laser;
+            public bool wasDown;
+        }
+        readonly List<Pointer> pointers = new List<Pointer>();
+        bool placed, loggedHover;
+        int lastFound = -1;
+        float shownAt;
         readonly List<InputAction> actions = new List<InputAction>();
         int hovered = -1;
         float pokeCooldown;
@@ -58,17 +69,26 @@ namespace Arte.Rhythm.Render
             font = Font.CreateDynamicFontFromOSFont(new[] { "Meiryo", "Yu Gothic UI", "MS Gothic", "Arial" }, 40);
             BuildMenu();
             BuildHud();
-            laser = new GameObject("光線").AddComponent<LineRenderer>();
-            laser.positionCount = 2;
-            laser.startWidth = laser.endWidth = 0.003f;
-            if (lineMaterial != null) laser.sharedMaterial = lineMaterial;
-            laser.startColor = laser.endColor = new Color(0.6f, 0.8f, 1f);
             toggleAction = NewAction("<XRController>{LeftHand}/menu");
-            clickAction = NewAction("<XRController>{RightHand}/triggerPressed");
-            aimPos = NewAction("<XRController>{RightHand}/pointerPosition", "Vector3");
-            aimRot = NewAction("<XRController>{RightHand}/pointerRotation", "Quaternion");
+            foreach (var hand in new[] { "RightHand", "LeftHand" })
+            {
+                var laser = new GameObject($"光線（{hand}）").AddComponent<LineRenderer>();
+                laser.positionCount = 2;
+                laser.startWidth = laser.endWidth = 0.004f;
+                if (lineMaterial != null) laser.sharedMaterial = new Material(lineMaterial) { color = new Color(0.6f, 0.8f, 1f) };
+                laser.enabled = false;
+                pointers.Add(new Pointer
+                {
+                    aimPos = NewAction($"<XRController>{{{hand}}}/pointerPosition", "Vector3"),
+                    aimRot = NewAction($"<XRController>{{{hand}}}/pointerRotation", "Quaternion"),
+                    gripPos = NewAction($"<XRController>{{{hand}}}/devicePosition", "Vector3"),
+                    gripRot = NewAction($"<XRController>{{{hand}}}/deviceRotation", "Quaternion"),
+                    trigger = NewAction($"<XRController>{{{hand}}}/trigger", "Axis"),
+                    laser = laser,
+                });
+            }
             if (session != null) session.Judged += OnJudged;
-            ShowMenu(true);
+            menu.gameObject.SetActive(true);      // 置く場所は頭の位置が取れてから（UpdateMenu）
         }
 
         InputAction NewAction(string binding, string control = null)
@@ -167,7 +187,9 @@ namespace Arte.Rhythm.Render
         void ShowMenu(bool show)
         {
             menu.gameObject.SetActive(show);
+            shownAt = Time.unscaledTime;
             if (!show || head == null) return;
+            placed = true;
             // 目の前 0.9m，目より少し下に，こちらを向けて置く
             var fwd = Vector3.ProjectOnPlane(head.transform.forward, Vector3.up).normalized;
             if (fwd.sqrMagnitude < 1e-4f) fwd = Vector3.forward;
@@ -206,7 +228,7 @@ namespace Arte.Rhythm.Render
             if (toggleAction.WasPressedThisFrame()) ShowMenu(!MenuVisible);
             UpdateHud();
             if (MenuVisible) UpdateMenu();
-            else laser.enabled = false;
+            else foreach (var p in pointers) p.laser.enabled = false;
         }
 
         void UpdateHud()
@@ -240,24 +262,67 @@ namespace Arte.Rhythm.Render
             viewLabel.text = vr != null && vr.ChildView ? "自分の目の高さにする" : "子どもの目の高さにする";
             startLabel.text = conductor != null && conductor.IsStarted ? "曲を最初から" : "曲を始める";
 
-            // 右手の光線
-            hovered = -1;
-            var origin = rig != null ? rig.TransformPoint(aimPos.ReadValue<Vector3>()) : Vector3.zero;
-            var q = aimRot.ReadValue<Quaternion>();
-            if (q.x == 0 && q.y == 0 && q.z == 0 && q.w == 0) q = Quaternion.identity;
-            var dir = (rig != null ? rig.rotation : Quaternion.identity) * q * Vector3.forward;
-            var plane = new Plane(-menu.transform.forward, menu.transform.position);
-            Vector3 end = origin + dir * 3f;
-            if (rig != null && plane.Raycast(new Ray(origin, dir), out float dist) && dist < 3f)
+            // 頭の位置が取れてから目の前に置く（VR を始めた直後は頭の位置がまだ 0 で，床の高さに出てしまった）
+            if (!placed)
             {
-                end = origin + dir * dist;
-                hovered = ButtonAt(end);
+                if (head.transform.localPosition.sqrMagnitude < 1e-6f && Time.unscaledTime - shownAt < 3f) return;
+                ShowMenu(true);
             }
-            laser.enabled = rig != null;
-            laser.SetPosition(0, origin);
-            laser.SetPosition(1, end);
+            // コントローラが見つかった / 外れたらログに出す（押せないときに入力が来ているかを確かめるため）
+            int found = 0;
+            foreach (var p in pointers) found += p.aimPos.controls.Count + p.gripPos.controls.Count + p.trigger.controls.Count;
+            if (found != lastFound)
+            {
+                lastFound = found;
+                foreach (var p in pointers)
+                    Debug.Log($"[VrMenu] 入力: 指す位置 {p.aimPos.controls.Count}，握る位置 {p.gripPos.controls.Count}，トリガー {p.trigger.controls.Count}（{p.trigger.bindings[0].path}）");
+            }
+
+            // 光線（左右どちらでも．指す向きが取れなければ握る位置から）．トリガーを半分くらい握ったら押す
+            hovered = -1;
+            var plane = new Plane(-menu.transform.forward, menu.transform.position);
+            foreach (var p in pointers)
+            {
+                bool aim = p.aimPos.controls.Count > 0;
+                var local = aim ? p.aimPos.ReadValue<Vector3>() : p.gripPos.ReadValue<Vector3>();
+                var q = aim ? p.aimRot.ReadValue<Quaternion>() : p.gripRot.ReadValue<Quaternion>();
+                if (q.x == 0 && q.y == 0 && q.z == 0 && q.w == 0)
+                {
+                    p.laser.enabled = false;
+                    continue;
+                }
+                var origin = rig != null ? rig.TransformPoint(local) : local;
+                var dir = (rig != null ? rig.rotation : Quaternion.identity) * q * Vector3.forward;
+                Vector3 end = origin + dir * 2f;
+                int hit = -1;
+                if (plane.Raycast(new Ray(origin, dir), out float dist) && dist < 3f)
+                {
+                    end = origin + dir * dist;
+                    hit = ButtonAt(end);
+                }
+                p.laser.enabled = true;
+                p.laser.SetPosition(0, origin);
+                p.laser.SetPosition(1, end);
+                bool down = p.trigger.ReadValue<float>() > 0.5f;
+                if (hit >= 0)
+                {
+                    hovered = hit;
+                    if (!loggedHover)
+                    {
+                        loggedHover = true;
+                        Debug.Log("[VrMenu] 光線がボタンに当たった");
+                    }
+                    if (down && !p.wasDown)
+                    {
+                        Debug.Log($"[VrMenu] ボタンを押した（{hit}）");
+                        p.wasDown = true;
+                        buttons[hit].action();
+                        return;
+                    }
+                }
+                p.wasDown = down;
+            }
             for (int i = 0; i < buttons.Count; i++) buttons[i].image.color = i == hovered ? ButtonHover : ButtonColor;
-            if (hovered >= 0 && clickAction.WasPressedThisFrame()) buttons[hovered].action();
 
             // 手の先でつつく（板から 2cm 以内に入ったら押す．続けて押さないよう 0.5 秒あける）
             pokeCooldown -= Time.unscaledDeltaTime;
