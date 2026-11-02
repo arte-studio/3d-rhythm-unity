@@ -113,7 +113,7 @@ namespace Arte.Rhythm.Tests
         public void ApproachFillBrightensTowardNoteWithoutSquare()
         {
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes);                // 既定は四角なし
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = false });
             r.Render(chart, judge, 8.5, 0, 0.016f, false, frame);
             int start = Mugu(3, 1, 0)[2];
             CollectionAssert.AreEqual(Mugu(3, 1, 0), Mugu(3, 1, 27), "むぎゅっと全体が同じ色");

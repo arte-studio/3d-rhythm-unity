@@ -42,9 +42,9 @@ namespace Arte.Rhythm.Gameplay
         public float approachTailLeds = 5f;
         /// <summary>
         /// Beats: むぎゅっとに縮む四角を出す．切ると，むぎゅっと全体が拍で光り，ノーツ時刻に向けてだんだん明るくなる
-        /// （2026-11-03 ユーザー: 縮む四角は見えない．一旦なし）．
+        /// （2026-11-03 ユーザー: 一度なしにしたが，やっぱり採用）．
         /// </summary>
-        public bool approachSquare = false;
+        public bool approachSquare = true;
         /// <summary>Beats: 四角を出さないとき，案内の始めの明るさ（0〜1．ノーツ時刻で 1）．</summary>
         public float approachFillStart = 0.3f;
         public byte[] perfectColor = { 0, 255, 0 };     // 緑
