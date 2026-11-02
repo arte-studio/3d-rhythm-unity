@@ -273,7 +273,9 @@ namespace Arte.Rhythm.Render
             hudDiag.text = text;
             if (Time.unscaledTime < diagAt) return;
             diagAt = Time.unscaledTime + 5f;
-            Debug.Log($"[VrMenu] {text}　ホーム画面 {(MenuVisible ? "出ている" : "消えている")}");
+            var names = new List<string>();
+            foreach (var d in InputSystem.devices) names.Add($"{d.layout}{(d.enabled ? "" : "（止まっている）")}");
+            Debug.Log($"[VrMenu] {text}　ホーム画面 {(MenuVisible ? "出ている" : "消えている")}　入力の機器: {string.Join("，", names)}");
         }
 
         void UpdateMenu()
