@@ -199,9 +199,11 @@ namespace Arte.Rhythm.Tests
         [Test]
         public void LaneMapMatchesLegacyNoteLeds()
         {
+            // レーン 11〜14 は 2026-11-03 に足した（旧版には無かった）
+            var added = new System.Collections.Generic.Dictionary<int, (int, int)> { [11] = (7, 2), [12] = (7, 3), [13] = (7, 4), [14] = (0, 3) };
             for (int lane = 0; lane < 16; lane++)
             {
-                var (device, module) = LegacyLaneToHard(lane);
+                var (device, module) = added.TryGetValue(lane, out var a) ? a : LegacyLaneToHard(lane);
                 bool ok = notes.TryGetModule(lane, out ModuleAddress m);
                 Assert.AreEqual(device >= 0, ok, $"lane {lane}");
                 if (!ok) continue;

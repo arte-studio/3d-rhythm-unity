@@ -35,8 +35,8 @@ namespace Arte.Rhythm.Tests
             for (int c = 0; c < perf.ColumnCount; c++)
                 if (perf.GetStrip(c).Installed) strips++;
             Assert.AreEqual(86, strips, "kodaisai-1101 は 4 本外している");
-            Assert.AreEqual(strips * 120 + 11 * (64 + 30), model.LedCount);
-            Assert.AreEqual(strips * 4 + 11 * (1 + LedSceneModel.ConnectSegments), model.ClusterCount);
+            Assert.AreEqual(strips * 120 + 15 * (64 + 30), model.LedCount, "むぎゅっと 15 個（2026-11-03 に 11 から足した）");
+            Assert.AreEqual(strips * 4 + 15 * (1 + LedSceneModel.ConnectSegments), model.ClusterCount);
 
             // 光源の位置は中の LED の平均（ストリップの最初の 1/4 は下の方）
             Assert.Less(model.ClusterPositions[1], 0.5f);

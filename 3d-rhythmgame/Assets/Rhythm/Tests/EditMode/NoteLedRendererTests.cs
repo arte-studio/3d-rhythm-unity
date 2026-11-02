@@ -240,8 +240,8 @@ namespace Arte.Rhythm.Tests
         [Test]
         public void UnwiredLanesAreIgnored()
         {
-            // レーン 12 は kodaisai-1101 に無い（旧版でも LED に出なかった）
-            var (chart, judge) = Make(new ChartNote(10, 12, NoteType.Touch));
+            // レーン 15 は kodaisai-1101 に無い
+            var (chart, judge) = Make(new ChartNote(10, 15, NoteType.Touch));
             var r = new NoteLedRenderer(notes, Blink());
             r.Render(chart, judge, 9.0, 0, 0.016f, false, frame);
             for (int d = 0; d < 8; d++)
