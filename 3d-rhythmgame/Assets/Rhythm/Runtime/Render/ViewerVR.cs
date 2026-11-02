@@ -77,16 +77,19 @@ namespace Arte.Rhythm.Render
                 yield break;
             }
             var manager = settings.Manager;
+            Debug.Log("[ViewerVR] VR を始める（1/4 OpenXR を読み込む）");
             if (manager.activeLoader == null) yield return manager.InitializeLoader();
             if (manager.activeLoader == null)
             {
                 Debug.LogWarning("[ViewerVR] VR を始められない（Quest Link がつながっているか，Meta Quest Link が OpenXR ランタイムになっているかを確かめる）．ふつうの画面で表示する");
                 yield break;
             }
+            Debug.Log("[ViewerVR] VR を始める（2/4 表示と入力を動かす）");
             manager.StartSubsystems();
             Active = true;
             SetUpRig();
             SetUpInput();
+            Debug.Log("[ViewerVR] VR を始める（3/4 視点・ホーム画面を作る）");
             Gameplay.VrTouchInput.EnsureInScene();
             var menu = gameObject.AddComponent<VrMenu>();
             menu.vr = this;

@@ -83,6 +83,59 @@ namespace Arte.Rhythm.Editor
             Debug.Log("[VrSetup] OpenXR を設定した（Windows，起動時には始めない，MultiPass，Quest のコントローラ）");
         }
 
+        /// <summary>
+        /// エディタで Play シーンを VR で再生して 25 秒後に終わる（動作の確かめ用．GUI のエディタで -executeMethod から呼ぶ）．
+        /// Play in VR のチェックはそのあと元に戻す．再生でスクリプトが読み込み直されても続くよう SessionState に覚える．
+        /// </summary>
+        public static void PlayInVrTest()
+        {
+            SessionState.SetBool("Arte.VrTest.Before", EditorPrefs.GetBool(ViewerVR.EditorPrefsKey, false));
+            SessionState.SetBool("Arte.VrTest", true);
+            EditorPrefs.SetBool(ViewerVR.EditorPrefsKey, true);
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Rhythm/Scenes/Play.unity");
+            EditorApplication.isPlaying = true;
+        }
+
+        /// <summary>Game ビューを開いて前に出す（無いと再生してもゲームが進まず VR が真っ暗になることがある）．</summary>
+        public static void FocusGameView()
+        {
+            var type = Type.GetType("UnityEditor.GameView, UnityEditor");
+            if (type != null) EditorWindow.GetWindow(type, false, null, true).Focus();
+        }
+
+        // Play in VR のときは再生を始めたら Game ビューを前に出す．Game ビューが出ていないとゲームが 1 フレームも進まず，
+        // ヘッドセットが真っ暗のままになった（2026-11-03．エディタで 25 秒に 2 フレーム．Game ビューを出すと 5407 フレーム）
+        [InitializeOnLoadMethod]
+        static void WatchPlayMode()
+        {
+            EditorApplication.playModeStateChanged += s =>
+            {
+                if (s == PlayModeStateChange.EnteredPlayMode && EditorPrefs.GetBool(ViewerVR.EditorPrefsKey, false)) FocusGameView();
+            };
+        }
+
+        [InitializeOnLoadMethod]
+        static void ResumeVrTest()
+        {
+            if (!SessionState.GetBool("Arte.VrTest", false)) return;
+            EditorApplication.update += () =>
+            {
+                if (!SessionState.GetBool("Arte.VrTest", false) || !EditorApplication.isPlaying) return;
+                float start = SessionState.GetFloat("Arte.VrTest.Start", 0);
+                if (start == 0)
+                {
+                    SessionState.SetFloat("Arte.VrTest.Start", (float)EditorApplication.timeSinceStartup);
+                    return;
+                }
+                if (EditorApplication.timeSinceStartup - start < 25) return;
+                Debug.Log($"[VrSetup] 試験の終わり（{Time.frameCount} フレーム）");
+                SessionState.SetBool("Arte.VrTest", false);
+                EditorPrefs.SetBool(ViewerVR.EditorPrefsKey, SessionState.GetBool("Arte.VrTest.Before", false));
+                EditorApplication.isPlaying = false;
+                EditorApplication.delayCall += () => EditorApplication.Exit(0);
+            };
+        }
+
         [MenuItem(PlayInVrMenu)]
         static void TogglePlayInVr() => EditorPrefs.SetBool(ViewerVR.EditorPrefsKey, !EditorPrefs.GetBool(ViewerVR.EditorPrefsKey, false));
 
