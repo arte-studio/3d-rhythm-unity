@@ -275,7 +275,12 @@ namespace Arte.Rhythm.Render
             diagAt = Time.unscaledTime + 5f;
             var names = new List<string>();
             foreach (var d in InputSystem.devices) names.Add($"{d.layout}{(d.enabled ? "" : "（止まっている）")}");
-            Debug.Log($"[VrMenu] {text}　ホーム画面 {(MenuVisible ? "出ている" : "消えている")}　入力の機器: {string.Join("，", names)}");
+            // その手前の XR の層（ランタイムから来ている機器）．Input System に出ないとき，ここに来ているかで原因を分ける
+            var xr = new List<UnityEngine.XR.InputDevice>();
+            UnityEngine.XR.InputDevices.GetDevices(xr);
+            var xrNames = new List<string>();
+            foreach (var d in xr) xrNames.Add($"{d.name}［{d.characteristics}］");
+            Debug.Log($"[VrMenu] {text}　ホーム画面 {(MenuVisible ? "出ている" : "消えている")}　入力の機器: {string.Join("，", names)}　XR の機器: {string.Join("，", xrNames)}");
         }
 
         void UpdateMenu()
