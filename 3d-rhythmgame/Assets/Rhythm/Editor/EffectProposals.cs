@@ -99,6 +99,7 @@ namespace Arte.Rhythm.Editor
             var tl = ScriptableObject.CreateInstance<TimelineAsset>();
             AssetDatabase.CreateAsset(tl, $"{dir}/{name}.playable");
             build(tl);
+            CrossfadeIntoChoruses(tl);
             EditorUtility.SetDirty(tl);
             return tl;
         }
@@ -672,14 +673,30 @@ namespace Arte.Rhythm.Editor
 
         // ---------------- 道具 ----------------
 
+        /// <summary>
+        /// サビの頭でぴったり終わるクリップを 1 拍延ばして消えていくようにする（サビは 1 拍かけて入るので，入れ替わりになる）．
+        /// ぴったり終わると，サビの頭で一度真っ暗になってから明るくなり，まばたきのように見えた（v8 の評価の「眩しさ」）．
+        /// </summary>
+        static void CrossfadeIntoChoruses(TimelineAsset tl)
+        {
+            foreach (var track in tl.GetOutputTracks())
+                foreach (var clip in track.GetClips())
+                {
+                    bool atChorus = Math.Abs(clip.end - B(Chorus1)) < 1e-3 || Math.Abs(clip.end - B(Chorus2)) < 1e-3;
+                    if (!atChorus || clip.easeOutDuration > 0) continue;
+                    clip.duration += EaseInBright;
+                    clip.easeOutDuration = EaseInBright;
+                }
+        }
+
         /// <summary>小節（と拍．1 始まり）の時刻．</summary>
         static double B(int bar, double beat = 1) => tempo.TimeOfBarBeat(bar, beat);
 
         /// <summary>
-        /// 明るい場面（サビ）に入るときは 1 拍かけて明るくする．一瞬で明るくなると眩しい（2026-11-03 ユーザー．
-        /// 評価の「眩しさ」で，暗い場面からサビへの切り替わりが 0.1 秒で 0.45 跳ねていた）．
+        /// 明るい場面（サビ）に入るときは 2 拍かけて明るくする．一瞬で明るくなると眩しい（2026-11-03 ユーザー．
+        /// 評価の「眩しさ」で，暗い場面からサビへの切り替わりが 0.1 秒で 0.45 跳ねていた．1 拍では真ん中で少し跳ねた（v9））．
         /// </summary>
-        static double EaseInBright => Beats(1);
+        static double EaseInBright => Beats(2);
 
         static double Beats(double n) => n * 60.0 / tempo.Points[0].Bpm;
 

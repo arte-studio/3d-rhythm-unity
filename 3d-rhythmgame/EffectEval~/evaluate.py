@@ -98,6 +98,7 @@ def light_features(fr):
     d = np.diff(L, axis=0)
     activity = np.r_[0, np.abs(d).mean((1, 2))]                         # 動きの量
     vonset = np.r_[0, np.maximum(0, d).mean((1, 2))]                    # 明るくなる変化（光の「アタック」）
+    vlocal = np.r_[0, np.percentile(np.maximum(0, d).reshape(len(d), -1), 95, axis=1)]   # 場所ごとの明るくなる変化（上位 5% の場所）
     # 場所の使い方: 高さの重心と，一周方向の偏り
     hy = Y.mean(2)
     hsum = hy.sum(1) + 1e-6
@@ -106,7 +107,7 @@ def light_features(fr):
     th = np.linspace(0, 2 * np.pi, Y.shape[2], endpoint=False)
     aniso = np.abs((ang * np.exp(1j * th)).sum(1)) / (ang.sum(1) + 1e-6)
     spatial_var = Y.reshape(len(Y), -1).std(1) / (Y.reshape(len(Y), -1).mean(1) + 1e-3)
-    return dict(lin=lin, Y=Y, bright=bright, activity=activity, vonset=vonset, ycent=ycent, aniso=aniso, svar=spatial_var)
+    return dict(lin=lin, Y=Y, bright=bright, activity=activity, vonset=vonset, vlocal=vlocal, ycent=ycent, aniso=aniso, svar=spatial_var)
 
 
 def hue_sat(rgb):
@@ -342,6 +343,14 @@ def main():
         return (v - v.mean()) / (v.std() + 1e-9)
     xc = [np.mean(norm(vo)[max(0, k):n + min(0, k)] * norm(onset)[max(0, -k):n - max(0, k)]) for k in range(-lag_range, lag_range + 1)]
     lag = (np.argmax(xc) - lag_range) / fps * 1000
+    # 場所ごとの同期: 一部の場所だけが音に合わせて明るくなる演出（周波数の波など）は全体の変化には出ないので，
+    # 上位 5% の場所の明るくなる変化と音の立ち上がりの相関を見る
+    vl = F['vlocal']
+    xl = [np.mean(norm(vl)[max(0, k2):n + min(0, k2)] * norm(onset)[max(0, -k2):n - max(0, k2)]) for k2 in range(-lag_range, lag_range + 1)]
+    local_peak = float(max(xl))
+    local_lag = (np.argmax(xl) - lag_range) / fps * 1000
+    R['local_xcorr_peak'] = local_peak
+    R['local_xcorr_lag_ms'] = float(local_lag)
     R.update(beat_concentration=float(beat_conc), beat_offset_ms=float(beat_off), attack_count=int(len(vpk)),
              attack_on_beat=prec_beat, attack_on_onset=prec_onset, strong_accent_hit=recall_strong,
              xcorr_peak=float(max(xc)), xcorr_lag_ms=float(lag))
@@ -350,6 +359,8 @@ def main():
     rep.append(f"- 曲の強いアクセント {len(strong)} 個のうち，光もアタックしたもの {recall_strong * 100:.0f}%")
     rep.append(f"- 光の変化の拍への集中度 {beat_conc:.2f}（0 = 拍と無関係，1 = 拍ちょうど），平均の位置は拍から {beat_off:+.0f} ms")
     rep.append(f"- 光の変化と音の立ち上がりの相互相関 {max(xc):.2f}，ずれ {lag:+.0f} ms（＋ = 光が遅い）\n")
+    rep.append(f"- 場所ごとの光の変化（明るくなる上位 5% の場所）と音の立ち上がりの相互相関 {local_peak:.2f}，ずれ {local_lag:+.0f} ms"
+               "（周波数の波のように一部だけが音に合わせて動く演出はこちらに出る）" + chr(10))
 
     # 3. 盛り上がり（音量と光の強さ）
     bar = P * bpb

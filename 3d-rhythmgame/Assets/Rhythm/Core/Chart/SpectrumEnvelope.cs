@@ -19,6 +19,7 @@ namespace Arte.Rhythm.Charts
         /// <summary>帯ごとにそろえるとき，一番大きい帯よりこれ以上小さい帯は引き上げない（音がほとんど無い帯が 1 にならないように）．</summary>
         public const double MaxBoostDb = 36;
         const double ReleaseSec = 0.18;
+        const double AttackSec = 0.04;    // 上がるときも少しだけなめらかに（一瞬で伸びると 1/4 の範囲の点滅が 1 秒に 3 回になった）
         const int FftSize = 2048;
 
         readonly float[] bands;    // [区間 * BandCount + 帯]
@@ -102,10 +103,11 @@ namespace Arte.Rhythm.Charts
                 for (int w = 0; w < n; w++) col[w] = db[w * BandCount + b];
                 double top = Math.Max(tops[b], loudest - MaxBoostDb);
                 double y = 0;
+                double attack = Math.Exp(-WindowSec / AttackSec);
                 for (int w = 0; w < n; w++)
                 {
                     double x = Math.Max(0, Math.Min(1, (col[w] - (top - RangeDb)) / RangeDb));
-                    y = x > y ? x : y * release + x * (1 - release);
+                    y = x > y ? y * attack + x * (1 - attack) : y * release + x * (1 - release);
                     bands[w * BandCount + b] = (float)y;
                 }
             }

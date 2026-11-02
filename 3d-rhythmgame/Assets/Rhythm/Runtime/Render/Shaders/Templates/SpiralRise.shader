@@ -35,7 +35,7 @@ Shader "Arte/LED/SpiralRise"
                 float since = _ArteClipProgress - order;
                 float lit = saturate(since / _Edge + 1);
                 float3 c = lerp(_ColorA.rgb, _ColorB.rgb, saturate(since / _Change));
-                if (_ArteClipProgress >= 0.999) c = _ColorB.rgb;
+                // 以前は終わりの 1 フレームだけ全体を最後の色にしていたが，その 1 コマで光の量が跳ねて眩しかった（2026-11-03）のでやめた
                 return float4(c * lit, lit * p.w);
             }
             ENDCG
