@@ -91,6 +91,25 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void CometFlowsFromThePreviousAdjacentModule()
+        {
+            // レーン 3 → レーン 4（隣）．レーン 4 の案内の光の粒は，レーン 3 のテープ（3 から 4 へ伸びる）を 3 の側から 4 の側へ流れる
+            var (chart, judge) = Make(new ChartNote(9.5, 3, NoteType.Touch), new ChartNote(10, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes);
+            notes.TryGetModule(3, out var m3);
+            notes.TryGetModule(4, out var m4);
+            int n = notes.ConnectLeds;
+            var events = new List<JudgeEvent>();
+            judge.Touch(3, 9.5, events);           // レーン 3 は取った（レーン 4 の案内だけが出る）
+            r.Render(chart, judge, 8.6, 0, 0.016f, false, frame);   // あと 1.4 秒（ほぼ走り始め）
+            int nearStart = Con(m3.device, m3.module, 1)[2], nearEnd = Con(m3.device, m3.module, n - 2)[2];
+            Assert.Greater(nearStart, nearEnd, "走り始めはレーン 3 の側（0 番目の近く）");
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(m4.device, m4.module, n - 1), "レーン 4 のテープは使わない");
+            r.Render(chart, judge, 9.999, 0, 0.016f, false, frame);
+            Assert.Greater(Con(m3.device, m3.module, n - 1)[1] + Con(m3.device, m3.module, n - 1)[0], 100, "着くのはレーン 4 の側（テープの最後）");
+        }
+
+        [Test]
         public void BeatsApproachFollowsTempo()
         {
             // 60BPM（1 拍 1 秒）なら 3 秒前から

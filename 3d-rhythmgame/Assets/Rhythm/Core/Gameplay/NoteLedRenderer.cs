@@ -13,6 +13,7 @@ namespace Arte.Rhythm.Gameplay
         /// 拍で案内する（2026-11-03 ユーザー決定）: ノーツ時刻の approachBeats 拍前から，
         /// むぎゅっとの外周の四角が中心へ縮み（中心の 2×2 は薄く点けておく．閉じた瞬間がノーツ時刻），
         /// つながるノーツ用テープの遠い端から光の粒が走ってむぎゅっとの側の端に着き，1 拍ごとに光が強まる（最後の 1 拍は色を変える）．
+        /// すぐ前のノーツが隣のレーン（テープでつながっているむぎゅっと）なら，光の粒はその間のテープを前のむぎゅっとから次のむぎゅっとへ流れる．
         /// </summary>
         Beats,
         /// <summary>旧版: ノーツ時刻の SpawnLeadSec 前から青の点滅（openBlinkPeriodSec．ノーツ時刻にちょうど点く位相）．何回目かを数えないと分かりにくかった</summary>
@@ -296,7 +297,11 @@ namespace Arte.Rhythm.Gameplay
                 float pulse = style.approachPulseMin + (1 - style.approachPulseMin) * (float)Math.Exp(-phase * style.approachPulseDecay);
                 var color = beatsBefore <= 1 ? style.approachLastColor : style.openColor;
                 PaintShrinkingSquare(mugu[lane], (float)remain, pulse, color);
-                PaintComet(approachConnect[lane], (float)remain, pulse, color);
+                // 光の粒を流すテープ: すぐ前のノーツが隣のレーンなら，その間のテープを前のむぎゅっとから流す
+                // （テープ k はむぎゅっと k から k+1 へ伸び，0 番目の LED が k の側）
+                int prev = PreviousAdjacentLane(notes, i, lane, window);
+                if (prev == lane - 1 && Has(prev)) PaintComet(approachConnect[prev], (float)remain, pulse, color, towardEnd: true);
+                else PaintComet(approachConnect[lane], (float)remain, pulse, color, towardEnd: false);
             }
         }
 
@@ -321,15 +326,31 @@ namespace Arte.Rhythm.Gameplay
             }
         }
 
-        // つながるノーツ用テープの遠い端（最後の LED）から，むぎゅっとの側の端（0 番目）へ光の粒が走る．remain = 0 で 0 番目に着く
-        void PaintComet(byte[] dest, float remain, float pulse, byte[] color)
+        // すぐ前のノーツ（この window の間に始まったもの）のうち，隣のレーン（lane ± 1）のもの．無ければ -1．後ろのほど優先
+        static int PreviousAdjacentLane(IReadOnlyList<ChartNote> notes, int index, int lane, double window)
+        {
+            double t = notes[index].Time;
+            for (int j = index - 1; j >= 0 && j >= index - 12; j--)
+            {
+                double dt = t - notes[j].Time;
+                if (dt < 1e-3) continue;                 // 同じ時刻のノーツ（同時押し）は流れの前ではない
+                if (dt > window * 1.5) break;
+                if (Math.Abs(notes[j].Lane - lane) == 1) return notes[j].Lane;
+            }
+            return -1;
+        }
+
+        // つながるノーツ用テープを光の粒が走る．remain = 1 で走り始め，0 で着く．
+        // towardEnd = false: 遠い端（最後の LED）からむぎゅっとの側の端（0 番目）へ（このテープのむぎゅっとに着く）
+        // towardEnd = true: 0 番目から最後の LED へ（テープの先の，次のレーンのむぎゅっとに着く）
+        void PaintComet(byte[] dest, float remain, float pulse, byte[] color, bool towardEnd)
         {
             int n = layout.ConnectLeds;
-            float head = (n - 1) * remain;
+            float head = towardEnd ? (n - 1) * (1 - remain) : (n - 1) * remain;
             float tail = Math.Max(0.5f, style.approachTailLeds);
             for (int i = 0; i < n; i++)
             {
-                float behind = i - head;                         // 頭より遠い側が尾
+                float behind = towardEnd ? head - i : i - head;   // 頭より後ろ（来た側）が尾
                 float k = behind < -0.5f ? 0 : behind <= 0.5f ? 1f : (float)Math.Exp(-(behind - 0.5f) / tail * 2.5f);
                 k *= pulse;
                 for (int ch = 0; ch < Channels; ch++)
