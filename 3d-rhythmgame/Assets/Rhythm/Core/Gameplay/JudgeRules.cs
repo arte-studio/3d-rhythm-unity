@@ -48,6 +48,9 @@ namespace Arte.Rhythm.Gameplay
         /// <summary>同じむぎゅっとの前のノーツからこれだけ（拍）あかないタッチノーツは遊ぶ譜面から外す（SongData.ToChart）．0 で外さない．</summary>
         [JsonProperty("sameLaneMinGapBeats")] public double SameLaneMinGapBeats = 3;
 
+        /// <summary>同じ流れの前のノーツからこれだけ（拍）あかないタッチノーツも外す（同時のものは残す）．0 で外さない．</summary>
+        [JsonProperty("sameFlowMinGapBeats")] public double SameFlowMinGapBeats = 3;
+
         /// <summary>
         /// Miss を見せる（演出・判定の文字）のはノーツ時刻からどれだけ後か（JSON では missShowAfterMs / missShowAfterBeats）．
         /// 判定そのもの（MissAfter）は変えない．Miss がすぐ出るとリズムが乱されるので，既定は 1 拍後．Perfect / Great / Good はすぐ見せる．

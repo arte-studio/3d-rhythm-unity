@@ -88,19 +88,25 @@ namespace Arte.Rhythm.Charts
         /// 遊ぶ人数（1〜3）に合わせて，流れ 0〜players−1 のノーツだけの譜面．
         /// 同じむぎゅっとの前のノーツから rules.sameLaneMinGapBeats 拍あかないタッチノーツは外す（譜面には残る．
         /// 2026-11-03 ユーザー: 同じ場所で近すぎるノーツは一旦無効に．既定 3 拍，0 で外さない）．
+        /// 同じ流れの前のノーツから rules.sameFlowMinGapBeats 拍あかないものも外す（案内がいつも紫の 3 から始まるように．
+        /// 2026-11-04 ユーザー決定．同時のノーツはそのまま）．
         /// </summary>
         public Chart ToChart(int players)
         {
-            double minGap = EffectiveRules.SameLaneMinGapBeats;
+            double minGap = EffectiveRules.SameLaneMinGapBeats, minFlowGap = EffectiveRules.SameFlowMinGapBeats;
             var tempo = TempoMap();
             var last = new Dictionary<int, double>();
+            var lastInFlow = new Dictionary<int, double>();
             return new Chart(ToChart().Notes.Where(n =>
             {
                 if (n.Flow >= Math.Max(1, players)) return false;
-                if (n.Type != NoteType.Touch || minGap <= 0) return true;
+                if (n.Type != NoteType.Touch) return true;
                 double beat = tempo.BeatOf(n.Time);
-                if (last.TryGetValue(n.Lane, out double prev) && beat - prev < minGap - 1e-3) return false;
+                if (minGap > 0 && last.TryGetValue(n.Lane, out double prev) && beat - prev < minGap - 1e-3) return false;
+                if (minFlowGap > 0 && lastInFlow.TryGetValue(n.Flow, out double prevFlow)
+                    && beat - prevFlow > 1e-3 && beat - prevFlow < minFlowGap - 1e-3) return false;
                 last[n.Lane] = beat;
+                lastInFlow[n.Flow] = beat;
                 return true;
             }));
         }

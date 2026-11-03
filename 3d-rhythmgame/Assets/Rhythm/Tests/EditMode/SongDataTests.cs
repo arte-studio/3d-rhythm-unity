@@ -156,9 +156,36 @@ namespace Arte.Rhythm.Tests
                 data.Notes.Add(new SongNote { Time = t, Lane = lane, Type = "touch" });
             CollectionAssert.AreEquivalent(new[] { (1.0, 0), (2.5, 0), (2.5, 1) },
                 data.ToChart(3).Notes.Select(n => (n.Time, n.Lane)), "2.0 は 0 番の 1.0 から 3 拍（1.5 秒）あかない．2.5 はちょうど 3 拍なので残る．3.5 は 2.5 から 2 拍");
-            data.Rules = new JudgeRules { SameLaneMinGapBeats = 0 };
+            data.Rules = new JudgeRules { SameLaneMinGapBeats = 0, SameFlowMinGapBeats = 0 };
             Assert.AreEqual(5, data.ToChart(3).Notes.Count, "0 なら外さない");
             Assert.AreEqual(5, data.ToChart().Notes.Count, "譜面そのものには残る");
+        }
+
+        [Test]
+        public void SameFlowNotesLessThanThreeBeatsApartAreLeftOutButSimultaneousStay()
+        {
+            var data = new SongData { Tempo = { new TempoPoint { TimeSec = 0, Bpm = 120 } } }; // 1 拍 0.5 秒
+            foreach (var (t, lane, flow) in new[] { (1.0, 0, 0), (1.0, 1, 0), (2.0, 2, 0), (2.5, 3, 0), (2.5, 4, 0), (3.0, 9, 0), (2.0, 7, 1) })
+                data.Notes.Add(new SongNote { Time = t, Lane = lane, Type = "touch", Flow = flow });
+            CollectionAssert.AreEquivalent(new[] { (1.0, 0), (1.0, 1), (2.5, 3), (2.5, 4), (2.0, 7) },
+                data.ToChart(3).Notes.Select(n => (n.Time, n.Lane)), "2.0 と 3.0 は流れ 0 の前から 3 拍あかない．同時の 2 つは残る．流れ 1 は別");
+        }
+
+        [Test]
+        public void KodaisaiChartNeverStartsTheCountdownAtTwo([Values(1, 2, 3)] int players)
+        {
+            // 2026-11-04 ユーザー: 2 から始まるノーツは禁止．同じ流れの前のノーツから必ず 3 拍あく（同時は別）
+            var song = SongJson.Load(File.ReadAllText(Path.Combine(TestData.SongsDir(), "kodaisai-2025", "song.json")));
+            var tempo = song.TempoMap();
+            foreach (var flow in song.ToChart(players).Notes.GroupBy(n => n.Flow))
+            {
+                var beats = flow.Select(n => tempo.BeatOf(n.Time)).ToList();
+                for (int i = 1; i < beats.Count; i++)
+                {
+                    double gap = beats[i] - beats[i - 1];
+                    Assert.That(gap < 1e-3 || gap > 3 - 1e-3, $"流れ {flow.Key} の {i} 番目: 前から {gap:F2} 拍");
+                }
+            }
         }
 
         [Test]
@@ -166,9 +193,9 @@ namespace Arte.Rhythm.Tests
         {
             var data = new SongData();
             data.Notes.Add(new SongNote { Time = 1, Lane = 5, Type = "touch" });
-            data.Notes.Add(new SongNote { Time = 2, Lane = 6, Type = "touch" });
-            data.Notes.Add(new SongNote { Time = 3, Lane = 4, Type = "touch" });
-            data.Notes.Add(new SongNote { Time = 4, Lane = 0, Type = "touch" });
+            data.Notes.Add(new SongNote { Time = 3, Lane = 6, Type = "touch" });
+            data.Notes.Add(new SongNote { Time = 5, Lane = 4, Type = "touch" });
+            data.Notes.Add(new SongNote { Time = 7, Lane = 0, Type = "touch" });
             data.Notes.Add(new SongNote { Time = 1, Lane = 9, Type = "touch", Flow = 1 });
             int[] ring = { 0, 1, 2, 3, 4, 5, 6, 7 };
             var one = data.ToChart(1, ring, 7).Notes;
