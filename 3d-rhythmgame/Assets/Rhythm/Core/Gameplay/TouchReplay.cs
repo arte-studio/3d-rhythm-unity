@@ -42,6 +42,7 @@ namespace Arte.Rhythm.Gameplay
         public List<JudgeEvent> Events = new List<JudgeEvent>();
         public int Score;
         public int Perfect;
+        public int Great;
         public int Good;
         public int Miss;
     }
@@ -62,6 +63,7 @@ namespace Arte.Rhythm.Gameplay
             judge.Advance(System.Math.Max(endTime, last), result.Events);
             result.Score = judge.Score;
             result.Perfect = judge.PerfectCount;
+            result.Great = judge.GreatCount;
             result.Good = judge.GoodCount;
             result.Miss = judge.MissCount;
             return result;

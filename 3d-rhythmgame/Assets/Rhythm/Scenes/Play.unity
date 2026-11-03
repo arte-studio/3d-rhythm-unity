@@ -180,7 +180,8 @@ MonoBehaviour:
     openColor: 0000ff
     openBlinkPeriodSec: 0.5
     perfectColor: 00ff00
-    goodColor: ffff00
+    greatColor: ffff00
+    goodColor: ff6400
     missColor: ff0000
     perfectRainbowSec: 0.2
     perfectRainbowSpeed: 0.8

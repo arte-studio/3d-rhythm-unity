@@ -87,7 +87,7 @@ namespace Arte.Rhythm.Tests
                     {
                         JudgeResult? r = null;
                         if (Math.Abs(diff) <= perfectRange && flag[i]) { r = JudgeResult.Perfect; Score += rules.PerfectScore; }
-                        else if (Math.Abs(diff) <= goodRange && flag[i]) { r = JudgeResult.Good; Score += rules.GoodScore; }
+                        else if (Math.Abs(diff) <= goodRange && flag[i]) { r = JudgeResult.Great; Score += rules.GreatScore; }
                         else if (currentTime > targetTime + missRange) r = JudgeResult.Miss;
                         if (r != null)
                         {
@@ -133,7 +133,7 @@ namespace Arte.Rhythm.Tests
         static IEnumerable<object[]> EquivalenceCases()
         {
             var kodaisai = JudgeRules.Legacy();
-            var tight = new JudgeRules { PerfectSec = 0.05, GoodSec = 0.12, MissAfterSec = 0.2, LaneCooldownSec = 0.1, SpawnLeadSec = 0.12 };
+            var tight = new JudgeRules { PerfectSec = 0.05, GreatSec = 0.12, GoodSec = 0.12, GoodBeats = null, MissAfterSec = 0.2, MissAfterBeats = null, PreferNearestNote = false, LaneCooldownSec = 0.1, SpawnLeadSec = 0.12 };
             foreach (string file in new[] { "Kodaisai_NoteData_1101.json", "Kokasai_NoteData_1026.json" })
                 foreach (int seed in new[] { 1, 2, 3, 4, 5 })
                 {
@@ -175,8 +175,8 @@ namespace Arte.Rhythm.Tests
         static Chart OneNote(double t = 10, int lane = 0) => new Chart(new[] { new ChartNote(t, lane, NoteType.Touch) });
 
         [TestCase(-3.01, null)]
-        [TestCase(-3.0, JudgeResult.Good)]
-        [TestCase(-2.5, JudgeResult.Good)]
+        [TestCase(-3.0, JudgeResult.Great)]
+        [TestCase(-2.5, JudgeResult.Great)]
         [TestCase(-2.0, JudgeResult.Perfect)]
         [TestCase(0.0, JudgeResult.Perfect)]
         [TestCase(0.5, JudgeResult.Perfect)]
@@ -189,23 +189,27 @@ namespace Arte.Rhythm.Tests
             Assert.That(judge.ResultOf(0), Is.EqualTo(expected));
         }
 
-        // 既定（2026-11-03 ユーザー決定: Perfect ±100ms，Good ±250ms．以前は旧仕様書 9.1 の ±50 / ±150ms）
-        [TestCase(-0.26, null)]
-        [TestCase(-0.249, JudgeResult.Good)]
-        [TestCase(-0.11, JudgeResult.Good)]
+        // 既定（2026-11-03 ユーザー決定: Perfect ±100ms，Great ±250ms，Good ±1 拍．テンポが無いと 120 BPM = 1 拍 0.5 秒）
+        [TestCase(-0.51, null)]
+        [TestCase(-0.49, JudgeResult.Good)]
+        [TestCase(-0.26, JudgeResult.Good)]
+        [TestCase(-0.249, JudgeResult.Great)]
+        [TestCase(-0.11, JudgeResult.Great)]
         [TestCase(-0.099, JudgeResult.Perfect)]
         [TestCase(0.0, JudgeResult.Perfect)]
         [TestCase(0.099, JudgeResult.Perfect)]
-        [TestCase(0.2, JudgeResult.Good)]
-        [TestCase(0.249, JudgeResult.Good)]
-        [TestCase(0.26, JudgeResult.Miss)]
+        [TestCase(0.2, JudgeResult.Great)]
+        [TestCase(0.249, JudgeResult.Great)]
+        [TestCase(0.26, JudgeResult.Good)]
+        [TestCase(0.49, JudgeResult.Good)]
+        [TestCase(0.51, JudgeResult.Miss)]
         public void Judge_SpecWindows(double offset, JudgeResult? expected)
         {
             var judge = new TouchJudge(OneNote(), new JudgeRules());
             var events = new List<JudgeEvent>();
             judge.Touch(0, 10 + offset, events);
             Assert.That(judge.ResultOf(0), Is.EqualTo(expected));
-            Assert.That(judge.Score, Is.EqualTo(expected == JudgeResult.Perfect ? 100 : expected == JudgeResult.Good ? 50 : 0));
+            Assert.That(judge.Score, Is.EqualTo(expected == JudgeResult.Perfect ? 100 : expected == JudgeResult.Great ? 50 : expected == JudgeResult.Good ? 20 : 0));
         }
 
         [Test]
@@ -213,11 +217,12 @@ namespace Arte.Rhythm.Tests
         {
             // 120 BPM（1 拍 0.5 秒）．Perfect は 1/4 拍 = 125ms，Good は 200ms と 1/2 拍 = 250ms の長い方
             var tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 120 } });
-            var rules = SongJson.Load("{\"format\":\"arte-rhythm-song/1\",\"rules\":{\"perfectMs\":0,\"perfectBeats\":0.25,\"goodMs\":200,\"goodBeats\":0.5,\"missAfterMs\":250}}").EffectiveRules;
+            var rules = SongJson.Load("{\"format\":\"arte-rhythm-song/1\",\"rules\":{\"perfectMs\":0,\"perfectBeats\":0.25,\"greatMs\":150,\"goodMs\":200,\"goodBeats\":0.5}}").EffectiveRules;
             Assert.AreEqual(0.125, rules.PerfectAt(tempo, 10), 1e-9);
             Assert.AreEqual(0.25, rules.GoodAt(tempo, 10), 1e-9);
-            Assert.AreEqual(0.25, rules.MissAfterAt(tempo, 10), 1e-9, "拍を書かなければ ms だけ");
-            foreach (var (offset, expected) in new[] { (0.12, JudgeResult.Perfect), (-0.13, JudgeResult.Good), (-0.24, JudgeResult.Good) })
+            Assert.AreEqual(0.15, rules.GreatAt(tempo, 10), 1e-9, "拍を書かなければ ms だけ");
+            Assert.AreEqual(0.5, rules.MissAfterAt(tempo, 10), 1e-9, "書かなければ既定（1 拍）");
+            foreach (var (offset, expected) in new[] { (0.12, JudgeResult.Perfect), (-0.13, JudgeResult.Great), (-0.24, JudgeResult.Good) })
             {
                 var judge = new TouchJudge(OneNote(), rules, tempo);
                 judge.Touch(0, 10 + offset, new List<JudgeEvent>());
@@ -234,10 +239,27 @@ namespace Arte.Rhythm.Tests
             var tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 150 } }); // 1 拍 0.4 秒
             var judge = new TouchJudge(OneNote(), new JudgeRules(), tempo);
             var events = new List<JudgeEvent>();
-            judge.Advance(10.3, events);
-            Assert.AreEqual(JudgeResult.Miss, events.Single().Result, "Miss の確定は今までどおり 250ms 後");
+            judge.Advance(10.39, events);
+            Assert.IsEmpty(events, "Good は 1 拍まで");
+            judge.Advance(10.41, events);
+            Assert.AreEqual(JudgeResult.Miss, events.Single().Result);
             Assert.AreEqual(10.4, judge.MissShowAt(0), 1e-9, "見せるのは 1 拍後");
             Assert.AreEqual(10.5, new TouchJudge(OneNote(), JudgeRules.Legacy(), tempo).MissShowAt(0), 1e-9, "旧版は確定した時");
+        }
+
+        [Test]
+        public void Judge_TakesTheNearerNoteOnTheSameLane()
+        {
+            // 同じむぎゅっとに 1 拍（0.5 秒）おき．Good は 1 拍あるが，次のノーツの方が近ければそちらを取る
+            var chart = new Chart(new[] { new ChartNote(10, 0, NoteType.Touch), new ChartNote(10.5, 0, NoteType.Touch) });
+            var judge = new TouchJudge(chart, new JudgeRules());
+            var events = new List<JudgeEvent>();
+            judge.Touch(0, 10.45, events);
+            Assert.AreEqual(new[] { JudgeResult.Miss, JudgeResult.Perfect }, events.Select(e => e.Result).ToArray());
+            judge = new TouchJudge(chart, new JudgeRules());
+            events.Clear();
+            judge.Touch(0, 10.2, events);
+            Assert.AreEqual(JudgeResult.Great, events.Single().Result, "前のノーツの方が近い");
         }
 
         [Test]

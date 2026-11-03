@@ -90,7 +90,8 @@ namespace Arte.Rhythm.Gameplay
         /// <summary>Beats: 四角を出さないとき，案内の始めの明るさ（0〜1．ノーツ時刻で 1）．</summary>
         public float approachFillStart = 0.3f;
         public byte[] perfectColor = { 0, 255, 0 };     // 緑
-        public byte[] goodColor = { 255, 255, 0 };      // 黄
+        public byte[] greatColor = { 255, 255, 0 };     // 黄
+        public byte[] goodColor = { 255, 100, 0 };      // 橙
         public byte[] missColor = { 255, 0, 0 };        // 赤
 
         /// <summary>Perfect のとき，むぎゅっとに虹色の回転を出す時間（旧版 PerfectPerformance．旧版は画面上の 3D オブジェクトにだけ出ていた）．</summary>
@@ -219,7 +220,7 @@ namespace Arte.Rhythm.Gameplay
         public void OnJudged(in JudgeEvent e, double realtime)
         {
             if (!Has(e.Lane)) return;
-            byte[] c = e.Result == JudgeResult.Perfect ? style.perfectColor : e.Result == JudgeResult.Good ? style.goodColor : style.missColor;
+            byte[] c = e.Result == JudgeResult.Perfect ? style.perfectColor : e.Result == JudgeResult.Great ? style.greatColor : e.Result == JudgeResult.Good ? style.goodColor : style.missColor;
             Array.Copy(c, judgedColor[e.Lane], Channels);
             judgedAt[e.Lane] = realtime;
             judgedPerfect[e.Lane] = e.Result == JudgeResult.Perfect;

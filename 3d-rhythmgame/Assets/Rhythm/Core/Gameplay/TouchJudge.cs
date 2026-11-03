@@ -7,6 +7,7 @@ namespace Arte.Rhythm.Gameplay
     public enum JudgeResult
     {
         Perfect,
+        Great,
         Good,
         Miss,
     }
@@ -42,7 +43,7 @@ namespace Arte.Rhythm.Gameplay
         Judged,
         /// <summary>そのレーンに受付時間内のノーツが無かった（空タッチ）．</summary>
         NoNote,
-        /// <summary>受付時間内のノーツはあったが Perfect/Good の範囲外だった（そのノーツはいずれ Miss になる）．</summary>
+        /// <summary>受付時間内のノーツはあったが Perfect/Great/Good の範囲外だった（そのノーツはいずれ Miss になる）．</summary>
         OutOfRange,
         /// <summary>同じレーンの連続タッチとして無視した．</summary>
         Cooldown,
@@ -72,7 +73,7 @@ namespace Arte.Rhythm.Gameplay
         readonly Dictionary<int, double> lastAcceptedTouch = new Dictionary<int, double>();
         readonly List<JudgeEvent> missScratch = new List<JudgeEvent>();
         // ノーツごとの幅（秒）．拍で書いた幅はノーツの所のテンポで秒にする
-        readonly double[] perfect, good, missAfter, missShowAfter;
+        readonly double[] perfect, great, good, missAfter, missShowAfter;
         double now = double.NegativeInfinity;
 
         sealed class LaneQueue
@@ -89,6 +90,7 @@ namespace Arte.Rhythm.Gameplay
             this.rules = rules ?? throw new ArgumentNullException(nameof(rules));
             results = new JudgeResult?[notes.Count];
             perfect = new double[notes.Count];
+            great = new double[notes.Count];
             good = new double[notes.Count];
             missAfter = new double[notes.Count];
             missShowAfter = new double[notes.Count];
@@ -96,6 +98,7 @@ namespace Arte.Rhythm.Gameplay
             {
                 double t = notes[i].Time;
                 perfect[i] = rules.PerfectAt(tempo, t);
+                great[i] = rules.GreatAt(tempo, t);
                 good[i] = rules.GoodAt(tempo, t);
                 missAfter[i] = rules.MissAfterAt(tempo, t);
                 missShowAfter[i] = rules.MissShowAfterAt(tempo, t);
@@ -108,6 +111,7 @@ namespace Arte.Rhythm.Gameplay
         public JudgeRules Rules => rules;
         public int Score { get; private set; }
         public int PerfectCount { get; private set; }
+        public int GreatCount { get; private set; }
         public int GoodCount { get; private set; }
         public int MissCount { get; private set; }
 
@@ -161,11 +165,24 @@ namespace Arte.Rhythm.Gameplay
             // 先頭（最も早い未判定ノーツ）だけが候補．後ろのノーツは先頭より遅いので，先頭が受付前なら後ろも受付前
             int index = q.Peek();
             double d = songTime - notes[index].Time;
+            // 幅が広いと，前のノーツが取られて次のノーツが Miss になることがある．
+            // 次のノーツの方が近ければ，前のノーツは Miss にして次のノーツを判定する
+            while (rules.PreferNearestNote && q.Head + 1 < q.Indices.Count)
+            {
+                int next = q.Indices[q.Head + 1];
+                double dn = songTime - notes[next].Time;
+                if (Math.Abs(dn) >= Math.Abs(d) || dn < -good[next]) break;
+                q.Head++;
+                Commit(index, JudgeResult.Miss, songTime, output);
+                index = next;
+                d = dn;
+            }
             if (d < -good[index] || d > good[index] + missAfter[index]) return TouchOutcome.NoNote;
 
             double abs = Math.Abs(d);
             JudgeResult result;
             if (abs <= perfect[index]) result = JudgeResult.Perfect;
+            else if (abs <= great[index]) result = JudgeResult.Great;
             else if (abs <= good[index]) result = JudgeResult.Good;
             else return TouchOutcome.OutOfRange;
 
@@ -180,6 +197,7 @@ namespace Arte.Rhythm.Gameplay
             switch (result)
             {
                 case JudgeResult.Perfect: PerfectCount++; Score += rules.PerfectScore; break;
+                case JudgeResult.Great: GreatCount++; Score += rules.GreatScore; break;
                 case JudgeResult.Good: GoodCount++; Score += rules.GoodScore; break;
                 default: MissCount++; break;
             }

@@ -13,7 +13,7 @@ namespace Arte.Rhythm.Render
     ///
     /// ホーム画面: 目の前に浮かぶ板．左の ≡ で出す / 消す（始めは出ている）．右手の光線で指してトリガーで押すか，手の先でつつく．
     /// ボタン: 曲を始める，一時停止 / 再開，演出の切り替え，子どもの目の高さ / 自分の目の高さ，リングの中心に戻る，床，ゲームを終了（Unity の ■）．
-    /// スコアの表示: 正面の上に浮かび，向いた方へゆっくりついてくる．スコア，Perfect / Good / Miss の数，直前の判定と何 ms 早い / 遅いか．
+    /// スコアの表示: 正面の上に浮かび，向いた方へゆっくりついてくる．スコア，Perfect / Great / Good / Miss の数，直前の判定と何 ms 早い / 遅いか．
     /// 日本語は Windows のフォント（Meiryo など）で書く．
     /// </summary>
     public sealed class VrMenu : MonoBehaviour
@@ -54,7 +54,7 @@ namespace Arte.Rhythm.Render
         string lastJudge = "";
         Color lastJudgeColor = Color.white;
         float lastJudgeAt = -10;
-        // むぎゅっとのすぐ近くに出す判定（Perfect / Good / Miss と，何 ms 早い・遅い）．2026-11-03 ユーザー
+        // むぎゅっとのすぐ近くに出す判定（Perfect / Great / Good / Miss と，何 ms 早い・遅い）．2026-11-03 ユーザー
         LedPreview preview;
         readonly List<(Canvas canvas, Text text, Vector3 at, float born)> popups = new List<(Canvas, Text, Vector3, float)>();
         const float PopupSec = 1.2f;
@@ -240,7 +240,7 @@ namespace Arte.Rhythm.Render
             int ms = (int)Math.Round(e.Offset * 1000);
             string timing = e.Result == JudgeResult.Miss ? "" : ms == 0 ? "（ぴったり）" : ms < 0 ? $"（{-ms}ms 早い）" : $"（{ms}ms 遅い）";
             lastJudge = e.Result + timing;
-            lastJudgeColor = e.Result == JudgeResult.Perfect ? new Color(0.4f, 1f, 0.5f) : e.Result == JudgeResult.Good ? new Color(1f, 0.9f, 0.3f) : new Color(1f, 0.4f, 0.4f);
+            lastJudgeColor = e.Result == JudgeResult.Perfect ? new Color(0.4f, 1f, 0.5f) : e.Result == JudgeResult.Great ? new Color(1f, 0.9f, 0.3f) : e.Result == JudgeResult.Good ? new Color(1f, 0.6f, 0.2f) : new Color(1f, 0.4f, 0.4f);
             lastJudgeAt = Time.unscaledTime;
             ShowPopup(e.Lane, e.Result + (timing.Length > 0 ? "\n" + timing.Trim('（', '）') : ""), lastJudgeColor);
         }
@@ -304,7 +304,7 @@ namespace Arte.Rhythm.Render
                 if (look.sqrMagnitude > 1e-4f) t.rotation = Quaternion.LookRotation(look.normalized, Vector3.up);
             }
             var judge = session != null ? session.Judge : null;
-            hudScore.text = judge != null ? $"スコア {judge.Score}　　Perfect {judge.PerfectCount}　Good {judge.GoodCount}　Miss {judge.MissCount}" : "";
+            hudScore.text = judge != null ? $"スコア {judge.Score}　　Perfect {judge.PerfectCount}　Great {judge.GreatCount}　Good {judge.GoodCount}　Miss {judge.MissCount}" : "";
             float age = Time.unscaledTime - lastJudgeAt;
             hudJudge.text = age < 1.5f ? lastJudge : "";
             hudJudge.color = new Color(lastJudgeColor.r, lastJudgeColor.g, lastJudgeColor.b, Mathf.Clamp01(1.5f - age) + 0.2f);

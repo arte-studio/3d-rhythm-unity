@@ -45,7 +45,7 @@ namespace Arte.Rhythm.Gameplay
             PlayerPrefs.Save();
         }
 
-        /// <summary>判定を見せる（Perfect/Good はすぐ．Miss はノーツ時刻の JudgeRules.MissShowAfter 後，既定 1 拍後）．</summary>
+        /// <summary>判定を見せる（Perfect/Great/Good はすぐ．Miss はノーツ時刻の JudgeRules.MissShowAfter 後，既定 1 拍後）．</summary>
         public event Action<JudgeEvent> Judged;
 
         /// <summary>タッチを受け付けた（空タッチを含む）．レーン，曲時刻，扱い．</summary>

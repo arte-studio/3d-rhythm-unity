@@ -9,7 +9,7 @@ namespace Arte.Rhythm.Gameplay
     /// 確認用の画面表示．LED の描画（P5）ができるまで，判定と音のずれをこれで確かめる．
     /// レーンごとに上からノーツが降りてきて，判定線に重なる瞬間がノーツ時刻．
     /// 判定を受け付けている間（旧版でノーツが黄色だった間）は黄色，判定が出るとその色で光る．
-    /// 判定の色は旧版と同じ（Perfect = マゼンタ，Good = 白，Miss = シアン）．
+    /// 判定の色は旧版と同じ（Perfect = マゼンタ，Great = 白，Good = 灰，Miss = シアン．Great は旧版の Good）．
     /// </summary>
     public sealed class DebugHud : MonoBehaviour
     {
@@ -44,7 +44,8 @@ namespace Arte.Rhythm.Gameplay
         static Color ColorOf(JudgeResult r) => r switch
         {
             JudgeResult.Perfect => Color.magenta,
-            JudgeResult.Good => Color.white,
+            JudgeResult.Great => Color.white,
+            JudgeResult.Good => Color.gray,
             _ => Color.cyan,
         };
 
@@ -79,7 +80,7 @@ namespace Arte.Rhythm.Gameplay
             double now = conductor.SongTime;
             var judge = session.Judge;
             GUI.Label(new Rect(10, 30, 800, 22),
-                $"{now:F2} 秒  {conductor.Data?.SectionAt(now)}  スコア {judge.Score}  Perfect {judge.PerfectCount}  Good {judge.GoodCount}  Miss {judge.MissCount}   {last}");
+                $"{now:F2} 秒  {conductor.Data?.SectionAt(now)}  スコア {judge.Score}  Perfect {judge.PerfectCount}  Great {judge.GreatCount}  Good {judge.GoodCount}  Miss {judge.MissCount}   {last}");
 
             float top = 60, bottom = Screen.height - 60, width = Mathf.Min(48, (Screen.width - 20f) / laneCount);
             float left = (Screen.width - width * laneCount) / 2;
