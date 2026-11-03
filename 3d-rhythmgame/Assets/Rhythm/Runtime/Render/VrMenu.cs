@@ -54,6 +54,10 @@ namespace Arte.Rhythm.Render
         string lastJudge = "";
         Color lastJudgeColor = Color.white;
         float lastJudgeAt = -10;
+        // むぎゅっとのすぐ近くに出す判定（Perfect / Good / Miss と，何 ms 早い・遅い）．2026-11-03 ユーザー
+        LedPreview preview;
+        readonly List<(Canvas canvas, Text text, Vector3 at, float born)> popups = new List<(Canvas, Text, Vector3, float)>();
+        const float PopupSec = 1.2f;
 
         static readonly Color Panel = new Color(0.05f, 0.06f, 0.1f, 0.92f);
         static readonly Color ButtonColor = new Color(0.16f, 0.2f, 0.32f, 1f);
@@ -70,6 +74,7 @@ namespace Arte.Rhythm.Render
             conductor = FindFirstObjectByType<SongConductor>();
             session = FindFirstObjectByType<GameSession>();
             visualSync = FindFirstObjectByType<SongVisualSync>();
+            preview = FindFirstObjectByType<LedPreview>();
             font = Font.CreateDynamicFontFromOSFont(new[] { "Meiryo", "Yu Gothic UI", "MS Gothic", "Arial" }, 40);
             BuildMenu();
             BuildHud();
@@ -237,6 +242,41 @@ namespace Arte.Rhythm.Render
             lastJudge = e.Result + timing;
             lastJudgeColor = e.Result == JudgeResult.Perfect ? new Color(0.4f, 1f, 0.5f) : e.Result == JudgeResult.Good ? new Color(1f, 0.9f, 0.3f) : new Color(1f, 0.4f, 0.4f);
             lastJudgeAt = Time.unscaledTime;
+            ShowPopup(e.Lane, e.Result + (timing.Length > 0 ? "\n" + timing.Trim('（', '）') : ""), lastJudgeColor);
+        }
+
+        // むぎゅっとの手前（リングの中心の側）少し上に，こちらを向けて出す
+        void ShowPopup(int lane, string text, Color color)
+        {
+            if (preview == null || preview.Notes == null || !preview.Notes.TryGetPlacement(lane, out var p)) return;
+            var mugyu = preview.transform.TransformPoint(new Vector3(p.mugyu[0], p.mugyu[1], p.mugyu[2]));
+            var toCenter = preview.transform.TransformPoint(new Vector3(0, p.mugyu[1], 0)) - mugyu;
+            var at = mugyu + toCenter.normalized * 0.12f + Vector3.up * 0.1f;
+            var c = NewCanvas("判定", new Vector2(360, 140), Color.clear);
+            var t = Label(c.transform, text, Vector2.zero, 44, FontStyle.Bold, new Vector2(360, 140));
+            t.color = color;
+            popups.Add((c, t, at, Time.unscaledTime));
+        }
+
+        void UpdatePopups()
+        {
+            for (int i = popups.Count - 1; i >= 0; i--)
+            {
+                var (c, t, at, born) = popups[i];
+                float age = Time.unscaledTime - born;
+                if (age > PopupSec || c == null)
+                {
+                    if (c != null) Destroy(c.gameObject);
+                    popups.RemoveAt(i);
+                    continue;
+                }
+                c.transform.position = at + Vector3.up * (0.04f * age);     // 少しずつ上へ
+                var look = c.transform.position - head.transform.position;
+                if (look.sqrMagnitude > 1e-4f) c.transform.rotation = Quaternion.LookRotation(look.normalized, Vector3.up);
+                var col = t.color;
+                col.a = Mathf.Clamp01((PopupSec - age) / 0.4f);
+                t.color = col;
+            }
         }
 
         void Update()
@@ -244,6 +284,7 @@ namespace Arte.Rhythm.Render
             if (head == null) return;
             if (toggleAction.WasPressedThisFrame()) ShowMenu(!MenuVisible);
             UpdateHud();
+            UpdatePopups();
             UpdateDiagnostics();
             if (MenuVisible) UpdateMenu();
             else foreach (var p in pointers) p.laser.enabled = false;
