@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Arte.Rhythm.Net;
 using Arte.Rhythm.Render;
+using Arte.Rhythm.Song;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.XR;
@@ -136,7 +137,8 @@ namespace Arte.Rhythm.Gameplay
                 h.detector.Update(point, pressed);
                 foreach (int lane in pressed)
                 {
-                    if (session != null) session.Touch(lane);
+                    // 音や手の追跡の遅れの分だけ前に押したことにする（VrLatency．PC + Link と Quest 単体で別の値）
+                    if (session != null) session.Touch(lane, AudioClock.Realtime - VrLatency.Sec);
                     InputDevices.GetDeviceAtXRNode(h.node).SendHapticImpulse(0, hapticAmplitude, hapticSec);
                 }
                 if (h.material != null)

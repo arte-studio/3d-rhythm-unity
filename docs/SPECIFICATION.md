@@ -105,6 +105,7 @@ d = タッチ時刻 − ノーツ時刻（秒）．2026-11-03 にユーザーの
   拍（`perfectBeats`，`greatBeats`，`goodBeats`，`missAfterBeats`，`missShowAfterBeats`．ノーツの所のテンポの 1 拍）のどちらでも書け，両方なら長い方．
   例: `"rules": {"perfectMs": 0, "perfectBeats": 0.25, "greatMs": 250}`．得点は `perfectScore`，`greatScore`，`goodScore`．
   旧版の値（Perfect −2.0〜+0.5 秒，Good −3.0〜−2.0 秒，得点 5/3）は `JudgeRules.Legacy()`（旧版の Good は Great として出る）．
+- VR で手が触れたタッチは，VR の遅れの補正（`VrLatency`）の分だけ前に押したことにする．PC + Quest Link と Quest 単体で別々の値を覚え，VR のホーム画面の −10 / +10 と「テストプレイのずれに合わせる」で変えられる．既定は 115ms（2026-11-04 のテストプレイ 49 回のずれの真ん中の値．Quest 単体はまだ測っていないので同じ値から）．本物のむぎゅっとのタッチには効かない．
 - タッチの時刻はデバイスの時刻を PC の時刻に直して使う（7 章）．遊んだタッチはリプレイとして保存する．
 
 ## 6. ノーツ用 LED

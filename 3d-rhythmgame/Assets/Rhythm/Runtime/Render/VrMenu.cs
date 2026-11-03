@@ -52,6 +52,9 @@ namespace Arte.Rhythm.Render
         int hovered = -1;
         float pokeCooldown;
         string lastJudge = "";
+        // テストプレイで叩いた時刻のずれ（ms，Perfect / Great / Good）．遅れの補正を合わせるのに使う
+        readonly List<int> testOffsets = new List<int>();
+        Text latencyLabel;
         Color lastJudgeColor = Color.white;
         float lastJudgeAt = -10;
         // むぎゅっとのすぐ近くに出す判定（Perfect / Great / Good / Miss と，何 ms 早い・遅い）．2026-11-03 ユーザー
@@ -134,17 +137,28 @@ namespace Arte.Rhythm.Render
             {
                 if (session != null) session.NextPlayers();
             });
+            Button(root, "−10", new Vector2(-430, -170), () => VrLatency.Ms -= 10, 90);
+            latencyLabel = Label(root, "", new Vector2(-245, -170), 22, FontStyle.Normal, new Vector2(270, 80));
+            Button(root, "+10", new Vector2(-60, -170), () => VrLatency.Ms += 10, 90);
+            Button(root, "テストプレイのずれに合わせる", new Vector2(-245, -250), () =>
+            {
+                int m = Median(testOffsets);
+                if (testOffsets.Count == 0) return;
+                VrLatency.Ms += m;
+                testOffsets.Clear();
+            });
             var quit = Button(root, "ゲームを終了する", new Vector2(245, -170), Quit);
             quit.color = new Color(1f, 0.7f, 0.7f);
             Label(root,
                 "左の ≡: この画面を出す / 消す　　光線を向けてトリガー，手でつつく，または 1.5 秒見つめて押す\n" +
                 "A: 子どもの目の高さ　B: 自分の目の高さ　X: 中心に戻る　Y: 床\n" +
                 "左スティック: 歩く　右スティック: 向きを変える　右スティックを押す: 一時停止　左スティックを押す: 演出を切り替える",
-                new Vector2(0, -320), 22, FontStyle.Normal, new Vector2(960, 150));
+                new Vector2(0, -350), 22, FontStyle.Normal, new Vector2(960, 110));
         }
 
         void StartSong(bool test)
         {
+            if (test) testOffsets.Clear();
             if (session != null) session.StartSong(test);
             else conductor?.Play();
         }
@@ -192,16 +206,24 @@ namespace Arte.Rhythm.Render
             return t;
         }
 
-        Text Button(Transform parent, string text, Vector2 pos, Action action)
+        static int Median(List<int> v)
+        {
+            if (v.Count == 0) return 0;
+            var s = new List<int>(v);
+            s.Sort();
+            return s[s.Count / 2];
+        }
+
+        Text Button(Transform parent, string text, Vector2 pos, Action action, float width = 460)
         {
             var img = new GameObject("ボタン", typeof(Image)).GetComponent<Image>();
             img.transform.SetParent(parent, false);
             var rt = (RectTransform)img.transform;
             rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(460, 80);
+            rt.sizeDelta = new Vector2(width, 80);
             img.color = ButtonColor;
             buttons.Add((rt, img, action));
-            return Label(img.transform, text, Vector2.zero, 30, FontStyle.Normal, new Vector2(440, 76));
+            return Label(img.transform, text, Vector2.zero, 30, FontStyle.Normal, new Vector2(width - 20, 76));
         }
 
         // ---------------- 動かす ----------------
@@ -247,6 +269,7 @@ namespace Arte.Rhythm.Render
             int ms = (int)Math.Round(e.Offset * 1000);
             string timing = e.Result == JudgeResult.Miss ? "" : ms == 0 ? "（ぴったり）" : ms < 0 ? $"（{-ms}ms 早い）" : $"（{ms}ms 遅い）";
             lastJudge = e.Result + timing;
+            if (session != null && session.TestPlay && e.Result != JudgeResult.Miss) testOffsets.Add(ms);
             lastJudgeColor = e.Result == JudgeResult.Perfect ? new Color(0.4f, 1f, 0.5f) : e.Result == JudgeResult.Great ? new Color(1f, 0.9f, 0.3f) : e.Result == JudgeResult.Good ? new Color(1f, 0.6f, 0.2f) : new Color(1f, 0.4f, 0.4f);
             lastJudgeAt = Time.unscaledTime;
             ShowPopup(e.Lane, e.Result + (timing.Length > 0 ? "\n" + timing.Trim('（', '）') : ""), lastJudgeColor);
@@ -349,6 +372,8 @@ namespace Arte.Rhythm.Render
             viewLabel.text = vr != null && vr.ChildView ? "自分の目の高さにする" : "子どもの目の高さにする";
             startLabel.text = conductor != null && conductor.IsStarted ? "曲を最初から" : "曲を始める";
             playersLabel.text = session != null ? $"人数: {session.players} 人（曲を始めると変わる）" : "人数";
+            latencyLabel.text = $"VR の遅れの補正 {VrLatency.Ms}ms\n（{VrLatency.Where}）" +
+                (testOffsets.Count > 0 ? $"\nテストプレイのずれ {Median(testOffsets):+0;-0}ms（{testOffsets.Count} 回）" : "");
 
             // 頭の位置が取れて落ち着いてから目の前に置く．VR を始めた直後は頭の位置がまだ 0 だったり，
             // ViewerVR が中心に戻す・目の高さを合わせる前だったりして，最初のホーム画面だけ下の方に出ていた（2026-11-03）．
