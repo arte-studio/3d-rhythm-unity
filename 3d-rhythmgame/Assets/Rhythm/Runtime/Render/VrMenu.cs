@@ -131,7 +131,7 @@ namespace Arte.Rhythm.Render
             Button(root, "床を変える", new Vector2(245, -20), () => vr?.NextFloor());
             playersLabel = Button(root, "人数", new Vector2(-245, -120), () =>
             {
-                if (session != null) session.players = session.players % 3 + 1;
+                if (session != null) session.NextPlayers();
             });
             var quit = Button(root, "ゲームを終了する", new Vector2(245, -120), Quit);
             quit.color = new Color(1f, 0.7f, 0.7f);

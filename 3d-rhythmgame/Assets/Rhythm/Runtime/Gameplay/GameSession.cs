@@ -28,9 +28,21 @@ namespace Arte.Rhythm.Gameplay
 
         void Awake()
         {
+            // 前に選んだ人数を使う（Play し直すたびに 3 人に戻っていた）．起動引数 -players N がそれより優先
+            players = Math.Max(1, Math.Min(3, PlayerPrefs.GetInt(PlayersKey, players)));
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "-players");
             if (i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out int n)) players = Math.Max(1, Math.Min(3, n));
+        }
+
+        const string PlayersKey = "Arte.Rhythm.Players";
+
+        /// <summary>人数を次へ（1 → 2 → 3 → 1）．選んだ人数は覚えておき，次に起動したときも使う．曲を始めるときに効く．</summary>
+        public void NextPlayers()
+        {
+            players = players % 3 + 1;
+            PlayerPrefs.SetInt(PlayersKey, players);
+            PlayerPrefs.Save();
         }
 
         /// <summary>判定が確定した（Perfect/Good/Miss）．</summary>
@@ -67,7 +79,7 @@ namespace Arte.Rhythm.Gameplay
             var notes = FindFirstObjectByType<Net.DeviceLink>()?.Notes;
             Chart = notes != null ? conductor.Data.ToChart(players, notes.Lanes, notes.FrontLane) : conductor.Data.ToChart(players);
             Judge = new TouchJudge(Chart, conductor.Data.EffectiveRules);
-            Log = new TouchLog { ChartName = conductor.song != null ? conductor.song.name : "" };
+            Log = new TouchLog { ChartName = conductor.song != null ? conductor.song.name : "", Players = players, FrontLane = notes != null && players == 1 ? notes.FrontLane : -1 };
             while (pending.TryDequeue(out _)) { }
             lastAdvanced = double.NegativeInfinity;
             // 途中から再生した場合，それより前のノーツは判定しない（Miss も出さない）

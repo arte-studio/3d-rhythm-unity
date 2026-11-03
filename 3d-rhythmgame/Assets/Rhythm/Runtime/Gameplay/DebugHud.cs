@@ -55,7 +55,7 @@ namespace Arte.Rhythm.Gameplay
             if (kb == null) return;
             if (kb.enterKey.wasPressedThisFrame) conductor.Play();
             // F10: 遊ぶ人数（1〜3．譜面の流れの数．次に曲を始めたときに効く）
-            if (kb.f10Key.wasPressedThisFrame && session != null) session.players = session.players % 3 + 1;
+            if (kb.f10Key.wasPressedThisFrame && session != null) session.NextPlayers();
             if (kb.spaceKey.wasPressedThisFrame)
             {
                 if (conductor.IsPaused) conductor.Resume();

@@ -25,6 +25,9 @@ namespace Arte.Rhythm.Gameplay
     public sealed class TouchLog
     {
         [JsonProperty("chart")] public string ChartName;
+        /// <summary>遊んだ人数（流れの数）と，1 人のとき最初のノーツを置いた正面のレーン（解析で同じ譜面を作り直すため．無ければ 0 / −1）．</summary>
+        [JsonProperty("players", DefaultValueHandling = DefaultValueHandling.Ignore)] public int Players;
+        [JsonProperty("frontLane")] public int FrontLane = -1;
         [JsonProperty("touches")] public List<TouchRecord> Touches = new List<TouchRecord>();
 
         public void Add(double songTime, int lane) => Touches.Add(new TouchRecord(songTime, lane));
