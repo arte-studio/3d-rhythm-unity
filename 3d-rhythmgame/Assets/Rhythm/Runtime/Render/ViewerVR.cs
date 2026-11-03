@@ -15,6 +15,7 @@ namespace Arte.Rhythm.Render
     /// VR は次のときだけ始める（ヘッドセットが無ければふつうの画面のまま）:
     /// - エディタ: メニュー Tools / Arte Rhythm / VR / Play in VR にチェックを入れて再生
     /// - ビルド: 起動引数 -vr
+    /// - Quest 単体（Android）: いつも（QuestBuild）
     ///
     /// 始まったら，カメラを「VR の足元（リグ）」の子にしてヘッドセットの位置と向きで動かす．足元はリングの中心の床（高さ 0）に置く．
     /// 操作（コントローラ / キーボード）:
@@ -77,6 +78,9 @@ namespace Arte.Rhythm.Render
             // 手の認識は試すときだけ（起動引数 -vr-hands）．Virtual Desktop でも Meta Quest Link でも hand provider failed to initialize で手は来ず，
             // エディタではゲームが 2 フレームで止まった（2026-11-03）
             bool want = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-vr-hands") >= 0;
+#if UNITY_ANDROID && !UNITY_EDITOR
+            want = true;    // Quest 単体では手の認識がそのまま使える
+#endif
             handsWasEnabled = hands.enabled;
             hands.enabled = want;
             HandTrackingOn = want;
@@ -115,6 +119,9 @@ namespace Arte.Rhythm.Render
 
         static bool Wanted()
         {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            return true;
+#endif
 #if UNITY_EDITOR
             if (UnityEditor.EditorPrefs.GetBool(EditorPrefsKey, false)) return true;
 #endif
