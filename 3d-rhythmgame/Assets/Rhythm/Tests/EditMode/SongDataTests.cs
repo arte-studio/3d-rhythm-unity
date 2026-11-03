@@ -146,5 +146,21 @@ namespace Arte.Rhythm.Tests
             Assert.Throws<Newtonsoft.Json.JsonSerializationException>(() =>
                 SongJson.Load("{\"format\":\"arte-rhythm-song/1\",\"bmp\":120}"));
         }
+
+        [Test]
+        public void OnePlayerChartStartsAtTheFrontModule()
+        {
+            var data = new SongData();
+            data.Notes.Add(new SongNote { Time = 1, Lane = 5, Type = "touch" });
+            data.Notes.Add(new SongNote { Time = 2, Lane = 6, Type = "touch" });
+            data.Notes.Add(new SongNote { Time = 3, Lane = 4, Type = "touch" });
+            data.Notes.Add(new SongNote { Time = 4, Lane = 0, Type = "touch" });
+            data.Notes.Add(new SongNote { Time = 1, Lane = 9, Type = "touch", Flow = 1 });
+            int[] ring = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            var one = data.ToChart(1, ring, 7).Notes;
+            CollectionAssert.AreEqual(new[] { 7, 0, 6, 2 }, one.Select(n => n.Lane), "最初が正面（7）．隣どうしの動きはそのまま輪に沿って回る");
+            Assert.AreEqual(5, data.ToChart(2, ring, 7).Notes.Count, "2 人のときは回さない");
+            Assert.AreEqual(5, data.ToChart(2, ring, 7).Notes[0].Lane);
+        }
     }
 }

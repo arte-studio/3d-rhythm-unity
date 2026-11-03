@@ -59,6 +59,25 @@ namespace Arte.Rhythm.Hardware
         /// <summary>レーンのモジュールの置き場所（設営データに無ければ false）．</summary>
         public bool TryGetPlacement(int lane, out ModulePlacement placement) => placements.TryGetValue(lane, out placement);
 
+        /// <summary>
+        /// 正面（リングの中心から +z の向き．VR では「リングの中心に戻る」で向く方）に一番近いむぎゅっとのレーン．置き場所が無ければ -1．
+        /// </summary>
+        public int FrontLane
+        {
+            get
+            {
+                int best = -1;
+                double bestAngle = double.MaxValue;
+                foreach (int lane in lanes)
+                {
+                    if (!placements.TryGetValue(lane, out var p) || p.mugyu == null || p.mugyu.Length < 3) continue;
+                    double angle = Math.Abs(Math.Atan2(p.mugyu[0], p.mugyu[2]));
+                    if (angle < bestAngle) { bestAngle = angle; best = lane; }
+                }
+                return best;
+            }
+        }
+
         public bool HasLane(int lane) => moduleOfLane.ContainsKey(lane);
 
         /// <summary>レーンのモジュールを引く．この設営にないレーンなら false．</summary>

@@ -24,6 +24,7 @@ namespace Arte.Rhythm.Gameplay
 
         [Tooltip("遊ぶ人数（1〜3）．譜面の 3 本の流れのうち，この数だけを出す（2026-11-03 ユーザー決定）．起動引数 -players N でも変えられる．曲を始めるときに効く")]
         [Range(1, 3)] public int players = 3;
+        // 1 人のときは最初のノーツが正面のむぎゅっとに来るよう回す（SongData.ToChart(players, ring, frontLane)）
 
         void Awake()
         {
@@ -63,7 +64,8 @@ namespace Arte.Rhythm.Gameplay
 
         void OnStarted(double fromSec)
         {
-            Chart = conductor.Data.ToChart(players);
+            var notes = FindFirstObjectByType<Net.DeviceLink>()?.Notes;
+            Chart = notes != null ? conductor.Data.ToChart(players, notes.Lanes, notes.FrontLane) : conductor.Data.ToChart(players);
             Judge = new TouchJudge(Chart, conductor.Data.EffectiveRules);
             Log = new TouchLog { ChartName = conductor.song != null ? conductor.song.name : "" };
             while (pending.TryDequeue(out _)) { }

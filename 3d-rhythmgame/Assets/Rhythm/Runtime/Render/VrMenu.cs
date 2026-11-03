@@ -47,7 +47,7 @@ namespace Arte.Rhythm.Render
         Text hudDiag;
         const float GazeSec = 1.5f;
         int lastFound = -1;
-        float shownAt;
+        float shownAt, settledAt = -1;
         readonly List<InputAction> actions = new List<InputAction>();
         int hovered = -1;
         float pokeCooldown;
@@ -194,6 +194,12 @@ namespace Arte.Rhythm.Render
 
         // ---------------- 動かす ----------------
 
+        /// <summary>出ていれば，今の頭の正面に置き直す（ViewerVR が中心に戻したとき・目の高さを変えたとき）．</summary>
+        public void Replace()
+        {
+            if (MenuVisible && placed) ShowMenu(true);
+        }
+
         void ShowMenu(bool show)
         {
             menu.gameObject.SetActive(show);
@@ -295,10 +301,16 @@ namespace Arte.Rhythm.Render
             startLabel.text = conductor != null && conductor.IsStarted ? "曲を最初から" : "曲を始める";
             playersLabel.text = session != null ? $"人数: {session.players} 人（曲を始めると変わる）" : "人数";
 
-            // 頭の位置が取れてから目の前に置く（VR を始めた直後は頭の位置がまだ 0 で，床の高さに出てしまった）
+            // 頭の位置が取れて落ち着いてから目の前に置く．VR を始めた直後は頭の位置がまだ 0 だったり，
+            // ViewerVR が中心に戻す・目の高さを合わせる前だったりして，最初のホーム画面だけ下の方に出ていた（2026-11-03）．
+            // 左の ≡ で出したときと同じ置き方（ShowMenu）にそろえる
             if (!placed)
             {
-                if (head.transform.localPosition.sqrMagnitude < 1e-6f && Time.unscaledTime - shownAt < 3f) return;
+                bool tracked = head.transform.localPosition.y > 0.3f;
+                if (!tracked) settledAt = -1;
+                else if (settledAt < 0) settledAt = Time.unscaledTime;
+                bool settled = tracked && Time.unscaledTime - settledAt > 1f;
+                if (!settled && Time.unscaledTime - shownAt < 6f) return;
                 ShowMenu(true);
             }
             // コントローラが見つかった / 外れたらログに出す（押せないときに入力が来ているかを確かめるため）

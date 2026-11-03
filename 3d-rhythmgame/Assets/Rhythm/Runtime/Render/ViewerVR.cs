@@ -56,6 +56,7 @@ namespace Arte.Rhythm.Render
         Transform rig;
         Camera cam;
         bool childView;
+        VrMenu menu;
         bool turnReady = true;
         readonly List<InputAction> actions = new List<InputAction>();
         InputAction childAction, ownAction, recenterAction, floorAction, moveAction, turnAction, pauseAction, effectsAction;
@@ -157,7 +158,7 @@ namespace Arte.Rhythm.Render
             SetUpInput();
             Debug.Log("[ViewerVR] VR を始める（3/4 視点・ホーム画面を作る）");
             Gameplay.VrTouchInput.EnsureInScene();
-            var menu = gameObject.AddComponent<VrMenu>();
+            menu = gameObject.AddComponent<VrMenu>();
             menu.vr = this;
             menu.head = cam;
             menu.rig = rig;
@@ -278,6 +279,7 @@ namespace Arte.Rhythm.Render
             var p = rig.position;
             p.y = child ? childEyeHeight - cam.transform.localPosition.y : 0;
             rig.position = p;
+            if (menu != null) menu.Replace();
         }
 
         /// <summary>今の頭の位置と向きを，リングの中心・正面（+z）に合わせる．</summary>

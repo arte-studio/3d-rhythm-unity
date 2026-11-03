@@ -87,6 +87,25 @@ namespace Arte.Rhythm.Charts
         /// <summary>遊ぶ人数（1〜3）に合わせて，流れ 0〜players−1 のノーツだけの譜面．</summary>
         public Chart ToChart(int players) => new Chart(ToChart().Notes.Where(n => n.Flow < Math.Max(1, players)));
 
+        /// <summary>
+        /// 遊ぶ人数に合わせた譜面．1 人のときは，最初のノーツが正面のむぎゅっと（frontLane）に来るよう，流れ全体をむぎゅっとの輪（ring．並び順）に沿って回す
+        /// （隣どうしの動きはそのまま．2026-11-03 ユーザー: 1 人のとき，最初のノーツは正面にいてほしい）．
+        /// </summary>
+        public Chart ToChart(int players, IReadOnlyList<int> ring, int frontLane)
+        {
+            var chart = ToChart(players);
+            if (players > 1 || ring == null || chart.Notes.Count == 0) return chart;
+            var order = ring.ToList();
+            int from = order.IndexOf(chart.Notes[0].Lane), to = order.IndexOf(frontLane);
+            if (from < 0 || to < 0 || from == to) return chart;
+            int shift = to - from, n = order.Count;
+            return new Chart(chart.Notes.Select(x =>
+            {
+                int i = order.IndexOf(x.Lane);
+                return i < 0 ? x : new ChartNote(x.Time, order[((i + shift) % n + n) % n], x.Type, x.Flow);
+            }));
+        }
+
         /// <summary>譜面を書き戻す（時刻順に並べ，時刻はミリ秒の1/10で丸める）．</summary>
         public void SetNotes(IEnumerable<ChartNote> notes)
         {
