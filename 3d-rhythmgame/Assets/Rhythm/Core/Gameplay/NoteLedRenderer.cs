@@ -67,8 +67,11 @@ namespace Arte.Rhythm.Gameplay
         public float approachGuideRunBeats = 1f;
         /// <summary>Beats: 道しるべを出すのは次のノーツの最大この秒数前から（前のノーツが遠いとき）．</summary>
         public float approachGuideMaxSec = 8f;
-        /// <summary>Beats: 道しるべの色．</summary>
+        /// <summary>Beats: むぎゅっとの案内（approachBeats）より前の道しるべの色と明るさ（0〜1）．案内が始まったらむぎゅっとと同じ拍の色</summary>
         public byte[] approachGuideColor = { 0, 120, 255 };
+        public float approachGuideDim = 0.5f;
+        /// <summary>Beats: 四角を 1 拍ごとに段で縮める（3 拍前は外周，2 拍前は真ん中，最後の 1 拍は内側．2026-11-03 ユーザー決定）．切るとなめらかに縮む</summary>
+        public bool approachSquareSteps = true;
         /// <summary>
         /// Beats: むぎゅっとに縮む四角を出す．切ると，むぎゅっと全体が拍で光り，ノーツ時刻に向けてだんだん明るくなる
         /// （2026-11-03 ユーザー: 一度なしにしたが，やっぱり採用）．
@@ -173,6 +176,9 @@ namespace Arte.Rhythm.Gameplay
 
         /// <summary>曲のテンポ（Beats の案内の 1 拍の長さに使う）．無ければ 120BPM．</summary>
         public TempoMap Tempo { get; set; }
+
+        // 曲の拍（テンポが無ければ 120BPM）
+        double BeatAt(double t) => Tempo != null ? Tempo.BeatOf(t) : t / 0.5;
 
         double SecPerBeatAt(double t)
         {
@@ -325,27 +331,37 @@ namespace Arte.Rhythm.Gameplay
                 if (notes[i].Type != NoteType.Touch || judge.ResultOf(i) != null || !Has(notes[i].Lane)) continue;
                 double beat = SecPerBeatAt(notes[i].Time);
                 double gap = notes[i].Time - PreviousTimeInFlow(notes, i);
-                double window = style.approachBeats * beat;
-                double muguWindow = gap < window ? Math.Min(window, style.approachShortBeats * beat) : window;   // むぎゅっと
-                // 道しるべ（テープ）: 前のノーツの少し前から．前のノーツが無ければ window 前から
-                double guideWindow = double.IsInfinity(gap) ? window : Math.Min(style.approachGuideMaxSec, gap + style.approachGuideLeadBeats * beat);
-                guideWindow = Math.Max(guideWindow, muguWindow);
                 double before = notes[i].Time - songTime;          // ノーツ時刻まであと何秒
-                if (before > guideWindow) continue;
+                // 曲の拍の頭で数える（2026-11-03 ユーザー決定）．n = ノーツまでに残っている拍（最後の 1 拍が 1．
+                // ノーツが拍の途中にあるときは，その拍の頭からノーツまでが 1）．拍の頭ごとに 1 つ減る
+                double beatNow = BeatAt(songTime), beatNote = BeatAt(notes[i].Time);
+                int n = (int)Math.Ceiling(beatNote - 1e-6) - (int)Math.Floor(beatNow + 1e-6);
+                int fullBeats = Math.Max(1, (int)Math.Round(style.approachBeats));
+                int muguBeats = gap < style.approachBeats * beat ? Math.Min(fullBeats, Math.Max(1, (int)Math.Round(style.approachShortBeats))) : fullBeats;
+                bool muguOn = n <= muguBeats;
+                // 道しるべ（テープ）: 前のノーツの少し前から．前のノーツが無ければむぎゅっとと同時に
+                double guideWindow = double.IsInfinity(gap) ? 0 : Math.Min(style.approachGuideMaxSec, gap + style.approachGuideLeadBeats * beat);
+                if (!muguOn && before > guideWindow) continue;
                 int lane = notes[i].Lane;
                 // 同じレーンに続けてノーツがあるときは先のものを描く（後のものは前のノーツの判定のあと）
                 if (!approachPainted.Add(lane)) continue;
-                double beatsBefore = before / beat;                  // ノーツ時刻まであと何拍
-                // 拍の頭（ノーツ時刻から 1 拍ずつ数えたところ）からどれだけ過ぎたか（拍に対する割合）
-                double phase = beatsBefore > 0 ? Math.Ceiling(beatsBefore) - beatsBefore : Math.Min(1, -beatsBefore);
-                float pulse = style.approachPulseMin + (1 - style.approachPulseMin) * (float)Math.Exp(-phase * style.approachPulseDecay);
-                var color = beatsBefore <= 1 ? style.approachLastColor : beatsBefore <= 2 ? style.approachColor2 : style.approachColor3;
-                double muguRemain = Math.Max(0, before) / muguWindow;
-                if (before > muguWindow) { }                         // むぎゅっとはまだ（テープの光の粒だけ先に走る）
-                else if (style.approachSquare) PaintShrinkingSquare(mugu[lane], (float)muguRemain, pulse, color);
+                // 曲の拍の頭からどれだけ過ぎたか（拍に対する割合）．ノーツ時刻を過ぎたらそこから
+                double phase = before > 0 ? beatNow - Math.Floor(beatNow + 1e-6) : Math.Min(1, -before / beat);
+                float pulse = style.approachPulseMin + (1 - style.approachPulseMin) * (float)Math.Exp(-Math.Max(0, phase) * style.approachPulseDecay);
+                var color = n <= 1 ? style.approachLastColor : n == 2 ? style.approachColor2 : style.approachColor3;
+                if (!muguOn) { }                                     // むぎゅっとはまだ（道しるべだけ先に流れる）
+                else if (style.approachSquare)
+                {
+                    // 段: 3 拍前は外周，2 拍前は真ん中，最後の 1 拍は内側（途中から見ても大きさで残りの拍が分かる）
+                    float remain = style.approachSquareSteps
+                        ? Math.Max(0, n) / (float)fullBeats
+                        : Clamp01((float)((beatNote - beatNow) / fullBeats));
+                    PaintShrinkingSquare(mugu[lane], before <= 0 ? 0 : remain, pulse, color);
+                }
                 else
                 {
-                    float k = (style.approachFillStart + (1 - style.approachFillStart) * (1 - (float)muguRemain)) * pulse;
+                    float muguRemain = Clamp01((float)((beatNote - beatNow) / muguBeats));
+                    float k = (style.approachFillStart + (1 - style.approachFillStart) * (1 - muguRemain)) * pulse;
                     Fill(mugu[lane], ToByte(color[0] / 255f * k), ToByte(color[1] / 255f * k), ToByte(color[2] / 255f * k));
                 }
                 // 「今」の合図: ノーツ時刻ちょうどに，むぎゅっと全体を明るく光らせてすぐ戻す
@@ -356,10 +372,13 @@ namespace Arte.Rhythm.Gameplay
                     for (int p = 0; p < dest.Length; p++)
                         dest[p] = Math.Max(dest[p], ToByte(color[p % Channels] / 255f * now));
                 }
-                // 道しるべ（今のノーツへのものと次のノーツへのものが同じテープで逆向きに重なってよい．2026-11-03 ユーザー）
-                double run = Math.Max(1e-3, style.approachGuideRunBeats) * beat;
-                double x = before / run;
-                guides.Add((notes[i].Flow, notes[i].Time, lane, (float)(x - Math.Floor(x))));   // 1 → 0 を繰り返す（拍の頭で着く）
+                // 道しるべ: 曲の拍の頭で次のノーツの側に着く．色はむぎゅっとの拍の色（紫 → 青 → 水色）．
+                // むぎゅっとの案内より前は暗めの道しるべの色．最後の水色の粒が着く瞬間が叩く瞬間（ノーツが拍の頭にあるとき）
+                // （今のノーツへのものと次のノーツへのものが同じテープで逆向きに重なってよい．2026-11-03 ユーザー）
+                double x = beatNow / Math.Max(1e-3, style.approachGuideRunBeats);
+                float guideRemain = before <= 0 ? 0 : 1 - (float)(x - Math.Floor(x + 1e-6));
+                byte[] guideColor = n <= fullBeats ? color : style.approachGuideColor;
+                guides.Add((notes[i].Flow, notes[i].Time, lane, guideRemain, guideColor, n <= fullBeats ? 1f : style.approachGuideDim));
             }
             // 道しるべ: 次のノーツの両隣のテープを，次のノーツへ向かって流れ続ける
             // （テープ k はむぎゅっと k から次の k+1 へ伸び，0 番目の LED が k の側．むぎゅっとは輪で，最後の次は最初）
@@ -369,18 +388,18 @@ namespace Arte.Rhythm.Gameplay
                 if (left >= 0 && left != g.lane && Has(left))
                 {
                     approachTapes.Add(left);
-                    PaintComet(approachConnect[left], g.remain, 1f, style.approachGuideColor, towardEnd: true);
+                    PaintComet(approachConnect[left], g.remain, g.level, g.color, towardEnd: true);
                 }
                 if (NextLane(g.lane) >= 0 && NextLane(g.lane) != g.lane)
                 {
                     approachTapes.Add(g.lane);
-                    PaintComet(approachConnect[g.lane], g.remain, 1f, style.approachGuideColor, towardEnd: false);
+                    PaintComet(approachConnect[g.lane], g.remain, g.level, g.color, towardEnd: false);
                 }
             }
             guides.Clear();
         }
 
-        readonly List<(int flow, double time, int lane, float remain)> guides = new List<(int, double, int, float)>();
+        readonly List<(int flow, double time, int lane, float remain, byte[] color, float level)> guides = new List<(int, double, int, float, byte[], float)>();
 
         // 外周の四角が中心へ縮む．remain = 1 で外周（8×8 の縁），0 で中心の 2×2．中心はいつも薄く点ける
         void PaintShrinkingSquare(byte[] dest, float remain, float pulse, byte[] color)

@@ -67,8 +67,8 @@ namespace Arte.Rhythm.Tests
 
             // ノーツ時刻の直前: 四角は中心に閉じ，最後の 1 拍は水色，粒はむぎゅっとの側の端に
             r.Render(chart, judge, 9.999, 0, 0.016f, false, frame);
-            var center = MuguAt(3, 1, 3, 3);
-            Assert.Greater(center[1], 80, "最後の 1 拍は水色（緑の成分がある）");
+            var center = MuguAt(3, 1, 2, 2);
+            Assert.Greater(center[1], 80, "最後の 1 拍は内側の段（中心から 1.5）で水色（緑の成分がある）");
             Assert.Greater(center[2], 100);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "外周は消えた");
         }
@@ -160,7 +160,7 @@ namespace Arte.Rhythm.Tests
             r.Render(chart, judge, 8.9, 0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "2 拍より前はまだ");
             r.Render(chart, judge, 9.05, 0, 0.016f, false, frame);
-            Assert.Greater(MuguAt(3, 1, 0, 0)[2], 100, "2 拍前から四角");
+            Assert.Greater(MuguAt(3, 1, 1, 1)[2], 100, "2 拍前から四角（真ん中の段）");
             // ノーツ時刻ちょうどは，むぎゅっと全体（四角の外の角も）が最後の 1 拍の色で光る
             r.Render(chart, judge, 10.0, 0, 0.016f, false, frame);
             Assert.Greater(MuguAt(3, 1, 0, 0)[1], 150, "ノーツ時刻はむぎゅっと全体が光る");
@@ -178,7 +178,7 @@ namespace Arte.Rhythm.Tests
             var c3 = MuguAt(3, 1, 0, 0);
             Assert.Greater(c3[0], 100, "3 拍前は紫（赤の成分がある）");
             r.Render(chart, judge, 9.05, 0, 0.016f, false, frame);
-            int outer = MuguAt(3, 1, 0, 0)[0] + MuguAt(3, 1, 0, 0)[1];
+            int outer = MuguAt(3, 1, 1, 1)[0] + MuguAt(3, 1, 1, 1)[1];
             var full = new byte[notes.ConnectLeds];
             for (int i = 0; i < notes.ConnectLeds; i++) full[i] = Con(3, 1, i)[2];
 
@@ -190,8 +190,8 @@ namespace Arte.Rhythm.Tests
             r2.Render(chart2, judge2, 8.55, 0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "むぎゅっとはまだ");
             r2.Render(chart2, judge2, 9.05, 0, 0.016f, false, frame);
-            Assert.Greater(MuguAt(3, 1, 0, 0)[2], 100, "2 拍前から（青）");
-            Assert.AreEqual(0, MuguAt(3, 1, 0, 0)[0] + MuguAt(3, 1, 0, 0)[1], "2 拍前は青（赤も緑も無い）");
+            Assert.Greater(MuguAt(3, 1, 1, 1)[2], 100, "2 拍前から（青）");
+            Assert.AreEqual(0, MuguAt(3, 1, 1, 1)[0] + MuguAt(3, 1, 1, 1)[1], "2 拍前は青（赤も緑も無い）");
             Assert.AreEqual(0, outer, "前のノーツが無くても 2 拍前は青");
             notes.TryGetModule(3, out var m3);
             // 光の粒はレーン 3 のテープ（3 → 4）を走るが，速さ（ノーツ時刻までの残りに対する位置）は同じ
@@ -200,6 +200,43 @@ namespace Arte.Rhythm.Tests
             for (int i = 0; i < notes.ConnectLeds; i++) tape[i] = Con(m3.device, m3.module, i)[2];
             int peakB = System.Array.IndexOf(tape, tape.Max());
             Assert.AreEqual(notes.ConnectLeds - 1 - peakA, peakB, "同じ速さ（向きだけ逆）");
+        }
+
+        [Test]
+        public void SquareStepsOncePerBeatAndGuideTakesTheBeatColor()
+        {
+            // 120BPM（1 拍 0.5 秒）．ノーツ 10 秒（拍の頭）．3 拍前（8.5〜9.0）は外周，2 拍前（9.0〜9.5）は真ん中，最後の 1 拍は内側
+            var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            foreach (double t in new[] { 8.55, 8.95 })
+            {
+                r.Render(chart, judge, t, 0, 0.016f, false, frame);
+                Assert.Greater(MuguAt(3, 1, 0, 0)[2], 100, $"{t} 秒: 外周（拍の中では動かない）");
+                Assert.AreEqual(0, MuguAt(3, 1, 1, 1)[2], $"{t} 秒: 真ん中はまだ");
+            }
+            r.Render(chart, judge, 9.2, 0, 0.016f, false, frame);
+            Assert.AreEqual(0, MuguAt(3, 1, 0, 0)[2], "外周は消えた");
+            Assert.Greater(MuguAt(3, 1, 1, 1)[2], 100, "真ん中の段");
+            r.Render(chart, judge, 9.7, 0, 0.016f, false, frame);
+            Assert.Greater(MuguAt(3, 1, 2, 2)[1], 80, "内側の段（水色）");
+            // 道しるべの粒もむぎゅっとと同じ拍の色（最後の 1 拍は水色．テープは R と G を入れ替えて書く）
+            notes.TryGetModule(3, out var m3);
+            int g = 0;
+            for (int i = 0; i < notes.ConnectLeds; i++) g = System.Math.Max(g, Con(m3.device, m3.module, i)[0]);
+            Assert.Greater(g, 100, "テープ 3 の粒は水色");
+        }
+
+        [Test]
+        public void OffBeatNoteCountsMusicBeats()
+        {
+            // ノーツが拍の途中（10.2 秒．拍の頭は 10.0）: 拍の頭 10.0 からノーツまでが最後の 1 拍（水色），その前の拍（9.5〜10.0）が 2 拍前（青）
+            var (chart, judge) = Make(new ChartNote(10.2, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            r.Render(chart, judge, 9.8, 0, 0.016f, false, frame);
+            Assert.Greater(MuguAt(3, 1, 1, 1)[2], 100, "2 拍前（青）は真ん中の段");
+            Assert.AreEqual(0, MuguAt(3, 1, 1, 1)[1]);
+            r.Render(chart, judge, 10.1, 0, 0.016f, false, frame);
+            Assert.Greater(MuguAt(3, 1, 2, 2)[1], 80, "拍の頭を過ぎたら最後の 1 拍（水色）");
         }
 
         [Test]
