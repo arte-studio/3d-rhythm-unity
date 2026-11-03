@@ -10,14 +10,22 @@ namespace Arte.Rhythm.Gameplay
     public enum NoteApproach
     {
         /// <summary>
-        /// 拍で案内する（2026-11-03 ユーザー決定）: ノーツ時刻の approachBeats 拍前から，
-        /// むぎゅっとの外周の四角が中心へ縮み（中心の 2×2 は薄く点けておく．閉じた瞬間がノーツ時刻），
-        /// つながるノーツ用テープの遠い端から光の粒が走ってむぎゅっとの側の端に着き，1 拍ごとに光が強まる（最後の 1 拍は色を変える）．
-        /// すぐ前のノーツが隣のレーン（テープでつながっているむぎゅっと）なら，光の粒はその間のテープを前のむぎゅっとから次のむぎゅっとへ流れる．
+        /// 拍で案内する（2026-11-03 ユーザー決定）: ノーツ時刻の approachBeats 拍前から，曲の拍ごとに
+        /// むぎゅっとの扇形が 3/3 → 2/3 → 1/3 と欠けていき（NoteApproachShape），色も 紫 → 青 → 水色 と変わる．
+        /// つながるノーツ用テープの光の粒は次のノーツの場所の道しるべ（次のノーツの両隣のテープから流れ込む）．
         /// </summary>
         Beats,
         /// <summary>旧版: ノーツ時刻の SpawnLeadSec 前から青の点滅（openBlinkPeriodSec．ノーツ時刻にちょうど点く位相）．何回目かを数えないと分かりにくかった</summary>
         Blink,
+    }
+
+    /// <summary>拍で案内するときのむぎゅっとの形．</summary>
+    public enum NoteApproachShape
+    {
+        /// <summary>扇形のカウントダウン: 3 拍前は丸ごと（3/3），2 拍前は 2/3，最後の 1 拍は 1/3．上（12 時）から時計回りに残る（2026-11-03 ユーザー決定）</summary>
+        Pie,
+        /// <summary>四角が外周から中心へ縮む（3 拍前は外周，2 拍前は真ん中，最後の 1 拍は内側）</summary>
+        Square,
     }
 
     /// <summary>ノーツ用 LED の見た目の設定．色は旧仕様書（docs/legacy/SPECIFICATION-v1.md 7.1），速さなどは旧版の値（docs/SPECIFICATION.md 6 章）．</summary>
@@ -77,6 +85,8 @@ namespace Arte.Rhythm.Gameplay
         /// （2026-11-03 ユーザー: 一度なしにしたが，やっぱり採用）．
         /// </summary>
         public bool approachSquare = true;
+        /// <summary>Beats: 形（扇形のカウントダウンか縮む四角か）．approachSquare が切ってあると，形は出さずに全体が光る</summary>
+        public NoteApproachShape approachShape = NoteApproachShape.Pie;
         /// <summary>Beats: 四角を出さないとき，案内の始めの明るさ（0〜1．ノーツ時刻で 1）．</summary>
         public float approachFillStart = 0.3f;
         public byte[] perfectColor = { 0, 255, 0 };     // 緑
@@ -356,7 +366,8 @@ namespace Arte.Rhythm.Gameplay
                     float remain = style.approachSquareSteps
                         ? Math.Max(0, n) / (float)fullBeats
                         : Clamp01((float)((beatNote - beatNow) / fullBeats));
-                    PaintShrinkingSquare(mugu[lane], before <= 0 ? 0 : remain, pulse, color);
+                    if (style.approachShape == NoteApproachShape.Pie) PaintPie(mugu[lane], before <= 0 ? 0 : remain, pulse, color);
+                    else PaintShrinkingSquare(mugu[lane], before <= 0 ? 0 : remain, pulse, color);
                 }
                 else
                 {
@@ -400,6 +411,31 @@ namespace Arte.Rhythm.Gameplay
         }
 
         readonly List<(int flow, double time, int lane, float remain, byte[] color, float level)> guides = new List<(int, double, int, float, byte[], float)>();
+
+        // 扇形のカウントダウン．remain = 1 で丸ごと，2/3 で 2/3，1/3 で 1/3（上の 12 時から時計回りの扇形が残る）．
+        // 丸の外（8×8 の四隅）は点けない．中心の 2×2 はいつも薄く点ける（ノーツ時刻を過ぎても目印が残るように）
+        void PaintPie(byte[] dest, float remain, float pulse, byte[] color)
+        {
+            int rows = layout.MuguRows, cols = layout.MuguColumns;
+            float cx = (cols - 1) / 2f, cy = (rows - 1) / 2f;
+            float radius = Math.Max(cx, cy) + 0.6f;           // 8×8 なら 4.1（四隅 4.95 は外）
+            const float inner = 0.5f;
+            double sweep = remain * 2 * Math.PI;
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    float dx = c - cx, dy = cy - r;           // 行 0 が上
+                    float d = (float)Math.Sqrt(dx * dx + dy * dy);
+                    double angle = Math.Atan2(dx, dy);       // 上が 0，時計回りに増える
+                    if (angle < 0) angle += 2 * Math.PI;
+                    float k = d <= radius && angle < sweep - 1e-6 ? pulse : 0;
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) <= inner + 1e-3f) k = Math.Max(k, style.approachTargetLevel);
+                    int i = (r * cols + c) * Channels;
+                    for (int ch = 0; ch < Channels; ch++) dest[i + ch] = ToByte(color[ch] / 255f * k);
+                }
+            }
+        }
 
         // 外周の四角が中心へ縮む．remain = 1 で外周（8×8 の縁），0 で中心の 2×2．中心はいつも薄く点ける
         void PaintShrinkingSquare(byte[] dest, float remain, float pulse, byte[] color)

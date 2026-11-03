@@ -121,7 +121,7 @@ namespace Arte.Rhythm.Render
             menu = NewCanvas("ホーム画面", new Vector2(1000, 760));
             var root = menu.transform;
             Label(root, "3D リズムゲーム", new Vector2(0, 330), 54, FontStyle.Bold);
-            Label(root, "テープを流れる光が次のノーツの場所を示す（両側から流れ込む）．むぎゅっとの四角は曲の拍ごとに 1 段ずつ縮み，色も 紫 → 青 → 水色．水色の光の粒が着き，むぎゅっと全体がパッと水色に光る瞬間に触れる",
+            Label(root, "テープを流れる光が次のノーツの場所を示す（両側から流れ込む）．むぎゅっとの丸が曲の拍ごとに 紫の丸ごと → 青の 2/3 → 水色の 1/3 と欠けていく（3，2，1）．水色の光の粒が着き，むぎゅっと全体がパッと水色に光る瞬間に触れる",
                   new Vector2(0, 270), 24, FontStyle.Normal, new Vector2(940, 70));
             startLabel = Button(root, "曲を始める（最初から）", new Vector2(-245, 180), () => { conductor?.Play(); ShowMenu(false); });
             pauseLabel = Button(root, "一時停止", new Vector2(245, 180), TogglePause);

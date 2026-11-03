@@ -53,7 +53,7 @@ namespace Arte.Rhythm.Tests
         {
             // テンポなし（120BPM，1 拍 0.5 秒）なので 3 拍前 = 1.5 秒前から
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true, approachShape = NoteApproachShape.Square });
             r.Render(chart, judge, 8.49, 0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "3 拍前より前は消えている");
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 3, 3));
@@ -154,7 +154,7 @@ namespace Arte.Rhythm.Tests
         {
             // 120BPM（1 拍 0.5 秒）．前のノーツ（同じ流れ）から 1 秒（2 拍．3 拍より短い）なので，2 拍前（9.0 秒）から案内する
             var (chart, judge) = Make(new ChartNote(9, 3, NoteType.Touch), new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true, approachShape = NoteApproachShape.Square });
             var events = new List<JudgeEvent>();
             judge.Touch(3, 9, events);
             r.Render(chart, judge, 8.9, 0, 0.016f, false, frame);
@@ -173,7 +173,7 @@ namespace Arte.Rhythm.Tests
         {
             // 120BPM（1 拍 0.5 秒）．3 拍前は紫，2 拍前は青，最後の 1 拍は水色
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true, approachShape = NoteApproachShape.Square });
             r.Render(chart, judge, 8.55, 0, 0.016f, false, frame);
             var c3 = MuguAt(3, 1, 0, 0);
             Assert.Greater(c3[0], 100, "3 拍前は紫（赤の成分がある）");
@@ -184,7 +184,7 @@ namespace Arte.Rhythm.Tests
 
             // 前のノーツ（同じ流れ）から 1 秒（2 拍）: むぎゅっとは 2 拍前から，テープの光の粒は同じ 3 拍前から同じ速さ
             var (chart2, judge2) = Make(new ChartNote(9, 3, NoteType.Touch), new ChartNote(10, 4, NoteType.Touch));
-            var r2 = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            var r2 = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true, approachShape = NoteApproachShape.Square });
             var events = new List<JudgeEvent>();
             judge2.Touch(3, 9, events);
             r2.Render(chart2, judge2, 8.55, 0, 0.016f, false, frame);
@@ -207,7 +207,7 @@ namespace Arte.Rhythm.Tests
         {
             // 120BPM（1 拍 0.5 秒）．ノーツ 10 秒（拍の頭）．3 拍前（8.5〜9.0）は外周，2 拍前（9.0〜9.5）は真ん中，最後の 1 拍は内側
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true, approachShape = NoteApproachShape.Square });
             foreach (double t in new[] { 8.55, 8.95 })
             {
                 r.Render(chart, judge, t, 0, 0.016f, false, frame);
@@ -231,7 +231,7 @@ namespace Arte.Rhythm.Tests
         {
             // ノーツが拍の途中（10.2 秒．拍の頭は 10.0）: 拍の頭 10.0 からノーツまでが最後の 1 拍（水色），その前の拍（9.5〜10.0）が 2 拍前（青）
             var (chart, judge) = Make(new ChartNote(10.2, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true, approachShape = NoteApproachShape.Square });
             r.Render(chart, judge, 9.8, 0, 0.016f, false, frame);
             Assert.Greater(MuguAt(3, 1, 1, 1)[2], 100, "2 拍前（青）は真ん中の段");
             Assert.AreEqual(0, MuguAt(3, 1, 1, 1)[1]);
@@ -240,11 +240,37 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void PieCountsDownThreeTwoOneThirds()
+        {
+            // 既定は扇形．120BPM（1 拍 0.5 秒）．ノーツ 10 秒．3 拍前は丸ごと紫，2 拍前は 2/3 青，最後の 1 拍は 1/3 水色（上から時計回り）
+            var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes);
+            // 行 0 が上．右上（行 1，列 6）は 0〜1/3，右下（行 6，列 6）は 1/3〜2/3，左上（行 2，列 0）は 2/3〜1
+            byte[] TopRight() => MuguAt(3, 1, 1, 6);
+            byte[] BottomRight() => MuguAt(3, 1, 6, 6);
+            byte[] UpperLeft() => MuguAt(3, 1, 2, 0);
+            r.Render(chart, judge, 8.6, 0, 0.016f, false, frame);
+            Assert.Greater(TopRight()[0], 50, "3/3 紫");
+            Assert.Greater(BottomRight()[2], 100);
+            Assert.Greater(UpperLeft()[2], 100);
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "丸の外（四隅）は点けない");
+            r.Render(chart, judge, 9.1, 0, 0.016f, false, frame);
+            Assert.Greater(TopRight()[2], 100, "2/3 青");
+            Assert.AreEqual(0, TopRight()[0]);
+            Assert.Greater(BottomRight()[2], 100);
+            Assert.AreEqual(0, UpperLeft()[2], "最後の 1/3 は消えた");
+            r.Render(chart, judge, 9.6, 0, 0.016f, false, frame);
+            Assert.Greater(TopRight()[1], 80, "1/3 水色");
+            Assert.AreEqual(0, BottomRight()[2]);
+            Assert.AreEqual(0, UpperLeft()[2]);
+        }
+
+        [Test]
         public void BeatsApproachFollowsTempo()
         {
             // 60BPM（1 拍 1 秒）なら 3 秒前から
             var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true }) { Tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 60, BeatsPerBar = 4 } }) };
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true, approachShape = NoteApproachShape.Square }) { Tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 60, BeatsPerBar = 4 } }) };
             r.Render(chart, judge, 6.9, 0, 0.016f, false, frame);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0));
             r.Render(chart, judge, 7.05, 0, 0.016f, false, frame);
