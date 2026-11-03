@@ -31,6 +31,16 @@ namespace Arte.Rhythm.Gameplay
         public float openBlinkPeriodSec = 0.5f;
         /// <summary>Beats: 何拍前から案内するか．</summary>
         public float approachBeats = 3f;
+        /// <summary>
+        /// Beats: 同じ流れのすぐ前のノーツとの間が approachBeats より短いときは，この拍数前から案内する
+        /// （前のノーツの案内と重なって分かりにくかった．2026-11-03 ユーザー決定）．
+        /// </summary>
+        public float approachShortBeats = 2f;
+        /// <summary>
+        /// Beats: ノーツ時刻ちょうどに，そのむぎゅっとだけを最後の 1 拍の色でいっぱいに光らせ，この秒数で戻す（「今」の合図．0 で無し）．
+        /// 全体は光らせない（2026-11-03 ユーザー決定）．
+        /// </summary>
+        public float approachNowSec = 0.12f;
         /// <summary>Beats: 最後の 1 拍の色（水色）．</summary>
         public byte[] approachLastColor = { 0, 200, 255 };
         /// <summary>Beats: 中心の 2×2（閉じる先）の明るさ（0〜1）．</summary>
@@ -280,6 +290,8 @@ namespace Arte.Rhythm.Gameplay
         }
 
         readonly HashSet<int> approachPainted = new HashSet<int>();
+        // 案内の光の粒が走っているテープ（このテープでは色相の演出・判定のあとの光を消し，光の粒だけを出す）
+        readonly HashSet<int> approachTapes = new HashSet<int>();
 
         // 拍で案内する（NoteApproach.Beats）
         void PaintApproach(Chart chart, TouchJudge judge, double songTime)
@@ -287,11 +299,13 @@ namespace Arte.Rhythm.Gameplay
             var notes = chart.Notes;
             while (openCursor < notes.Count && (notes[openCursor].Type != NoteType.Touch || judge.ResultOf(openCursor) != null)) openCursor++;
             approachPainted.Clear();
+            approachTapes.Clear();
             for (int i = openCursor; i < notes.Count && notes[i].Time - 10 <= songTime; i++)
             {
                 if (notes[i].Type != NoteType.Touch || judge.ResultOf(i) != null || !Has(notes[i].Lane)) continue;
                 double beat = SecPerBeatAt(notes[i].Time);
-                double window = style.approachBeats * beat;
+                double gap = notes[i].Time - PreviousTimeInFlow(notes, i);
+                double window = (gap < style.approachBeats * beat ? style.approachShortBeats : style.approachBeats) * beat;
                 double before = notes[i].Time - songTime;          // ノーツ時刻まであと何秒
                 if (before > window) continue;
                 int lane = notes[i].Lane;
@@ -309,11 +323,20 @@ namespace Arte.Rhythm.Gameplay
                     float k = (style.approachFillStart + (1 - style.approachFillStart) * (1 - (float)remain)) * pulse;
                     Fill(mugu[lane], ToByte(color[0] / 255f * k), ToByte(color[1] / 255f * k), ToByte(color[2] / 255f * k));
                 }
+                // 「今」の合図: ノーツ時刻ちょうどに，むぎゅっと全体を明るく光らせてすぐ戻す
+                if (before <= 0 && style.approachNowSec > 0)
+                {
+                    float now = (float)Math.Exp(before / style.approachNowSec);
+                    byte[] dest = mugu[lane];
+                    for (int p = 0; p < dest.Length; p++)
+                        dest[p] = Math.Max(dest[p], ToByte(color[p % Channels] / 255f * now));
+                }
                 // 光の粒を流すテープ: 同じ流れのすぐ前のノーツが隣のむぎゅっとなら，その間のテープを前のむぎゅっとから流す
                 // （テープ k はむぎゅっと k から次の k+1 へ伸び，0 番目の LED が k の側．むぎゅっとは輪で，最後の次は最初）
                 int prev = PreviousAdjacentLane(notes, i, lane, window);
-                if (prev >= 0 && NextLane(prev) == lane && Has(prev)) PaintComet(approachConnect[prev], (float)remain, pulse, color, towardEnd: true);
-                else PaintComet(approachConnect[lane], (float)remain, pulse, color, towardEnd: false);
+                int tape = prev >= 0 && NextLane(prev) == lane && Has(prev) ? prev : lane;
+                approachTapes.Add(tape);
+                PaintComet(approachConnect[tape], (float)remain, pulse, color, towardEnd: tape != lane);
             }
         }
 
@@ -346,6 +369,16 @@ namespace Arte.Rhythm.Gameplay
         }
 
         bool Adjacent(int a, int b) => a != b && (NextLane(a) == b || NextLane(b) == a);
+
+        // 同じ流れ（ChartNote.Flow）のすぐ前のノーツ（同じ時刻のものは除く）の時刻．無ければ −∞
+        static double PreviousTimeInFlow(IReadOnlyList<ChartNote> notes, int index)
+        {
+            double t = notes[index].Time;
+            int flow = notes[index].Flow;
+            for (int j = index - 1; j >= 0 && j >= index - 12; j--)
+                if (notes[j].Flow == flow && t - notes[j].Time >= 1e-3) return notes[j].Time;
+            return double.NegativeInfinity;
+        }
 
         // 同じ流れ（ChartNote.Flow）のすぐ前のノーツ（window の 1.5 倍の間に始まったもの）が隣のむぎゅっとなら，そのレーン．無ければ -1
         int PreviousAdjacentLane(IReadOnlyList<ChartNote> notes, int index, int lane, double window)
@@ -451,7 +484,8 @@ namespace Arte.Rhythm.Gameplay
                 int conStart = layout.ConnectLedIndex(m.module, 0) * Channels;
                 if (conStart + layout.ConnectLeds * Channels > pin.Length) continue;
                 mugu[lane].AsSpan().CopyTo(pin.Slice(muguStart));
-                var con = connect[lane];
+                // 案内の光の粒が走っているテープは光の粒だけ（色相の演出の青〜紫と見分けにくかった．2026-11-03 ユーザー）
+                var con = approachTapes.Contains(lane) ? approachConnect[lane] : connect[lane];
                 var over = approachConnect[lane];
                 bool swap = layout.ConnectSwapRG;
                 for (int i = 0; i < layout.ConnectLeds; i++)

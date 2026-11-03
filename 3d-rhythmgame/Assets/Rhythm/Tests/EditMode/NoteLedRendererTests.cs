@@ -101,7 +101,8 @@ namespace Arte.Rhythm.Tests
             int n = notes.ConnectLeds;
             var events = new List<JudgeEvent>();
             judge.Touch(3, 9.5, events);           // レーン 3 は取った（レーン 4 の案内だけが出る）
-            r.Render(chart, judge, 8.6, 0, 0.016f, false, frame);   // あと 1.4 秒（ほぼ走り始め）
+            // 前のノーツとの間が 3 拍より短いので 2 拍前（1 秒前）から
+            r.Render(chart, judge, 9.05, 0, 0.016f, false, frame);  // あと 0.95 秒（ほぼ走り始め）
             int nearStart = Con(m3.device, m3.module, 1)[2], nearEnd = Con(m3.device, m3.module, n - 2)[2];
             Assert.Greater(nearStart, nearEnd, "走り始めはレーン 3 の側（0 番目の近く）");
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(m4.device, m4.module, n - 1), "レーン 4 のテープは使わない");
@@ -135,9 +136,28 @@ namespace Arte.Rhythm.Tests
             judge.Touch(last, 9.5, events);
             notes.TryGetModule(last, out var mLast);
             int n = notes.ConnectLeds;
-            r.Render(chart, judge, 8.6, 0, 0.016f, false, frame);
+            r.Render(chart, judge, 9.05, 0, 0.016f, false, frame);
             Assert.Greater(Con(mLast.device, mLast.module, 1)[2], Con(mLast.device, mLast.module, n - 2)[2],
                 "レーン 0 の案内は，最後のレーンのテープ（最後 → 0）を最後のレーンの側から流れる");
+        }
+
+        [Test]
+        public void ShortGapStartsTwoBeatsBeforeAndNoteTimeLightsTheWholeModule()
+        {
+            // 120BPM（1 拍 0.5 秒）．前のノーツ（同じ流れ）から 1 秒（2 拍．3 拍より短い）なので，2 拍前（9.0 秒）から案内する
+            var (chart, judge) = Make(new ChartNote(9, 3, NoteType.Touch), new ChartNote(10, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            var events = new List<JudgeEvent>();
+            judge.Touch(3, 9, events);
+            r.Render(chart, judge, 8.9, 0, 0.016f, false, frame);
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "2 拍より前はまだ");
+            r.Render(chart, judge, 9.05, 0, 0.016f, false, frame);
+            Assert.Greater(MuguAt(3, 1, 0, 0)[2], 100, "2 拍前から四角");
+            // ノーツ時刻ちょうどは，むぎゅっと全体（四角の外の角も）が最後の 1 拍の色で光る
+            r.Render(chart, judge, 10.0, 0, 0.016f, false, frame);
+            Assert.Greater(MuguAt(3, 1, 0, 0)[1], 150, "ノーツ時刻はむぎゅっと全体が光る");
+            r.Render(chart, judge, 10.2, 0, 0.016f, false, frame);
+            Assert.Less(MuguAt(3, 1, 0, 0)[1], 50, "すぐ戻る");
         }
 
         [Test]
