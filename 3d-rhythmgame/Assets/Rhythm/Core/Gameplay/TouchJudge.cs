@@ -71,6 +71,8 @@ namespace Arte.Rhythm.Gameplay
         readonly Dictionary<int, LaneQueue> lanes = new Dictionary<int, LaneQueue>();
         readonly Dictionary<int, double> lastAcceptedTouch = new Dictionary<int, double>();
         readonly List<JudgeEvent> missScratch = new List<JudgeEvent>();
+        // ノーツごとの幅（秒）．拍で書いた幅はノーツの所のテンポで秒にする
+        readonly double[] perfect, good, missAfter, missShowAfter;
         double now = double.NegativeInfinity;
 
         sealed class LaneQueue
@@ -81,13 +83,22 @@ namespace Arte.Rhythm.Gameplay
             public int Peek() => Indices[Head];
         }
 
-        public TouchJudge(Chart chart, JudgeRules rules)
+        public TouchJudge(Chart chart, JudgeRules rules, TempoMap tempo = null)
         {
             notes = chart.Notes;
             this.rules = rules ?? throw new ArgumentNullException(nameof(rules));
             results = new JudgeResult?[notes.Count];
+            perfect = new double[notes.Count];
+            good = new double[notes.Count];
+            missAfter = new double[notes.Count];
+            missShowAfter = new double[notes.Count];
             for (int i = 0; i < notes.Count; i++)
             {
+                double t = notes[i].Time;
+                perfect[i] = rules.PerfectAt(tempo, t);
+                good[i] = rules.GoodAt(tempo, t);
+                missAfter[i] = rules.MissAfterAt(tempo, t);
+                missShowAfter[i] = rules.MissShowAfterAt(tempo, t);
                 if (notes[i].Type != NoteType.Touch) continue;
                 if (!lanes.TryGetValue(notes[i].Lane, out var q)) lanes[notes[i].Lane] = q = new LaneQueue();
                 q.Indices.Add(i);
@@ -102,6 +113,9 @@ namespace Arte.Rhythm.Gameplay
 
         /// <summary>判定が確定していればその結果，未確定なら null．</summary>
         public JudgeResult? ResultOf(int noteIndex) => results[noteIndex];
+
+        /// <summary>このノーツの Miss を見せる曲時刻（ノーツ時刻 + MissShowAfter．Miss の確定より前なら確定した時）．</summary>
+        public double MissShowAt(int noteIndex) => notes[noteIndex].Time + Math.Max(missShowAfter[noteIndex], missAfter[noteIndex]);
 
         /// <summary>
         /// 未判定で，案内（受付色の点滅）が始まっているか（ノーツ時刻の SpawnLeadSec 前から）．
@@ -120,7 +134,7 @@ namespace Arte.Rhythm.Gameplay
             missScratch.Clear();
             foreach (var q in lanes.Values)
             {
-                while (!q.Empty && songTime > notes[q.Peek()].Time + rules.MissAfterSec)
+                while (!q.Empty && songTime > notes[q.Peek()].Time + missAfter[q.Peek()])
                 {
                     int i = q.Peek();
                     q.Head++;
@@ -147,12 +161,12 @@ namespace Arte.Rhythm.Gameplay
             // 先頭（最も早い未判定ノーツ）だけが候補．後ろのノーツは先頭より遅いので，先頭が受付前なら後ろも受付前
             int index = q.Peek();
             double d = songTime - notes[index].Time;
-            if (d < -rules.GoodSec || d > rules.AcceptUntilSec) return TouchOutcome.NoNote;
+            if (d < -good[index] || d > good[index] + missAfter[index]) return TouchOutcome.NoNote;
 
             double abs = Math.Abs(d);
             JudgeResult result;
-            if (abs <= rules.PerfectSec) result = JudgeResult.Perfect;
-            else if (abs <= rules.GoodSec) result = JudgeResult.Good;
+            if (abs <= perfect[index]) result = JudgeResult.Perfect;
+            else if (abs <= good[index]) result = JudgeResult.Good;
             else return TouchOutcome.OutOfRange;
 
             q.Head++;

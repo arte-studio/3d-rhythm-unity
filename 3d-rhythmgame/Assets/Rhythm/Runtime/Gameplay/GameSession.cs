@@ -45,7 +45,7 @@ namespace Arte.Rhythm.Gameplay
             PlayerPrefs.Save();
         }
 
-        /// <summary>判定が確定した（Perfect/Good/Miss）．</summary>
+        /// <summary>判定を見せる（Perfect/Good はすぐ．Miss はノーツ時刻の JudgeRules.MissShowAfter 後，既定 1 拍後）．</summary>
         public event Action<JudgeEvent> Judged;
 
         /// <summary>タッチを受け付けた（空タッチを含む）．レーン，曲時刻，扱い．</summary>
@@ -58,6 +58,8 @@ namespace Arte.Rhythm.Gameplay
         readonly ConcurrentQueue<(int lane, double realtime)> pending = new ConcurrentQueue<(int, double)>();
         readonly List<(int lane, double songTime)> ordered = new List<(int, double)>();
         readonly List<JudgeEvent> events = new List<JudgeEvent>();
+        // 確定したがまだ見せていない Miss
+        readonly List<JudgeEvent> lateMisses = new List<JudgeEvent>();
         double lastAdvanced = double.NegativeInfinity;
 
         void OnEnable()
@@ -78,7 +80,8 @@ namespace Arte.Rhythm.Gameplay
         {
             var notes = FindFirstObjectByType<Net.DeviceLink>()?.Notes;
             Chart = notes != null ? conductor.Data.ToChart(players, notes.Lanes, notes.FrontLane) : conductor.Data.ToChart(players);
-            Judge = new TouchJudge(Chart, conductor.Data.EffectiveRules);
+            Judge = new TouchJudge(Chart, conductor.Data.EffectiveRules, conductor.Data.TempoMap());
+            lateMisses.Clear();
             Log = new TouchLog { ChartName = conductor.song != null ? conductor.song.name : "", Players = players, FrontLane = notes != null && players == 1 ? notes.FrontLane : -1 };
             while (pending.TryDequeue(out _)) { }
             lastAdvanced = double.NegativeInfinity;
@@ -147,7 +150,17 @@ namespace Arte.Rhythm.Gameplay
                 Judge.Advance(now, events);
                 lastAdvanced = now;
             }
-            foreach (var e in events) Judged?.Invoke(e);
+            foreach (var e in events)
+            {
+                if (e.Result == JudgeResult.Miss && now < Judge.MissShowAt(e.NoteIndex)) lateMisses.Add(e);
+                else Judged?.Invoke(e);
+            }
+            for (int i = 0; i < lateMisses.Count; i++)
+            {
+                if (now < Judge.MissShowAt(lateMisses[i].NoteIndex)) continue;
+                Judged?.Invoke(lateMisses[i]);
+                lateMisses.RemoveAt(i--);
+            }
         }
     }
 }

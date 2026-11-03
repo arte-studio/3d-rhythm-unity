@@ -94,7 +94,10 @@ d = タッチ時刻 − ノーツ時刻（秒）．2026-11-03 にユーザーの
 
 - 判定はタッチの押し始めだけ．触れたままでは次のノーツは取れない．同じレーンの 0.1 秒以内の再タッチは無視．
 - 1 回のタッチで判定するのは，そのレーンの最も早い未判定のノーツだけ．
-- 子ども向けに緩めるときは曲ごとに song.json の `rules` に書く（`perfectSec`，`goodSec`，`missAfterSec` など）．
+- Miss を見せる（LED の演出と判定の文字）のはノーツ時刻の 1 拍後（すぐ出るとリズムが乱される）．Miss の確定と得点は今までどおり．Perfect / Good はすぐ見せる．
+- 子ども向けに緩めるときは曲ごとに song.json の `rules` に書く．幅は ms（`perfectMs`，`goodMs`，`missAfterMs`，`missShowAfterMs`）と
+  拍（`perfectBeats`，`goodBeats`，`missAfterBeats`，`missShowAfterBeats`．ノーツの所のテンポの 1 拍）のどちらでも書け，両方なら長い方．
+  例: `"rules": {"perfectMs": 0, "perfectBeats": 0.25, "goodMs": 250}`．
   旧版の値（Perfect −2.0〜+0.5 秒，Good −3.0〜−2.0 秒，得点 5/3）は `JudgeRules.Legacy()`．
 - タッチの時刻はデバイスの時刻を PC の時刻に直して使う（7 章）．遊んだタッチはリプレイとして保存する．
 

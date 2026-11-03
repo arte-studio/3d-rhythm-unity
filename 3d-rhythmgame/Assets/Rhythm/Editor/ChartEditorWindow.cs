@@ -979,8 +979,10 @@ namespace Arte.Rhythm.Editor
             var rules = data.EffectiveRules;
             float y = YOfLane(n.Lane), h = LaneH - 1;
             void Band(double a, double b, Color c) => EditorGUI.DrawRect(new Rect(XOf(a), y, XOf(b) - XOf(a), h), c);
-            Band(n.Time - rules.GoodSec, n.Time - rules.PerfectSec, new Color(1f, 1f, 1f, 0.10f));
-            Band(n.Time - rules.PerfectSec, n.Time + rules.MissAfterSec, new Color(1f, 0.3f, 1f, 0.16f));
+            var tempo = data.TempoMap();
+            double good = rules.GoodAt(tempo, n.Time), perfect = rules.PerfectAt(tempo, n.Time);
+            Band(n.Time - good, n.Time - perfect, new Color(1f, 1f, 1f, 0.10f));
+            Band(n.Time - perfect, n.Time + rules.MissAfterAt(tempo, n.Time), new Color(1f, 0.3f, 1f, 0.16f));
         }
 
         void DrawNotes()

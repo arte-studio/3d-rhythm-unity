@@ -1,3 +1,5 @@
+using System;
+using Arte.Rhythm.Charts;
 using Newtonsoft.Json;
 
 namespace Arte.Rhythm.Gameplay
@@ -15,17 +17,52 @@ namespace Arte.Rhythm.Gameplay
     ///   d &gt; MissAfterSec            : タッチが無ければ Miss
     /// </code>
     /// 判定はタッチした瞬間（押し始め）だけで行うので，触れたままにしても次のノーツは取れない．
+    ///
+    /// 幅は ms（xxxMs）と拍（xxxBeats，その曲のテンポでノーツの所の 1 拍の長さを掛ける）のどちらでも書ける．
+    /// 両方を書いたら長い方を使う．拍を書かなければ ms だけ（拍を書くときは ms を 0 にすれば拍だけ）．
     /// </summary>
     public sealed class JudgeRules
     {
-        /// <summary>|d| がこれ以下なら Perfect．</summary>
-        [JsonProperty("perfectSec")] public double PerfectSec = 0.1;
+        /// <summary>|d| がこれ以下なら Perfect（秒．JSON では perfectMs）．</summary>
+        [JsonIgnore] public double PerfectSec = 0.1;
+        [JsonProperty("perfectBeats", NullValueHandling = NullValueHandling.Ignore)] public double? PerfectBeats;
 
-        /// <summary>|d| がこれ以下なら Good．判定の受付開始も -GoodSec．</summary>
-        [JsonProperty("goodSec")] public double GoodSec = 0.25;
+        /// <summary>|d| がこれ以下なら Good．判定の受付開始も -GoodSec（JSON では goodMs）．</summary>
+        [JsonIgnore] public double GoodSec = 0.25;
+        [JsonProperty("goodBeats", NullValueHandling = NullValueHandling.Ignore)] public double? GoodBeats;
 
-        /// <summary>ノーツ時刻からこれだけ過ぎてもタッチが無ければ Miss．</summary>
-        [JsonProperty("missAfterSec")] public double MissAfterSec = 0.25;
+        /// <summary>ノーツ時刻からこれだけ過ぎてもタッチが無ければ Miss（JSON では missAfterMs）．</summary>
+        [JsonIgnore] public double MissAfterSec = 0.25;
+        [JsonProperty("missAfterBeats", NullValueHandling = NullValueHandling.Ignore)] public double? MissAfterBeats;
+
+        /// <summary>
+        /// Miss を見せる（演出・判定の文字）のはノーツ時刻からどれだけ後か（JSON では missShowAfterMs / missShowAfterBeats）．
+        /// 判定そのもの（MissAfter）は変えない．Miss がすぐ出るとリズムが乱されるので，既定は 1 拍後．Perfect / Good はすぐ見せる．
+        /// </summary>
+        [JsonIgnore] public double MissShowAfterSec = 0;
+        [JsonProperty("missShowAfterBeats", NullValueHandling = NullValueHandling.Ignore)] public double? MissShowAfterBeats = 1;
+
+        [JsonProperty("perfectMs")] double PerfectMs { get => PerfectSec * 1000; set => PerfectSec = value / 1000; }
+        [JsonProperty("goodMs")] double GoodMs { get => GoodSec * 1000; set => GoodSec = value / 1000; }
+        [JsonProperty("missAfterMs")] double MissAfterMs { get => MissAfterSec * 1000; set => MissAfterSec = value / 1000; }
+        [JsonProperty("missShowAfterMs")] double MissShowAfterMs { get => MissShowAfterSec * 1000; set => MissShowAfterSec = value / 1000; }
+
+        /// <summary>ノーツ（時刻 noteTime）の所での幅（秒）．tempo が無ければ 120 BPM．</summary>
+        public double PerfectAt(TempoMap tempo, double noteTime) => Window(PerfectSec, PerfectBeats, tempo, noteTime);
+        public double GoodAt(TempoMap tempo, double noteTime) => Window(GoodSec, GoodBeats, tempo, noteTime);
+        public double MissAfterAt(TempoMap tempo, double noteTime) => Window(MissAfterSec, MissAfterBeats, tempo, noteTime);
+        public double MissShowAfterAt(TempoMap tempo, double noteTime) => Window(MissShowAfterSec, MissShowAfterBeats, tempo, noteTime);
+
+        static double Window(double sec, double? beats, TempoMap tempo, double noteTime)
+        {
+            if (beats == null) return sec;
+            var map = tempo ?? Default;
+            double b = map.BeatOf(noteTime);
+            double secPerBeat = map.TimeOf(b + 0.5) - map.TimeOf(b - 0.5);
+            return Math.Max(sec, beats.Value * secPerBeat);
+        }
+
+        static readonly TempoMap Default = new TempoMap(null);
 
         /// <summary>同じレーンへの連続タッチを無視する時間（旧 touchInputCooldown）．</summary>
         [JsonProperty("laneCooldownSec")] public double LaneCooldownSec = 0.1;
@@ -37,18 +74,12 @@ namespace Arte.Rhythm.Gameplay
         [JsonProperty("goodScore")] public int GoodScore = 50;
 
         /// <summary>
-        /// タッチを受け付ける時間幅の終わり（旧 HandleTouchInput の goodRange + missRange）．
-        /// 実際には MissAfterSec を過ぎたノーツは先に Miss になるので，効くのは MissAfterSec &gt; GoodSec のときだけ．
-        /// </summary>
-        [JsonIgnore] public double AcceptUntilSec => GoodSec + MissAfterSec;
-
-        /// <summary>
         /// 旧版（工大祭のシーン設定）の判定．Perfect = [-2.0, +0.5] 秒，Good = [-3.0, -2.0) 秒，得点 5/3．
         /// 遅れ側は MissAfterSec で切れるので，PerfectSec の遅れ側（+0.5〜+2.0）は使われない．
         /// </summary>
         public static JudgeRules Legacy() => new JudgeRules
         {
-            PerfectSec = 2.0, GoodSec = 3.0, MissAfterSec = 0.5, LaneCooldownSec = 0.1, SpawnLeadSec = 3.0, PerfectScore = 5, GoodScore = 3,
+            PerfectSec = 2.0, GoodSec = 3.0, MissAfterSec = 0.5, LaneCooldownSec = 0.1, SpawnLeadSec = 3.0, PerfectScore = 5, GoodScore = 3, MissShowAfterBeats = null,
         };
     }
 }

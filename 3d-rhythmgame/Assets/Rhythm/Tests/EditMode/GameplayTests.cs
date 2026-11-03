@@ -209,6 +209,38 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void Judge_WindowsInMsOrBeats()
+        {
+            // 120 BPM（1 拍 0.5 秒）．Perfect は 1/4 拍 = 125ms，Good は 200ms と 1/2 拍 = 250ms の長い方
+            var tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 120 } });
+            var rules = SongJson.Load("{\"format\":\"arte-rhythm-song/1\",\"rules\":{\"perfectMs\":0,\"perfectBeats\":0.25,\"goodMs\":200,\"goodBeats\":0.5,\"missAfterMs\":250}}").EffectiveRules;
+            Assert.AreEqual(0.125, rules.PerfectAt(tempo, 10), 1e-9);
+            Assert.AreEqual(0.25, rules.GoodAt(tempo, 10), 1e-9);
+            Assert.AreEqual(0.25, rules.MissAfterAt(tempo, 10), 1e-9, "拍を書かなければ ms だけ");
+            foreach (var (offset, expected) in new[] { (0.12, JudgeResult.Perfect), (-0.13, JudgeResult.Good), (-0.24, JudgeResult.Good) })
+            {
+                var judge = new TouchJudge(OneNote(), rules, tempo);
+                judge.Touch(0, 10 + offset, new List<JudgeEvent>());
+                Assert.AreEqual(expected, judge.ResultOf(0), $"{offset}");
+            }
+            var back = SongJson.Load(SongJson.Save(new SongData { Rules = rules })).EffectiveRules;
+            Assert.AreEqual(0.2, back.GoodSec, 1e-9);
+            Assert.AreEqual(0.5, back.GoodBeats);
+        }
+
+        [Test]
+        public void Judge_MissIsShownOneBeatAfterTheNote()
+        {
+            var tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 150 } }); // 1 拍 0.4 秒
+            var judge = new TouchJudge(OneNote(), new JudgeRules(), tempo);
+            var events = new List<JudgeEvent>();
+            judge.Advance(10.3, events);
+            Assert.AreEqual(JudgeResult.Miss, events.Single().Result, "Miss の確定は今までどおり 250ms 後");
+            Assert.AreEqual(10.4, judge.MissShowAt(0), 1e-9, "見せるのは 1 拍後");
+            Assert.AreEqual(10.5, new TouchJudge(OneNote(), JudgeRules.Legacy(), tempo).MissShowAt(0), 1e-9, "旧版は確定した時");
+        }
+
+        [Test]
         public void Judge_CooldownIgnoresRapidRetouch()
         {
             var chart = new Chart(new[] { new ChartNote(10, 0, NoteType.Touch), new ChartNote(10.05, 0, NoteType.Touch) });

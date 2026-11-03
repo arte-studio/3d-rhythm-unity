@@ -49,9 +49,9 @@ namespace Arte.Rhythm.Gameplay
     public static class TouchReplay
     {
         /// <summary>記録したタッチを時刻順に判定し直す．endTime まで時刻を進めて残りを Miss にする．</summary>
-        public static ReplayResult Run(Chart chart, JudgeRules rules, IEnumerable<TouchRecord> touches, double endTime)
+        public static ReplayResult Run(Chart chart, JudgeRules rules, IEnumerable<TouchRecord> touches, double endTime, TempoMap tempo = null)
         {
-            var judge = new TouchJudge(chart, rules);
+            var judge = new TouchJudge(chart, rules, tempo);
             var result = new ReplayResult();
             double last = double.NegativeInfinity;
             foreach (var t in touches.OrderBy(t => t.Time))
