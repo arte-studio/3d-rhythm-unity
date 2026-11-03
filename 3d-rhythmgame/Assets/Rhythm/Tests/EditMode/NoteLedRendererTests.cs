@@ -63,8 +63,7 @@ namespace Arte.Rhythm.Tests
             Assert.Greater(MuguAt(3, 1, 0, 0)[2], 200, "外周の角");
             Assert.AreEqual(170, MuguAt(3, 1, 0, 0)[0], "3 拍前は紫");
             Assert.That(MuguAt(3, 1, 3, 3)[2], Is.InRange(50, 80), "中心の 2×2 は薄く（25%）");
-            Assert.Greater(Con(3, 1, notes.ConnectLeds - 1)[2], 200, "テープの遠い端");
-            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(3, 1, 0), "むぎゅっとの側の端はまだ");
+            Assert.Greater(Enumerable.Range(0, notes.ConnectLeds).Max(i => Con(3, 1, i)[2]), 200, "テープには道しるべ");
 
             // ノーツ時刻の直前: 四角は中心に閉じ，最後の 1 拍は水色，粒はむぎゅっとの側の端に
             r.Render(chart, judge, 9.999, 0, 0.016f, false, frame);
@@ -72,43 +71,51 @@ namespace Arte.Rhythm.Tests
             Assert.Greater(center[1], 80, "最後の 1 拍は水色（緑の成分がある）");
             Assert.Greater(center[2], 100);
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "外周は消えた");
-            // テープは R と G を入れ替えて書く
-            Assert.Greater(Con(3, 1, 0)[0] + Con(3, 1, 0)[1], 100, "むぎゅっとの側の端に着いた");
+        }
+
+        // テープ（レーン lane のむぎゅっとから次へ伸びる）の一番明るい LED の番号（0 = lane の側）．消えていれば −1
+        int Peak(int lane)
+        {
+            notes.TryGetModule(lane, out var m);
+            int best = -1, max = 0;
+            for (int i = 0; i < notes.ConnectLeds; i++)
+                if (Con(m.device, m.module, i)[2] > max) { max = Con(m.device, m.module, i)[2]; best = i; }
+            return best;
         }
 
         [Test]
-        public void BeatsApproachPulsesOnEachBeatCountedFromNote()
+        public void GuideFlowsIntoTheNextNoteFromBothSidesFromJustBeforeThePreviousNote()
         {
-            var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
-            var r = new NoteLedRenderer(notes);
-            // 粒の頭（テープの何番目か = 29 × 残りの割合）の明るさで比べる．
-            // 9.0 秒はノーツ時刻から 1 拍ずつ数えた拍の頭（あと 2 拍）なので一番明るい．9.3 秒は拍の途中なので暗い
-            r.Render(chart, judge, 9.0, 0, 0.016f, false, frame);
-            int onBeat = Con(3, 1, 19)[2];
-            r.Render(chart, judge, 9.3, 0, 0.016f, false, frame);
-            int midBeat = Con(3, 1, 14)[2];
-            Assert.AreEqual(255, onBeat);
-            Assert.That(midBeat, Is.InRange(130, 170), "拍の途中は 55〜60% くらいまで戻る");
-        }
-
-        [Test]
-        public void CometFlowsFromThePreviousAdjacentModule()
-        {
-            // レーン 3 → レーン 4（隣）．レーン 4 の案内の光の粒は，レーン 3 のテープ（3 から 4 へ伸びる）を 3 の側から 4 の側へ流れる
+            // 120BPM（1 拍 0.5 秒）．流れ: レーン 3（9.5 秒）→ レーン 4（10 秒）
             var (chart, judge) = Make(new ChartNote(9.5, 3, NoteType.Touch), new ChartNote(10, 4, NoteType.Touch));
             var r = new NoteLedRenderer(notes);
-            notes.TryGetModule(3, out var m3);
-            notes.TryGetModule(4, out var m4);
-            int n = notes.ConnectLeds;
+            // 8.9 秒: まだレーン 3 への道しるべだけ（テープ 2 とテープ 3 からレーン 3 へ）
+            r.Render(chart, judge, 8.9, 0, 0.016f, false, frame);
+            Assert.GreaterOrEqual(Peak(2), 0, "テープ 2（2 → 3）");
+            Assert.That(Peak(3), Is.InRange(0, 14), "テープ 3 はレーン 3 の側へ流れている");
+            Assert.AreEqual(-1, Peak(4));
+            // 9.1 秒（前のノーツの 1 拍前を過ぎた）: レーン 4 への道しるべも始まる（レーン 3 への道しるべも判定まで続く）
+            r.Render(chart, judge, 9.1, 0, 0.016f, false, frame);
+            Assert.GreaterOrEqual(Peak(2), 0, "レーン 3 への道しるべは判定まで続く");
+            Assert.GreaterOrEqual(Peak(4), 0, "テープ 4（5 の側から 4 へ）");
+            // レーン 3 を取ったら，テープ 3 と テープ 4 の両側からレーン 4 へ
             var events = new List<JudgeEvent>();
-            judge.Touch(3, 9.5, events);           // レーン 3 は取った（レーン 4 の案内だけが出る）
-            // 前のノーツとの間が 3 拍より短いので 2 拍前（1 秒前）から
-            r.Render(chart, judge, 9.05, 0, 0.016f, false, frame);  // あと 0.95 秒（ほぼ走り始め）
-            int nearStart = Con(m3.device, m3.module, 1)[2], nearEnd = Con(m3.device, m3.module, n - 2)[2];
-            Assert.Greater(nearStart, nearEnd, "走り始めはレーン 3 の側（0 番目の近く）");
-            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(m4.device, m4.module, n - 1), "レーン 4 のテープは使わない");
-            r.Render(chart, judge, 9.999, 0, 0.016f, false, frame);
-            Assert.Greater(Con(m3.device, m3.module, n - 1)[1] + Con(m3.device, m3.module, n - 1)[0], 100, "着くのはレーン 4 の側（テープの最後）");
+            judge.Touch(3, 9.5, events);
+            r.Render(chart, judge, 9.6, 0, 0.016f, false, frame);
+            Assert.AreEqual(-1, Peak(2), "レーン 3 への道しるべは止まった");
+            int a3 = Peak(3), a4 = Peak(4);
+            r.Render(chart, judge, 9.7, 0, 0.016f, false, frame);
+            Assert.Greater(Peak(3), a3, "テープ 3 は 3 の側からレーン 4 の側（最後の LED）へ");
+            Assert.Less(Peak(4), a4, "テープ 4 は遠い端（5 の側）からレーン 4 の側（0 番目）へ");
+            // 流れ続ける（1 拍ごとに繰り返す．9.7 秒の 1 拍前も同じ所）
+            int b4 = Peak(4);
+            r.Render(chart, judge, 9.2, 0, 0.016f, false, frame);
+            Assert.AreEqual(b4, Peak(4), "1 拍ごとに繰り返す");
+            // 判定したら止まる
+            judge.Touch(4, 10, events);
+            r.Render(chart, judge, 10.3, 0, 0.016f, false, frame);
+            Assert.AreEqual(-1, Peak(3));
+            Assert.AreEqual(-1, Peak(4));
         }
 
         [Test]

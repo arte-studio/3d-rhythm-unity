@@ -58,6 +58,18 @@ namespace Arte.Rhythm.Gameplay
         /// <summary>Beats: テープを走る光の粒の尾の長さ（個）．</summary>
         public float approachTailLeds = 5f;
         /// <summary>
+        /// Beats: テープの光の粒は「次のノーツがどこに出るか」の道しるべ（叩く時刻は示さない．2026-11-03 ユーザー決定）．
+        /// 同じ流れの前のノーツの時刻のこの拍数前から，次のノーツが判定されるまで，次のノーツの両隣のテープを次のノーツへ向かって流れ続ける
+        /// （両側から流すのは，違う方を見ていても気付けるように）．前のノーツが無いときは approachBeats 前から．
+        /// </summary>
+        public float approachGuideLeadBeats = 1f;
+        /// <summary>Beats: 道しるべの光の粒が 1 本のテープを流れきるのにかかる拍数（拍の頭でむぎゅっとに着く）．</summary>
+        public float approachGuideRunBeats = 1f;
+        /// <summary>Beats: 道しるべを出すのは次のノーツの最大この秒数前から（前のノーツが遠いとき）．</summary>
+        public float approachGuideMaxSec = 8f;
+        /// <summary>Beats: 道しるべの色．</summary>
+        public byte[] approachGuideColor = { 0, 120, 255 };
+        /// <summary>
         /// Beats: むぎゅっとに縮む四角を出す．切ると，むぎゅっと全体が拍で光り，ノーツ時刻に向けてだんだん明るくなる
         /// （2026-11-03 ユーザー: 一度なしにしたが，やっぱり採用）．
         /// </summary>
@@ -313,14 +325,16 @@ namespace Arte.Rhythm.Gameplay
                 if (notes[i].Type != NoteType.Touch || judge.ResultOf(i) != null || !Has(notes[i].Lane)) continue;
                 double beat = SecPerBeatAt(notes[i].Time);
                 double gap = notes[i].Time - PreviousTimeInFlow(notes, i);
-                double window = style.approachBeats * beat;                       // テープの光の粒（いつも同じ速さ）
+                double window = style.approachBeats * beat;
                 double muguWindow = gap < window ? Math.Min(window, style.approachShortBeats * beat) : window;   // むぎゅっと
+                // 道しるべ（テープ）: 前のノーツの少し前から．前のノーツが無ければ window 前から
+                double guideWindow = double.IsInfinity(gap) ? window : Math.Min(style.approachGuideMaxSec, gap + style.approachGuideLeadBeats * beat);
+                guideWindow = Math.Max(guideWindow, muguWindow);
                 double before = notes[i].Time - songTime;          // ノーツ時刻まであと何秒
-                if (before > window) continue;
+                if (before > guideWindow) continue;
                 int lane = notes[i].Lane;
                 // 同じレーンに続けてノーツがあるときは先のものを描く（後のものは前のノーツの判定のあと）
                 if (!approachPainted.Add(lane)) continue;
-                double remain = Math.Max(0, before) / window;        // 1 → 0（ノーツ時刻で 0．過ぎたら 0 のまま）
                 double beatsBefore = before / beat;                  // ノーツ時刻まであと何拍
                 // 拍の頭（ノーツ時刻から 1 拍ずつ数えたところ）からどれだけ過ぎたか（拍に対する割合）
                 double phase = beatsBefore > 0 ? Math.Ceiling(beatsBefore) - beatsBefore : Math.Min(1, -beatsBefore);
@@ -342,14 +356,31 @@ namespace Arte.Rhythm.Gameplay
                     for (int p = 0; p < dest.Length; p++)
                         dest[p] = Math.Max(dest[p], ToByte(color[p % Channels] / 255f * now));
                 }
-                // 光の粒を流すテープ: 同じ流れのすぐ前のノーツが隣のむぎゅっとなら，その間のテープを前のむぎゅっとから流す
-                // （テープ k はむぎゅっと k から次の k+1 へ伸び，0 番目の LED が k の側．むぎゅっとは輪で，最後の次は最初）
-                int prev = PreviousAdjacentLane(notes, i, lane, window);
-                int tape = prev >= 0 && NextLane(prev) == lane && Has(prev) ? prev : lane;
-                approachTapes.Add(tape);
-                PaintComet(approachConnect[tape], (float)remain, pulse, color, towardEnd: tape != lane);
+                // 道しるべ（今のノーツへのものと次のノーツへのものが同じテープで逆向きに重なってよい．2026-11-03 ユーザー）
+                double run = Math.Max(1e-3, style.approachGuideRunBeats) * beat;
+                double x = before / run;
+                guides.Add((notes[i].Flow, notes[i].Time, lane, (float)(x - Math.Floor(x))));   // 1 → 0 を繰り返す（拍の頭で着く）
             }
+            // 道しるべ: 次のノーツの両隣のテープを，次のノーツへ向かって流れ続ける
+            // （テープ k はむぎゅっと k から次の k+1 へ伸び，0 番目の LED が k の側．むぎゅっとは輪で，最後の次は最初）
+            foreach (var g in guides)
+            {
+                int left = PrevLane(g.lane);
+                if (left >= 0 && left != g.lane && Has(left))
+                {
+                    approachTapes.Add(left);
+                    PaintComet(approachConnect[left], g.remain, 1f, style.approachGuideColor, towardEnd: true);
+                }
+                if (NextLane(g.lane) >= 0 && NextLane(g.lane) != g.lane)
+                {
+                    approachTapes.Add(g.lane);
+                    PaintComet(approachConnect[g.lane], g.remain, 1f, style.approachGuideColor, towardEnd: false);
+                }
+            }
+            guides.Clear();
         }
+
+        readonly List<(int flow, double time, int lane, float remain)> guides = new List<(int, double, int, float)>();
 
         // 外周の四角が中心へ縮む．remain = 1 で外周（8×8 の縁），0 で中心の 2×2．中心はいつも薄く点ける
         void PaintShrinkingSquare(byte[] dest, float remain, float pulse, byte[] color)
@@ -379,7 +410,13 @@ namespace Arte.Rhythm.Gameplay
             return i < 0 ? -1 : lanes[(i + 1) % lanes.Length];
         }
 
-        bool Adjacent(int a, int b) => a != b && (NextLane(a) == b || NextLane(b) == a);
+        // むぎゅっとの輪の前（最初のレーンの前は最後のレーン）
+        int PrevLane(int lane)
+        {
+            int i = Array.IndexOf(lanes, lane);
+            return i < 0 ? -1 : lanes[(i - 1 + lanes.Length) % lanes.Length];
+        }
+
 
         // 同じ流れ（ChartNote.Flow）のすぐ前のノーツ（同じ時刻のものは除く）の時刻．無ければ −∞
         static double PreviousTimeInFlow(IReadOnlyList<ChartNote> notes, int index)
@@ -389,21 +426,6 @@ namespace Arte.Rhythm.Gameplay
             for (int j = index - 1; j >= 0 && j >= index - 12; j--)
                 if (notes[j].Flow == flow && t - notes[j].Time >= 1e-3) return notes[j].Time;
             return double.NegativeInfinity;
-        }
-
-        // 同じ流れ（ChartNote.Flow）のすぐ前のノーツ（window の 1.5 倍の間に始まったもの）が隣のむぎゅっとなら，そのレーン．無ければ -1
-        int PreviousAdjacentLane(IReadOnlyList<ChartNote> notes, int index, int lane, double window)
-        {
-            double t = notes[index].Time;
-            int flow = notes[index].Flow;
-            for (int j = index - 1; j >= 0 && j >= index - 12; j--)
-            {
-                double dt = t - notes[j].Time;
-                if (dt < 1e-3 || notes[j].Flow != flow) continue;   // 同じ時刻のノーツ（同時押し）やほかの流れは前ではない
-                if (dt > window * 1.5) break;
-                return Adjacent(notes[j].Lane, lane) ? notes[j].Lane : -1;
-            }
-            return -1;
         }
 
         // つながるノーツ用テープを光の粒が走る．remain = 1 で走り始め，0 で着く．
