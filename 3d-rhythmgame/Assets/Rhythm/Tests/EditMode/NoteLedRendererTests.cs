@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using Arte.Rhythm.Charts;
@@ -42,7 +43,7 @@ namespace Arte.Rhythm.Tests
             return (chart, new TouchJudge(chart, new JudgeRules()));
         }
 
-        static NoteLedStyle Blink() => new NoteLedStyle { approach = NoteApproach.Blink };
+        static NoteLedStyle Blink() => new NoteLedStyle { approach = NoteApproach.Blink, connectSweep = true };   // 旧版の見え方
 
         // むぎゅっと（8×8）の行 r・列 c
         byte[] MuguAt(int device, int module, int r, int c) => Pixel(device, notes.MuguLedIndex(module, 0, 0) + r * notes.MuguColumns + c);
@@ -60,7 +61,7 @@ namespace Arte.Rhythm.Tests
             // 3 拍前: 外周（角）が明るく，中心は薄く，テープは遠い端に粒
             r.Render(chart, judge, 8.5, 0, 0.016f, false, frame);
             Assert.Greater(MuguAt(3, 1, 0, 0)[2], 200, "外周の角");
-            Assert.AreEqual(0, MuguAt(3, 1, 0, 0)[0]);
+            Assert.AreEqual(170, MuguAt(3, 1, 0, 0)[0], "3 拍前は紫");
             Assert.That(MuguAt(3, 1, 3, 3)[2], Is.InRange(50, 80), "中心の 2×2 は薄く（25%）");
             Assert.Greater(Con(3, 1, notes.ConnectLeds - 1)[2], 200, "テープの遠い端");
             CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, Con(3, 1, 0), "むぎゅっとの側の端はまだ");
@@ -158,6 +159,40 @@ namespace Arte.Rhythm.Tests
             Assert.Greater(MuguAt(3, 1, 0, 0)[1], 150, "ノーツ時刻はむぎゅっと全体が光る");
             r.Render(chart, judge, 10.2, 0, 0.016f, false, frame);
             Assert.Less(MuguAt(3, 1, 0, 0)[1], 50, "すぐ戻る");
+        }
+
+        [Test]
+        public void EachBeatHasItsOwnColorAndTheCometKeepsItsSpeedWhenTheGapIsShort()
+        {
+            // 120BPM（1 拍 0.5 秒）．3 拍前は紫，2 拍前は青，最後の 1 拍は水色
+            var (chart, judge) = Make(new ChartNote(10, 4, NoteType.Touch));
+            var r = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            r.Render(chart, judge, 8.55, 0, 0.016f, false, frame);
+            var c3 = MuguAt(3, 1, 0, 0);
+            Assert.Greater(c3[0], 100, "3 拍前は紫（赤の成分がある）");
+            r.Render(chart, judge, 9.05, 0, 0.016f, false, frame);
+            int outer = MuguAt(3, 1, 0, 0)[0] + MuguAt(3, 1, 0, 0)[1];
+            var full = new byte[notes.ConnectLeds];
+            for (int i = 0; i < notes.ConnectLeds; i++) full[i] = Con(3, 1, i)[2];
+
+            // 前のノーツ（同じ流れ）から 1 秒（2 拍）: むぎゅっとは 2 拍前から，テープの光の粒は同じ 3 拍前から同じ速さ
+            var (chart2, judge2) = Make(new ChartNote(9, 3, NoteType.Touch), new ChartNote(10, 4, NoteType.Touch));
+            var r2 = new NoteLedRenderer(notes, new NoteLedStyle { approachSquare = true });
+            var events = new List<JudgeEvent>();
+            judge2.Touch(3, 9, events);
+            r2.Render(chart2, judge2, 8.55, 0, 0.016f, false, frame);
+            CollectionAssert.AreEqual(new byte[] { 0, 0, 0 }, MuguAt(3, 1, 0, 0), "むぎゅっとはまだ");
+            r2.Render(chart2, judge2, 9.05, 0, 0.016f, false, frame);
+            Assert.Greater(MuguAt(3, 1, 0, 0)[2], 100, "2 拍前から（青）");
+            Assert.AreEqual(0, MuguAt(3, 1, 0, 0)[0] + MuguAt(3, 1, 0, 0)[1], "2 拍前は青（赤も緑も無い）");
+            Assert.AreEqual(0, outer, "前のノーツが無くても 2 拍前は青");
+            notes.TryGetModule(3, out var m3);
+            // 光の粒はレーン 3 のテープ（3 → 4）を走るが，速さ（ノーツ時刻までの残りに対する位置）は同じ
+            int peakA = System.Array.IndexOf(full, full.Max());
+            var tape = new byte[notes.ConnectLeds];
+            for (int i = 0; i < notes.ConnectLeds; i++) tape[i] = Con(m3.device, m3.module, i)[2];
+            int peakB = System.Array.IndexOf(tape, tape.Max());
+            Assert.AreEqual(notes.ConnectLeds - 1 - peakA, peakB, "同じ速さ（向きだけ逆）");
         }
 
         [Test]

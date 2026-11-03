@@ -32,8 +32,9 @@ namespace Arte.Rhythm.Gameplay
         /// <summary>Beats: 何拍前から案内するか．</summary>
         public float approachBeats = 3f;
         /// <summary>
-        /// Beats: 同じ流れのすぐ前のノーツとの間が approachBeats より短いときは，この拍数前から案内する
+        /// Beats: 同じ流れのすぐ前のノーツとの間が approachBeats より短いときは，むぎゅっとの案内をこの拍数前から出す
         /// （前のノーツの案内と重なって分かりにくかった．2026-11-03 ユーザー決定）．
+        /// テープを走る光の粒はいつも approachBeats 前から同じ速さで走る（速さが変わると分かりにくい．同）．
         /// </summary>
         public float approachShortBeats = 2f;
         /// <summary>
@@ -43,6 +44,12 @@ namespace Arte.Rhythm.Gameplay
         public float approachNowSec = 0.12f;
         /// <summary>Beats: 最後の 1 拍の色（水色）．</summary>
         public byte[] approachLastColor = { 0, 200, 255 };
+        /// <summary>
+        /// Beats: 2 拍前・3 拍前の色．拍を数えやすいよう 1 拍ごとに違う色（紫 → 青 → 水色．2026-11-03 ユーザー: 青 → 青は別の色どうしの方がいい）．
+        /// 判定の色（緑・黄・赤）と白は使わない．
+        /// </summary>
+        public byte[] approachColor2 = { 0, 0, 255 };
+        public byte[] approachColor3 = { 170, 0, 255 };
         /// <summary>Beats: 中心の 2×2（閉じる先）の明るさ（0〜1）．</summary>
         public float approachTargetLevel = 0.25f;
         /// <summary>Beats: 拍で強まった光が戻る速さ（大きいほど早く戻る）と，戻った先の明るさ（0〜1）．</summary>
@@ -81,8 +88,9 @@ namespace Arte.Rhythm.Gameplay
         /// 曲の間，全モジュールのつながるノーツ用 LED を 1 個ずつ色相を変えながら塗っていく（旧 ConnectLEDPerform）．
         /// 旧版は全モジュールのつもりで書かれていたが，LED にはレーン 0 にしか出ておらず（SetConColor(0, ...)），
         /// 1 フレームに 1 個進むのでフレームレートで速さが変わっていた．曲が終わったら消す（旧版の意図）．
+        /// 案内の光の粒と見分けにくいので一旦切ってある（2026-11-03 ユーザー）．
         /// </summary>
-        public bool connectSweep = true;
+        public bool connectSweep = false;
         /// <summary>塗る位置が進む速さ（個/秒）．旧版は 1 フレームに 1 個（60fps なら 60）．</summary>
         public float connectSweepLedsPerSec = 60f;
         public float connectHueMinDeg = 210f;
@@ -305,7 +313,8 @@ namespace Arte.Rhythm.Gameplay
                 if (notes[i].Type != NoteType.Touch || judge.ResultOf(i) != null || !Has(notes[i].Lane)) continue;
                 double beat = SecPerBeatAt(notes[i].Time);
                 double gap = notes[i].Time - PreviousTimeInFlow(notes, i);
-                double window = (gap < style.approachBeats * beat ? style.approachShortBeats : style.approachBeats) * beat;
+                double window = style.approachBeats * beat;                       // テープの光の粒（いつも同じ速さ）
+                double muguWindow = gap < window ? Math.Min(window, style.approachShortBeats * beat) : window;   // むぎゅっと
                 double before = notes[i].Time - songTime;          // ノーツ時刻まであと何秒
                 if (before > window) continue;
                 int lane = notes[i].Lane;
@@ -316,11 +325,13 @@ namespace Arte.Rhythm.Gameplay
                 // 拍の頭（ノーツ時刻から 1 拍ずつ数えたところ）からどれだけ過ぎたか（拍に対する割合）
                 double phase = beatsBefore > 0 ? Math.Ceiling(beatsBefore) - beatsBefore : Math.Min(1, -beatsBefore);
                 float pulse = style.approachPulseMin + (1 - style.approachPulseMin) * (float)Math.Exp(-phase * style.approachPulseDecay);
-                var color = beatsBefore <= 1 ? style.approachLastColor : style.openColor;
-                if (style.approachSquare) PaintShrinkingSquare(mugu[lane], (float)remain, pulse, color);
+                var color = beatsBefore <= 1 ? style.approachLastColor : beatsBefore <= 2 ? style.approachColor2 : style.approachColor3;
+                double muguRemain = Math.Max(0, before) / muguWindow;
+                if (before > muguWindow) { }                         // むぎゅっとはまだ（テープの光の粒だけ先に走る）
+                else if (style.approachSquare) PaintShrinkingSquare(mugu[lane], (float)muguRemain, pulse, color);
                 else
                 {
-                    float k = (style.approachFillStart + (1 - style.approachFillStart) * (1 - (float)remain)) * pulse;
+                    float k = (style.approachFillStart + (1 - style.approachFillStart) * (1 - (float)muguRemain)) * pulse;
                     Fill(mugu[lane], ToByte(color[0] / 255f * k), ToByte(color[1] / 255f * k), ToByte(color[2] / 255f * k));
                 }
                 // 「今」の合図: ノーツ時刻ちょうどに，むぎゅっと全体を明るく光らせてすぐ戻す

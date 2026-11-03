@@ -116,7 +116,7 @@ namespace Arte.Rhythm.Render
             menu = NewCanvas("ホーム画面", new Vector2(1000, 760));
             var root = menu.transform;
             Label(root, "3D リズムゲーム", new Vector2(0, 330), 54, FontStyle.Bold);
-            Label(root, "むぎゅっとの四角が中心に閉じ，むぎゅっと全体がパッと水色に光る瞬間（テープを走る光がむぎゅっとに着く瞬間）に触れる．3 拍前（間が短いときは 2 拍前）から 1 拍ごとに光る．最後の 1 拍は水色",
+            Label(root, "むぎゅっとの四角が中心に閉じ，むぎゅっと全体がパッと水色に光る瞬間（テープを走る光がむぎゅっとに着く瞬間）に触れる．1 拍ごとに 紫 → 青 → 水色 と光る（間が短いときは 青 → 水色）",
                   new Vector2(0, 270), 24, FontStyle.Normal, new Vector2(940, 70));
             startLabel = Button(root, "曲を始める（最初から）", new Vector2(-245, 180), () => { conductor?.Play(); ShowMenu(false); });
             pauseLabel = Button(root, "一時停止", new Vector2(245, 180), TogglePause);
@@ -211,6 +211,7 @@ namespace Arte.Rhythm.Render
             if (fwd.sqrMagnitude < 1e-4f) fwd = Vector3.forward;
             menu.transform.position = head.transform.position + fwd * 0.9f + Vector3.down * 0.15f;
             menu.transform.rotation = Quaternion.LookRotation(fwd, Vector3.up);
+            Debug.Log($"[VrMenu] ホーム画面を置いた（頭 {head.transform.position}，画面 {menu.transform.position}）");
         }
 
         void TogglePause()
@@ -312,6 +313,15 @@ namespace Arte.Rhythm.Render
                 bool settled = tracked && Time.unscaledTime - settledAt > 1f;
                 if (!settled && Time.unscaledTime - shownAt < 6f) return;
                 ShowMenu(true);
+            }
+            // 目の高さから大きく外れた（床の近くに出た・頭の位置があとから取れた）ら置き直す．
+            // 起動直後に下の方に出て，上の段のボタン 2 つだけが見えていた（2026-11-03）
+            else
+            {
+                var d = menu.transform.position - head.transform.position;
+                float dy = d.y + 0.15f;
+                d.y = 0;
+                if (Mathf.Abs(dy) > 0.35f || d.magnitude > 2.5f) ShowMenu(true);
             }
             // コントローラが見つかった / 外れたらログに出す（押せないときに入力が来ているかを確かめるため）
             int found = 0;

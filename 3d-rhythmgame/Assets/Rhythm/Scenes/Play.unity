@@ -188,7 +188,7 @@ MonoBehaviour:
     trailDurationSec: 3
     trailSpeedLedsPerSec: 18
     trailSigmaLeds: 4
-    connectSweep: 1
+    connectSweep: 0
     connectSweepLedsPerSec: 60
     connectHueMinDeg: 210
     connectHueMaxDeg: 296
