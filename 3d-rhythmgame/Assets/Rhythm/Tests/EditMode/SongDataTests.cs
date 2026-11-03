@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using Arte.Rhythm.Charts;
+using Arte.Rhythm.Gameplay;
 using NUnit.Framework;
 
 namespace Arte.Rhythm.Tests
@@ -145,6 +146,19 @@ namespace Arte.Rhythm.Tests
         {
             Assert.Throws<Newtonsoft.Json.JsonSerializationException>(() =>
                 SongJson.Load("{\"format\":\"arte-rhythm-song/1\",\"bmp\":120}"));
+        }
+
+        [Test]
+        public void SameLaneNotesLessThanThreeBeatsApartAreLeftOut()
+        {
+            var data = new SongData { Tempo = { new TempoPoint { TimeSec = 0, Bpm = 120 } } }; // 1 拍 0.5 秒
+            foreach (var (t, lane) in new[] { (1.0, 0), (2.0, 0), (2.5, 0), (2.5, 1), (3.5, 0) })
+                data.Notes.Add(new SongNote { Time = t, Lane = lane, Type = "touch" });
+            CollectionAssert.AreEquivalent(new[] { (1.0, 0), (2.5, 0), (2.5, 1) },
+                data.ToChart(3).Notes.Select(n => (n.Time, n.Lane)), "2.0 は 0 番の 1.0 から 3 拍（1.5 秒）あかない．2.5 はちょうど 3 拍なので残る．3.5 は 2.5 から 2 拍");
+            data.Rules = new JudgeRules { SameLaneMinGapBeats = 0 };
+            Assert.AreEqual(5, data.ToChart(3).Notes.Count, "0 なら外さない");
+            Assert.AreEqual(5, data.ToChart().Notes.Count, "譜面そのものには残る");
         }
 
         [Test]

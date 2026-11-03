@@ -84,8 +84,26 @@ namespace Arte.Rhythm.Charts
 
         public Chart ToChart() => new Chart(Notes.Select(n => new ChartNote(n.Time, n.Lane, ParseType(n.Type), n.Flow)));
 
-        /// <summary>遊ぶ人数（1〜3）に合わせて，流れ 0〜players−1 のノーツだけの譜面．</summary>
-        public Chart ToChart(int players) => new Chart(ToChart().Notes.Where(n => n.Flow < Math.Max(1, players)));
+        /// <summary>
+        /// 遊ぶ人数（1〜3）に合わせて，流れ 0〜players−1 のノーツだけの譜面．
+        /// 同じむぎゅっとの前のノーツから rules.sameLaneMinGapBeats 拍あかないタッチノーツは外す（譜面には残る．
+        /// 2026-11-03 ユーザー: 同じ場所で近すぎるノーツは一旦無効に．既定 3 拍，0 で外さない）．
+        /// </summary>
+        public Chart ToChart(int players)
+        {
+            double minGap = EffectiveRules.SameLaneMinGapBeats;
+            var tempo = TempoMap();
+            var last = new Dictionary<int, double>();
+            return new Chart(ToChart().Notes.Where(n =>
+            {
+                if (n.Flow >= Math.Max(1, players)) return false;
+                if (n.Type != NoteType.Touch || minGap <= 0) return true;
+                double beat = tempo.BeatOf(n.Time);
+                if (last.TryGetValue(n.Lane, out double prev) && beat - prev < minGap - 1e-3) return false;
+                last[n.Lane] = beat;
+                return true;
+            }));
+        }
 
         /// <summary>
         /// 遊ぶ人数に合わせた譜面．1 人のときは，最初のノーツが正面のむぎゅっと（frontLane）に来るよう，流れ全体をむぎゅっとの輪（ring．並び順）に沿って回す
