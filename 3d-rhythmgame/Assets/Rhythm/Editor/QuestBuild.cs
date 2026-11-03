@@ -63,7 +63,8 @@ namespace Arte.Rhythm.Editor
             }
             UnityEditor.XR.OpenXR.Features.FeatureHelpers.RefreshFeatures(group);
             openxr.renderMode = OpenXRSettings.RenderMode.MultiPass;
-            Enable(openxr.GetFeature<UnityEngine.XR.OpenXR.Features.MetaQuestSupport.MetaQuestFeature>(), "Meta Quest");
+            // MetaQuestFeature は別のアセンブリにあるので型の名前で探す
+            Enable(openxr.GetFeatures().FirstOrDefault(f => f.GetType().Name == "MetaQuestFeature"), "Meta Quest");
             Enable(openxr.GetFeature<OculusTouchControllerProfile>(), "Oculus Touch");
             Enable(openxr.GetFeature<MetaQuestTouchPlusControllerProfile>(), "Touch Plus");
 #if ARTE_XR_HANDS
