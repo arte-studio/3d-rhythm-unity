@@ -55,6 +55,8 @@ namespace Arte.Rhythm.Gameplay
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb == null) return;
             if (kb.enterKey.wasPressedThisFrame) conductor.Play();
+            // F11: テストプレイ（正面のむぎゅっとに 3，2，1，はい のリズムでノーツを出し続ける）
+            if (kb.f11Key.wasPressedThisFrame && session != null) session.StartSong(true);
             // F10: 遊ぶ人数（1〜3．譜面の流れの数．次に曲を始めたときに効く）
             if (kb.f10Key.wasPressedThisFrame && session != null) session.NextPlayers();
             if (kb.spaceKey.wasPressedThisFrame)

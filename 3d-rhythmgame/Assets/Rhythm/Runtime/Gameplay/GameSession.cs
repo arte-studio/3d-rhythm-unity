@@ -33,6 +33,17 @@ namespace Arte.Rhythm.Gameplay
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "-players");
             if (i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out int n)) players = Math.Max(1, Math.Min(3, n));
+            CountdownSound.EnsureFor(this);
+        }
+
+        /// <summary>テストプレイ中か（正面のむぎゅっとに 4 拍おきにノーツを出し続ける．SongData.TestChart）．</summary>
+        public bool TestPlay { get; private set; }
+
+        /// <summary>曲を最初から始める．test ならテストプレイ（曲はそのまま流れ，ノーツだけ差し替える）．</summary>
+        public void StartSong(bool test)
+        {
+            TestPlay = test;
+            conductor.Play();
         }
 
         const string PlayersKey = "Arte.Rhythm.Players";
@@ -79,10 +90,16 @@ namespace Arte.Rhythm.Gameplay
         void OnStarted(double fromSec)
         {
             var notes = FindFirstObjectByType<Net.DeviceLink>()?.Notes;
-            Chart = notes != null ? conductor.Data.ToChart(players, notes.Lanes, notes.FrontLane) : conductor.Data.ToChart(players);
+            if (TestPlay)
+            {
+                var normal = conductor.Data.ToChart(1);
+                int lane = notes != null ? notes.FrontLane : normal.Notes.Count > 0 ? normal.Notes[0].Lane : 0;
+                Chart = conductor.Data.TestChart(lane, conductor.LengthSec);
+            }
+            else Chart = notes != null ? conductor.Data.ToChart(players, notes.Lanes, notes.FrontLane) : conductor.Data.ToChart(players);
             Judge = new TouchJudge(Chart, conductor.Data.EffectiveRules, conductor.Data.TempoMap());
             lateMisses.Clear();
-            Log = new TouchLog { ChartName = conductor.song != null ? conductor.song.name : "", Players = players, FrontLane = notes != null && players == 1 ? notes.FrontLane : -1 };
+            Log = new TouchLog { ChartName = (conductor.song != null ? conductor.song.name : "") + (TestPlay ? "-test" : ""), Players = players, FrontLane = notes != null && players == 1 ? notes.FrontLane : -1 };
             while (pending.TryDequeue(out _)) { }
             lastAdvanced = double.NegativeInfinity;
             // 途中から再生した場合，それより前のノーツは判定しない（Miss も出さない）

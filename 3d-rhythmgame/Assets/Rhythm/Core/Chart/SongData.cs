@@ -130,6 +130,23 @@ namespace Arte.Rhythm.Charts
             }));
         }
 
+        /// <summary>
+        /// テストプレイの譜面: むぎゅっと lane に，2 小節目から曲の終わり（untilSec）まで，小節の頭ごと（4 拍おき）にノーツを出し続ける．
+        /// 3，2，1，はい のリズムを確かめる用（2026-11-04 ユーザー）．
+        /// </summary>
+        public Chart TestChart(int lane, double untilSec)
+        {
+            var tempo = TempoMap();
+            var notes = new List<ChartNote>();
+            for (int bar = 2; ; bar++)
+            {
+                double t = tempo.TimeOfBarBeat(bar, 1);
+                if (t > untilSec - 1 || notes.Count > 10000) break;
+                notes.Add(new ChartNote(t, lane, NoteType.Touch));
+            }
+            return new Chart(notes);
+        }
+
         /// <summary>譜面を書き戻す（時刻順に並べ，時刻はミリ秒の1/10で丸める）．</summary>
         public void SetNotes(IEnumerable<ChartNote> notes)
         {

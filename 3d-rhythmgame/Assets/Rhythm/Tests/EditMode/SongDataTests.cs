@@ -189,6 +189,25 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void TestChartPutsANoteOnEveryBarHeadAtOneModule()
+        {
+            var data = new SongData { Tempo = { new TempoPoint { TimeSec = 1, Bpm = 120, BeatsPerBar = 4 } } }; // 1 小節 2 秒
+            var notes = data.TestChart(11, 10).Notes;
+            CollectionAssert.AreEqual(new[] { 3.0, 5.0, 7.0, 9.0 }, notes.Select(n => n.Time), "2 小節目から，終わりの 1 秒前まで");
+            Assert.That(notes.All(n => n.Lane == 11));
+        }
+
+        [Test]
+        public void CountdownCuesAreThreeTwoOneAndHitOnBeatHeads()
+        {
+            var tempo = new TempoMap(new[] { new TempoPoint { TimeSec = 0, Bpm = 120 } }); // 1 拍 0.5 秒
+            var chart = new Chart(new[] { new ChartNote(2.0, 0, NoteType.Touch), new ChartNote(2.0, 5, NoteType.Touch), new ChartNote(3.5, 1, NoteType.Touch) });
+            var cues = CountdownCues.From(chart, tempo).Select(c => (c.Time, c.Count)).ToList();
+            CollectionAssert.AreEqual(new[] { (0.5, 3), (1.0, 2), (1.5, 1), (2.0, 0), (2.0, 3), (2.5, 2), (3.0, 1), (3.5, 0) }, cues,
+                "同時の 2 つは 1 回．3 拍あとのノーツの 3 は前の はい と一緒に鳴る");
+        }
+
+        [Test]
         public void OnePlayerChartStartsAtTheFrontModule()
         {
             var data = new SongData();

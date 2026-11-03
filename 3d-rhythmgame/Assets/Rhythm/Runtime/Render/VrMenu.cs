@@ -118,28 +118,35 @@ namespace Arte.Rhythm.Render
 
         void BuildMenu()
         {
-            menu = NewCanvas("ホーム画面", new Vector2(1000, 760));
+            menu = NewCanvas("ホーム画面", new Vector2(1000, 860));
             var root = menu.transform;
-            Label(root, "3D リズムゲーム", new Vector2(0, 330), 54, FontStyle.Bold);
+            Label(root, "3D リズムゲーム", new Vector2(0, 380), 54, FontStyle.Bold);
             Label(root, "テープを流れる光が次のノーツの場所を示す（両側から流れ込む）．むぎゅっとの丸が曲の拍ごとに 紫の丸ごと → 青の 2/3 → 水色の 1/3 と欠けていく（3，2，1）．水色の光の粒が着き，むぎゅっと全体がパッと水色に光る瞬間に触れる",
-                  new Vector2(0, 270), 24, FontStyle.Normal, new Vector2(940, 70));
-            startLabel = Button(root, "曲を始める（最初から）", new Vector2(-245, 180), () => { conductor?.Play(); ShowMenu(false); });
-            pauseLabel = Button(root, "一時停止", new Vector2(245, 180), TogglePause);
-            effectsLabel = Button(root, "演出を切り替える", new Vector2(-245, 80), () => visualSync?.NextEffects());
-            viewLabel = Button(root, "子どもの目の高さにする", new Vector2(245, 80), () => vr?.SetChildView(!vr.ChildView));
-            Button(root, "リングの中心に戻る", new Vector2(-245, -20), () => vr?.Recenter());
-            Button(root, "床を変える", new Vector2(245, -20), () => vr?.NextFloor());
-            playersLabel = Button(root, "人数", new Vector2(-245, -120), () =>
+                  new Vector2(0, 320), 24, FontStyle.Normal, new Vector2(940, 70));
+            startLabel = Button(root, "曲を始める（最初から）", new Vector2(-245, 230), () => { StartSong(false); ShowMenu(false); });
+            Button(root, "テストプレイ（正面で 3，2，1，はい）", new Vector2(245, 230), () => { StartSong(true); ShowMenu(false); });
+            pauseLabel = Button(root, "一時停止", new Vector2(-245, 130), TogglePause);
+            effectsLabel = Button(root, "演出を切り替える", new Vector2(245, 130), () => visualSync?.NextEffects());
+            viewLabel = Button(root, "子どもの目の高さにする", new Vector2(-245, 30), () => vr?.SetChildView(!vr.ChildView));
+            Button(root, "リングの中心に戻る", new Vector2(245, 30), () => vr?.Recenter());
+            Button(root, "床を変える", new Vector2(-245, -70), () => vr?.NextFloor());
+            playersLabel = Button(root, "人数", new Vector2(245, -70), () =>
             {
                 if (session != null) session.NextPlayers();
             });
-            var quit = Button(root, "ゲームを終了する", new Vector2(245, -120), Quit);
+            var quit = Button(root, "ゲームを終了する", new Vector2(245, -170), Quit);
             quit.color = new Color(1f, 0.7f, 0.7f);
             Label(root,
                 "左の ≡: この画面を出す / 消す　　光線を向けてトリガー，手でつつく，または 1.5 秒見つめて押す\n" +
                 "A: 子どもの目の高さ　B: 自分の目の高さ　X: 中心に戻る　Y: 床\n" +
                 "左スティック: 歩く　右スティック: 向きを変える　右スティックを押す: 一時停止　左スティックを押す: 演出を切り替える",
-                new Vector2(0, -260), 22, FontStyle.Normal, new Vector2(960, 150));
+                new Vector2(0, -320), 22, FontStyle.Normal, new Vector2(960, 150));
+        }
+
+        void StartSong(bool test)
+        {
+            if (session != null) session.StartSong(test);
+            else conductor?.Play();
         }
 
         void BuildHud()
@@ -310,7 +317,7 @@ namespace Arte.Rhythm.Render
             hudJudge.color = new Color(lastJudgeColor.r, lastJudgeColor.g, lastJudgeColor.b, Mathf.Clamp01(1.5f - age) + 0.2f);
             string section = conductor != null && conductor.IsStarted ? conductor.Data?.SectionAt(conductor.SongTime) : null;
             hudInfo.text = conductor != null && conductor.IsStarted
-                ? $"{conductor.SongTime:F0} 秒　{section}　演出: {SongVisualSync.CurrentEffects}{(conductor.IsPaused ? "　（一時停止中）" : "")}"
+                ? $"{(session != null && session.TestPlay ? "テストプレイ　" : "")}{conductor.SongTime:F0} 秒　{section}　演出: {SongVisualSync.CurrentEffects}{(conductor.IsPaused ? "　（一時停止中）" : "")}"
                 : "左の ≡ でホーム画面";
         }
 
