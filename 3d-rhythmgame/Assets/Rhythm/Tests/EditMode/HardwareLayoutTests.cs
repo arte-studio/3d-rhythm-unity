@@ -27,7 +27,7 @@ namespace Arte.Rhythm.Tests
             notes = new NoteLayout(config, setup);
         }
 
-        // ---- 旧コードの式（Assets/Script/UdpController.cs, RenderTextureSampler.cs, NoteLeds.cs） ----
+        // ---- 旧コードの式（タグ legacy-v1 の Assets/Script/UdpController.cs, RenderTextureSampler.cs, NoteLeds.cs） ----
 
         static int LegacyConvertPerfLedsID(int i)
         {

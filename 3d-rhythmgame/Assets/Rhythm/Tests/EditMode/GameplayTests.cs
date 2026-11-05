@@ -18,7 +18,7 @@ namespace Arte.Rhythm.Tests
         static Chart LoadLegacy(string name) =>
             LegacyChartJson.Parse(File.ReadAllText(Path.Combine(TestData.LegacyDataDir(), name)));
 
-        // ---- 旧版の判定（Assets/Script/GameManager.cs の TouchNotes_judge / HandleTouchInput / Update） ----
+        // ---- 旧版の判定（タグ legacy-v1 の Assets/Script/GameManager.cs の TouchNotes_judge / HandleTouchInput / Update） ----
 
         /// <summary>
         /// 旧版をフレーム単位でまねる．1フレームの処理は「判定 → タッチ受付 → 判定」とする
