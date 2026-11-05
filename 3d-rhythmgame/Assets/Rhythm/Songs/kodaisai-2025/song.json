@@ -14,10 +14,6 @@
       "beatsPerBar": 4
     }
   ],
-  "rules": {
-    "sameLaneMinGapBeats": 3,
-    "sameFlowMinGapBeats": 3
-  },
   "sections": [
     {
       "t": 0.0,
