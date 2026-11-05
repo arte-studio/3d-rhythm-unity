@@ -155,7 +155,9 @@ namespace Arte.Rhythm.Tests
             foreach (var (t, lane) in new[] { (1.0, 0), (2.0, 0), (2.5, 0), (2.5, 1), (3.5, 0) })
                 data.Notes.Add(new SongNote { Time = t, Lane = lane, Type = "touch" });
             CollectionAssert.AreEquivalent(new[] { (1.0, 0), (2.5, 0), (2.5, 1) },
-                data.ToChart(3).Notes.Select(n => (n.Time, n.Lane)), "2.0 は 0 番の 1.0 から 3 拍（1.5 秒）あかない．2.5 はちょうど 3 拍なので残る．3.5 は 2.5 から 2 拍");
+                data.ToChart(3, CountIn.Hard).Notes.Select(n => (n.Time, n.Lane)), "2，1，はい: 2.0 は 0 番の 1.0 から 3 拍（1.5 秒）あかない．2.5 はちょうど 3 拍なので残る．3.5 は 2.5 から 2 拍");
+            CollectionAssert.AreEquivalent(new[] { (1.0, 0), (3.5, 0) },
+                data.ToChart(3).Notes.Select(n => (n.Time, n.Lane)), "3，2，1，はい（既定）: 4 拍あかないものを外す");
             data.Rules = new JudgeRules { SameLaneMinGapBeats = 0, SameFlowMinGapBeats = 0 };
             Assert.AreEqual(5, data.ToChart(3).Notes.Count, "0 なら外さない");
             Assert.AreEqual(5, data.ToChart().Notes.Count, "譜面そのものには残る");
@@ -168,22 +170,25 @@ namespace Arte.Rhythm.Tests
             foreach (var (t, lane, flow) in new[] { (1.0, 0, 0), (1.0, 1, 0), (2.0, 2, 0), (2.5, 3, 0), (2.5, 4, 0), (3.0, 9, 0), (2.0, 7, 1) })
                 data.Notes.Add(new SongNote { Time = t, Lane = lane, Type = "touch", Flow = flow });
             CollectionAssert.AreEquivalent(new[] { (1.0, 0), (1.0, 1), (2.5, 3), (2.5, 4), (2.0, 7) },
-                data.ToChart(3).Notes.Select(n => (n.Time, n.Lane)), "2.0 と 3.0 は流れ 0 の前から 3 拍あかない．同時の 2 つは残る．流れ 1 は別");
+                data.ToChart(3, CountIn.Hard).Notes.Select(n => (n.Time, n.Lane)), "2，1，はい: 2.0 と 3.0 は流れ 0 の前から 3 拍あかない．同時の 2 つは残る．流れ 1 は別");
+            CollectionAssert.AreEquivalent(new[] { (1.0, 0), (1.0, 1), (3.0, 9), (2.0, 7) },
+                data.ToChart(3, CountIn.Normal).Notes.Select(n => (n.Time, n.Lane)), "3，2，1，はい: 2.5 は 3 拍しかあかない．3.0 はちょうど 4 拍");
         }
 
         [Test]
-        public void KodaisaiChartNeverStartsTheCountdownAtTwo([Values(1, 2, 3)] int players)
+        public void KodaisaiChartNeverStartsTheCountdownLate([Values(1, 2, 3)] int players, [Values(CountIn.Normal, CountIn.Hard)] int count)
         {
+            // 2026-11-05 ユーザー: 数え終わりをそろえる．前のノーツの はい のあと 1 拍あけて数え始める（同時は別）
             // 2026-11-04 ユーザー: 2 から始まるノーツは禁止．同じ流れの前のノーツから必ず 3 拍あく（同時は別）
             var song = SongJson.Load(File.ReadAllText(Path.Combine(TestData.SongsDir(), "kodaisai-2025", "song.json")));
             var tempo = song.TempoMap();
-            foreach (var flow in song.ToChart(players).Notes.GroupBy(n => n.Flow))
+            foreach (var flow in song.ToChart(players, count).Notes.GroupBy(n => n.Flow))
             {
                 var beats = flow.Select(n => tempo.BeatOf(n.Time)).ToList();
                 for (int i = 1; i < beats.Count; i++)
                 {
                     double gap = beats[i] - beats[i - 1];
-                    Assert.That(gap < 1e-3 || gap > 3 - 1e-3, $"流れ {flow.Key} の {i} 番目: 前から {gap:F2} 拍");
+                    Assert.That(gap < 1e-3 || gap > count + 1 - 1e-3, $"流れ {flow.Key} の {i} 番目: 前から {gap:F2} 拍");
                 }
             }
         }
@@ -208,18 +213,23 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
-        public void KodaisaiCountdownAlwaysHasThreeTwoOneBeforeEachNote([Values(1, 2, 3)] int players)
+        public void KodaisaiCountdownAlwaysHasThreeTwoOneBeforeEachNote([Values(1, 2, 3)] int players, [Values(CountIn.Normal, CountIn.Hard)] int count)
         {
             // 2026-11-05 ユーザー: 通常プレイでは 3，2，はい になる．song.json の時刻が拍よりごくわずか後ろでも，1 は はい の 1 拍前
             var song = SongJson.Load(File.ReadAllText(Path.Combine(TestData.SongsDir(), "kodaisai-2025", "song.json")));
             var tempo = song.TempoMap();
-            var cues = CountdownCues.From(song.ToChart(players), tempo);
+            var cues = CountdownCues.From(song.ToChart(players, count), tempo, count);
+            Assert.That(cues.All(c => c.Count <= count));
             foreach (var hit in cues.Where(c => c.Count == 0))
-                for (int k = 1; k <= 3; k++)
+            {
+                // 数え始めが前の はい と重ならない（1 人のとき．2〜3 人では別の流れの はい と重なることはある）
+                Assert.That(players > 1 || !cues.Any(c => c.Count == 0 && System.Math.Abs(c.Time - (hit.Time - count * 60 / 151.96)) < 2e-3), $"{hit.Time:F4} の数え始めが前の はい と重なる");
+                for (int k = 1; k <= count; k++)
                 {
                     double want = hit.Time - k * 60 / 151.96;
                     Assert.That(cues.Any(c => c.Count == k && System.Math.Abs(c.Time - want) < 2e-3), $"{hit.Time:F4} の {k} が {want:F4} に無い");
                 }
+            }
         }
 
         [Test]

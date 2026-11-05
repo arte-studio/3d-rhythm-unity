@@ -29,7 +29,7 @@ namespace Arte.Rhythm.Render
         Font font;
 
         Canvas menu, hud;
-        Text hudScore, hudJudge, hudInfo, effectsLabel, viewLabel, pauseLabel, startLabel, playersLabel;
+        Text hudScore, hudJudge, hudInfo, effectsLabel, viewLabel, pauseLabel, startLabel, playersLabel, countLabel;
         readonly List<(RectTransform rect, Image image, Action action)> buttons = new List<(RectTransform, Image, Action)>();
         InputAction toggleAction;
 
@@ -146,6 +146,10 @@ namespace Arte.Rhythm.Render
                 if (testOffsets.Count == 0) return;
                 VrLatency.Ms += m;
                 testOffsets.Clear();
+            });
+            countLabel = Button(root, "数え方", new Vector2(245, -250), () =>
+            {
+                if (session != null) session.NextCountBeats();
             });
             var quit = Button(root, "ゲームを終了する", new Vector2(245, -170), Quit);
             quit.color = new Color(1f, 0.7f, 0.7f);
@@ -372,6 +376,7 @@ namespace Arte.Rhythm.Render
             viewLabel.text = vr != null && vr.ChildView ? "自分の目の高さにする" : "子どもの目の高さにする";
             startLabel.text = conductor != null && conductor.IsStarted ? "曲を最初から" : "曲を始める";
             playersLabel.text = session != null ? $"人数: {session.players} 人（曲を始めると変わる）" : "人数";
+            countLabel.text = session != null ? $"数え方: {CountIn.Name(session.CountBeats)}" : "数え方";
             latencyLabel.text = $"VR の遅れの補正 {VrLatency.Ms}ms\n（{VrLatency.Where}）" +
                 (testOffsets.Count > 0 ? $"\nテストプレイのずれ {Median(testOffsets):+0;-0}ms（{testOffsets.Count} 回）" : "");
 

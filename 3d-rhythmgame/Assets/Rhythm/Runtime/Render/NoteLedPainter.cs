@@ -57,6 +57,7 @@ namespace Arte.Rhythm.Render
         {
             if (painter == null || link.Frame == null) return;
             bool started = conductor.IsStarted && session.Judge != null;
+            style.approachBeats = session.PlayingCountBeats;   // 3，2，1，はい か 2，1，はい（CountIn）
             painter.Render(started ? session.Chart : null, started ? session.Judge : null, started ? conductor.SongTime : 0,
                 Time.timeAsDouble, Time.deltaTime, conductor.IsPlaying, link.Frame);
         }

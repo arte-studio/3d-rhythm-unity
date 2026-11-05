@@ -81,7 +81,7 @@ namespace Arte.Rhythm.Gameplay
             if (session.Chart != cuesFor)
             {
                 cuesFor = session.Chart;
-                cues = CountdownCues.From(cuesFor, conductor.Data?.TempoMap());
+                cues = CountdownCues.From(cuesFor, conductor.Data?.TempoMap(), session.PlayingCountBeats);
                 cursor = 0;
             }
             if (volume <= 0) return;

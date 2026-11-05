@@ -10,6 +10,19 @@ namespace Arte.Rhythm.Gameplay
     /// むぎゅっとの案内（NoteLedRenderer の Beats）と同じく曲の拍の頭で数える: ノーツの拍 B に対して B−3，B−2，B−1 が 3，2，1，
     /// ノーツ時刻が はい（Count = 0）．同じ時刻の同じ音は 1 回にまとめる（2〜3 人で案内が重なっても 1 回）．
     /// </summary>
+    /// <summary>
+    /// 何拍前から数えるか（2026-11-05 ユーザー: 数え始めではなく数え終わりの合図をそろえる）．
+    /// ふつうは 3，2，1，はい，むずかしいは 2，1，はい．どちらも終わりは 1，はい．
+    /// 遊ぶ譜面からは，前のノーツから 数える拍 + 1 あかないノーツを外す（SongData.ToChart．前の はい と次の数え始めが重ならない）．
+    /// </summary>
+    public static class CountIn
+    {
+        public const int Normal = 3;
+        public const int Hard = 2;
+
+        public static string Name(int beats) => beats <= Hard ? "2，1，はい（むずかしい）" : "3，2，1，はい（ふつう）";
+    }
+
     public static class CountdownCues
     {
         public readonly struct Cue

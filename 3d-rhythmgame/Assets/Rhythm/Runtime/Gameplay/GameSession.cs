@@ -33,6 +33,7 @@ namespace Arte.Rhythm.Gameplay
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "-players");
             if (i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out int n)) players = Math.Max(1, Math.Min(3, n));
+            CountBeats = PlayerPrefs.GetInt(CountKey, CountIn.Normal) == CountIn.Hard ? CountIn.Hard : CountIn.Normal;
             CountdownSound.EnsureFor(this);
         }
 
@@ -47,6 +48,21 @@ namespace Arte.Rhythm.Gameplay
         }
 
         const string PlayersKey = "Arte.Rhythm.Players";
+        const string CountKey = "Arte.Rhythm.CountBeats";
+
+        /// <summary>選んでいる数え方（3 = 3，2，1，はい / 2 = 2，1，はい．CountIn）．曲を始めるときに効く．選んだものは覚えておく．</summary>
+        public int CountBeats { get; private set; } = CountIn.Normal;
+
+        /// <summary>今の譜面の数え方（光の案内と音はこれで数える）．</summary>
+        public int PlayingCountBeats { get; private set; } = CountIn.Normal;
+
+        /// <summary>数え方を切り替える（ふつう ⇔ むずかしい）．</summary>
+        public void NextCountBeats()
+        {
+            CountBeats = CountBeats == CountIn.Normal ? CountIn.Hard : CountIn.Normal;
+            PlayerPrefs.SetInt(CountKey, CountBeats);
+            PlayerPrefs.Save();
+        }
 
         /// <summary>人数を次へ（1 → 2 → 3 → 1）．選んだ人数は覚えておき，次に起動したときも使う．曲を始めるときに効く．</summary>
         public void NextPlayers()
@@ -90,13 +106,14 @@ namespace Arte.Rhythm.Gameplay
         void OnStarted(double fromSec)
         {
             var notes = FindFirstObjectByType<Net.DeviceLink>()?.Notes;
+            PlayingCountBeats = CountBeats;
             if (TestPlay)
             {
                 var normal = conductor.Data.ToChart(1);
                 int lane = notes != null ? notes.FrontLane : normal.Notes.Count > 0 ? normal.Notes[0].Lane : 0;
                 Chart = conductor.Data.TestChart(lane, conductor.LengthSec);
             }
-            else Chart = notes != null ? conductor.Data.ToChart(players, notes.Lanes, notes.FrontLane) : conductor.Data.ToChart(players);
+            else Chart = notes != null ? conductor.Data.ToChart(players, notes.Lanes, notes.FrontLane, CountBeats) : conductor.Data.ToChart(players, CountBeats);
             Judge = new TouchJudge(Chart, conductor.Data.EffectiveRules, conductor.Data.TempoMap());
             lateMisses.Clear();
             Log = new TouchLog { ChartName = (conductor.song != null ? conductor.song.name : "") + (TestPlay ? "-test" : ""), Players = players, FrontLane = notes != null && players == 1 ? notes.FrontLane : -1 };

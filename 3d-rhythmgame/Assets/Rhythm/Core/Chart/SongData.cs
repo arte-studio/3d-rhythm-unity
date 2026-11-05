@@ -91,9 +91,10 @@ namespace Arte.Rhythm.Charts
         /// 同じ流れの前のノーツから rules.sameFlowMinGapBeats 拍あかないものも外す（案内がいつも紫の 3 から始まるように．
         /// 2026-11-04 ユーザー決定．同時のノーツはそのまま）．
         /// </summary>
-        public Chart ToChart(int players)
+        public Chart ToChart(int players, int countBeats = CountIn.Normal)
         {
-            double minGap = EffectiveRules.SameLaneMinGapBeats, minFlowGap = EffectiveRules.SameFlowMinGapBeats;
+            // 数え終わり（1，はい）をそろえる: 前のノーツの はい のあと，次のノーツの数え始めまで 1 拍あける（2026-11-05 ユーザー）
+            double minGap = EffectiveRules.SameLaneMinGapBeats ?? countBeats + 1, minFlowGap = EffectiveRules.SameFlowMinGapBeats ?? countBeats + 1;
             var tempo = TempoMap();
             var last = new Dictionary<int, double>();
             var lastInFlow = new Dictionary<int, double>();
@@ -115,9 +116,9 @@ namespace Arte.Rhythm.Charts
         /// 遊ぶ人数に合わせた譜面．1 人のときは，最初のノーツが正面のむぎゅっと（frontLane）に来るよう，流れ全体をむぎゅっとの輪（ring．並び順）に沿って回す
         /// （隣どうしの動きはそのまま．2026-11-03 ユーザー: 1 人のとき，最初のノーツは正面にいてほしい）．
         /// </summary>
-        public Chart ToChart(int players, IReadOnlyList<int> ring, int frontLane)
+        public Chart ToChart(int players, IReadOnlyList<int> ring, int frontLane, int countBeats = CountIn.Normal)
         {
-            var chart = ToChart(players);
+            var chart = ToChart(players, countBeats);
             if (players > 1 || ring == null || chart.Notes.Count == 0) return chart;
             var order = ring.ToList();
             int from = order.IndexOf(chart.Notes[0].Lane), to = order.IndexOf(frontLane);

@@ -45,11 +45,14 @@ namespace Arte.Rhythm.Gameplay
         /// </summary>
         [JsonProperty("preferNearestNote")] public bool PreferNearestNote = true;
 
-        /// <summary>同じむぎゅっとの前のノーツからこれだけ（拍）あかないタッチノーツは遊ぶ譜面から外す（SongData.ToChart）．0 で外さない．</summary>
-        [JsonProperty("sameLaneMinGapBeats")] public double SameLaneMinGapBeats = 3;
+        /// <summary>
+        /// 同じむぎゅっとの前のノーツからこれだけ（拍）あかないタッチノーツは遊ぶ譜面から外す（SongData.ToChart）．0 で外さない．
+        /// 無し（既定）なら 数える拍 + 1（3，2，1，はい なら 4 拍．前のノーツの はい と次のノーツの数え始めが重ならない．2026-11-05 ユーザー）．
+        /// </summary>
+        [JsonProperty("sameLaneMinGapBeats", NullValueHandling = NullValueHandling.Ignore)] public double? SameLaneMinGapBeats;
 
-        /// <summary>同じ流れの前のノーツからこれだけ（拍）あかないタッチノーツも外す（同時のものは残す）．0 で外さない．</summary>
-        [JsonProperty("sameFlowMinGapBeats")] public double SameFlowMinGapBeats = 3;
+        /// <summary>同じ流れの前のノーツからこれだけ（拍）あかないタッチノーツも外す（同時のものは残す）．0 で外さない．無しなら 数える拍 + 1．</summary>
+        [JsonProperty("sameFlowMinGapBeats", NullValueHandling = NullValueHandling.Ignore)] public double? SameFlowMinGapBeats;
 
         /// <summary>
         /// Miss を見せる（演出・判定の文字）のはノーツ時刻からどれだけ後か（JSON では missShowAfterMs / missShowAfterBeats）．
