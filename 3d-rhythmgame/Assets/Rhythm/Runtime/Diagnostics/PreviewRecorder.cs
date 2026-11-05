@@ -156,7 +156,7 @@ namespace Arte.Rhythm.Diagnostics
 
         void CaptureCanvas()
         {
-            var tex = req.canvas && Render.LedCanvas.Current != null ? Render.LedCanvas.Current.Texture : null;
+            var tex = req.canvas && Led.LedCanvas.Current != null ? Led.LedCanvas.Current.Texture : null;
             if (tex == null) return;
             if (canvasOut == null)
             {

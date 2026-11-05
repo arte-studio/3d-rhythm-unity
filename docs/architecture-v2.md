@@ -123,7 +123,7 @@ d = タッチ時刻 − ノーツ時刻として，
 
 ## P5: LED の描画
 
-- **演出用キャンバス**（`Runtime/Render/LedCanvas.cs`）: 幅 = ストリップの列数，高さ = 1 本の LED 数の RenderTexture（1 ピクセル = LED 1 個，y = 0 が下端）．
+- **演出用キャンバス**（`Runtime/Led/LedCanvas.cs`）: 幅 = ストリップの列数，高さ = 1 本の LED 数の RenderTexture（1 ピクセル = LED 1 個，y = 0 が下端）．
   カメラ・動画・シェーダー（`LedCanvasEffect`）など何で描いてもよく，非同期で読み戻して `CanvasPacker` が配線順（ジグザグ・外したストリップ）に詰める．
   読み戻しのぶん LED に出るのは描いてから 1〜2 フレーム後．キャンバスの色は画面で見える値（sRGB の 8bit）．
 - **LED に送る値**: `LedOutputModel.Encode`（色の曲線 → 明るさ → 1 回だけ丸める）．曲線は設営データの `outputCurve`
@@ -134,7 +134,7 @@ d = タッチ時刻 − ノーツ時刻として，
   HDR で描き，ブルームとトーンマップで画面に出す．全 LED を 1 回の描画で描く．旧版は送る値をそのまま画面の色にしていたため，明るさ（50）が掛からず約 5 倍明るく，中間は実機より暗く見えていた．
 - **速度**（`Builds/Play/Play.exe -probe`，1920×1080）: 開発用デスクトップ（i7-11700 / RTX 3060）で 1 フレーム平均 1.9ms（99% 4.0ms），GC 割り当て 0．本番ノート PC では未計測．
 - 見た目の自動確認: `Play.exe -screenshot <png> [-screenshot-delay 秒] [-quit-after 秒]`．ビルドは `Tools/Arte Rhythm/Build Play Player`．
-- **ノーツ用 LED**（`Core/Gameplay/NoteLedRenderer.cs`，`Runtime/Render/NoteLedPainter.cs`）: 旧仕様書（docs/legacy/SPECIFICATION-v1.md 4.7，7.1，7.1.1）に沿う（2026-10-27 ユーザー決定．今の仕様は docs/SPECIFICATION.md 6 章）．
+- **ノーツ用 LED**（`Core/Led/NoteLedRenderer.cs`，`Runtime/Led/NoteLedPainter.cs`）: 旧仕様書（docs/legacy/SPECIFICATION-v1.md 4.7，7.1，7.1.1）に沿う（2026-10-27 ユーザー決定．今の仕様は docs/SPECIFICATION.md 6 章）．
   - 案内: ノーツ時刻の 3 秒前から青の点滅（周期 0.5 秒，ノーツ時刻にちょうど点く位相）
   - 判定: Perfect 緑（最初の 0.2 秒は虹色の回転），Good 黄，Miss 赤．0.5 秒でフェードアウト
   - 判定したらそのレーンのつながるノーツ用 LED に判定色の光を流す（3 秒．旧版の計算どおり）
@@ -178,23 +178,23 @@ d = タッチ時刻 − ノーツ時刻として，
      VR を始めるとランタイムの名前がログとスコアの下に出る（Meta Quest Link でなければ注意が出る）
   2. **始め方**: エディタはメニュー `Tools / Arte Rhythm / VR / Play in VR` にチェックを入れて再生．ビルドは起動引数 `-vr`
      （`Play.exe -vr`，`Viewer.exe -vr`）．ヘッドセットが無ければふつうの画面のまま（ログに理由が出る）
-  3. **操作**（`Runtime/Render/ViewerVR.cs`）: 左の ≡ ホーム画面，A / F5 子どもの目の高さ（1.1m に合わせる），B / F6 自分の目の高さ，X / F7 リングの中心・正面に戻る，
+  3. **操作**（`Runtime/VR/ViewerVR.cs`）: 左の ≡ ホーム画面，A / F5 子どもの目の高さ（1.1m に合わせる），B / F6 自分の目の高さ，X / F7 リングの中心・正面に戻る，
      Y / F3 床の種類，左スティックで歩く，右スティックでなめらかに向きを変える，右スティックの押し込みで一時停止，左スティックの押し込みで演出の切り替え．
      始めにリングの中心に立つ
-  4. **設定**（`Editor/VrSetup.cs`．`Tools / Arte Rhythm / VR / Set Up OpenXR (Quest Link)`）: Windows 用に OpenXR，起動時には始めない，
+  4. **設定**（`Editor/Build/VrSetup.cs`．`Tools / Arte Rhythm / VR / Set Up OpenXR (Quest Link)`）: Windows 用に OpenXR，起動時には始めない，
      Quest のコントローラ（Touch Plus，Touch）．描き方は両目を 1 回ずつ描く **MultiPass**（`LedPoint.shader` が頂点番号から四角形を作っていて，
      両目をまとめて描く single-pass instanced にはまだ対応していないため．重ければ対応する）
   5. **本番と分けて見る**: 本番のノート PC から `-mirror` でデスクトップへ LED を送り，デスクトップで `Viewer.exe -vr`．ゲームの PC には負荷がかからない
   6. **VR でゲームを遊ぶ**（2026-11-03）: Play シーンを VR で再生し，左の ≡ で曲を始め，コントローラの先でむぎゅっとに触れる．
      むぎゅっとの正面の「触れる箱」（24cm 角，正面 15cm〜奥 10cm．`Core/Gameplay/ModuleTouchDetector.cs`）に手の先が入った瞬間がタッチ．
-     触れるとそのコントローラが振動し，手の先に小さな球が出る（`Runtime/Gameplay/VrTouchInput.cs`．入口は `KeyboardTouchInput` と同じ `GameSession.Touch`）．
+     触れるとそのコントローラが振動し，手の先に小さな球が出る（`Runtime/VR/VrTouchInput.cs`．入口は `KeyboardTouchInput` と同じ `GameSession.Touch`）．
      古い Play シーンでも ViewerVR が自動で足す．むぎゅっとの置き場所は設営データの `modules`（今は旧版の配置からの仮）．
      **手の認識**: 仕組みはある（XR Hands．指が見えていれば人差し指の先，見えていなければコントローラ）が，**パッケージごと外してある**
      （com.unity.xr.hands を入れると ARTE_XR_HANDS で有効になる）．
      Quest Link で手の認識が使えない（hand provider failed to initialize）と，エディタの再生でゲームが 2 フレームで止まり真っ暗になった（2026-11-03）．
      使うときは Meta Quest Link アプリの「設定 → ベータ → 開発者ランタイム機能」をオンにしてから Tools / Arte Rhythm / VR / Enable Hand Tracking．
      真っ暗になったら Set Up OpenXR を実行して切る．試験: `-executeMethod Arte.Rhythm.Editor.VrSetup.PlayInVrTest`（GUI のエディタで 25 秒 VR 再生）
-     **ホーム画面**（`Runtime/Render/VrMenu.cs`）: 左の ≡ で出す / 消す．右手の光線とトリガーか，手の先でつついて押す．
+     **ホーム画面**（`Runtime/VR/VrMenu.cs`）: 左の ≡ で出す / 消す．右手の光線とトリガーか，手の先でつついて押す．
      曲を始める，一時停止，演出の切り替え，目の高さ，中心に戻る，床，ゲームを終了（Unity の ■）と操作方法．
      スコアの表示: 正面の上に，スコアと直前の判定（何 ms 早い / 遅いか）．
      これから: 触れたときの遅れの補正確かめること: 暗幕の部屋の暗さ（Quest 3 の LCD の黒の浮き），LED の眩しさ（トーンマップ），
@@ -206,7 +206,7 @@ d = タッチ時刻 − ノーツ時刻として，
 
 - **キャンバスの流れ**（`LedCanvas`）: 土台（カメラ・動画）→ 演出を重ねる（`Composite`．リニアの半精度で計算）→ 描画の直前に sRGB 8bit にして読み戻す．
   重ね方は 普通 / 足す / 掛ける / 明るい方（`Shaders/Composite.shader`）
-- **Timeline**（`Runtime/Render/Timeline/`）: `LedEffectTrack`（バインド先 LedCanvas．空ならシーンの LedCanvas）と `LedEffectClip`（マテリアル，重ね方，不透明度）．
+- **Timeline**（`Runtime/Led/Timeline/`）: `LedEffectTrack`（バインド先 LedCanvas．空ならシーンの LedCanvas）と `LedEffectClip`（マテリアル，重ね方，不透明度）．
   クリップの重なりでクロスフェード，トラックの順に重ねる．曲の Timeline が無いときは Play シーンの見本（`Effects/Samples/Showcase.playable`）が流れる
 - **演出に渡す値**（`Shaders/ArteLed.cginc`）: 曲の時刻，拍・小節（テンポマップ．無ければ 120BPM），キャンバスの大きさ，
   各ピクセルの LED の 3D 位置（`_ArtePositionTex`．キャンバスの列はリングを順に回らないので，位置で決まる演出はこれを使う），クリップの時刻

@@ -44,7 +44,7 @@ namespace Arte.Rhythm.Diagnostics
                 ScreenCapture.CaptureScreenshot(path);
                 Debug.Log($"[AutoScreenshot] {path}");
                 // LED のキャンバス（列 × LED 数）も 4 倍に拡大して保存する
-                var canvas = Render.LedCanvas.Current;
+                var canvas = Led.LedCanvas.Current;
                 if (canvas != null && canvas.Texture != null)
                 {
                     var rt = canvas.Texture;

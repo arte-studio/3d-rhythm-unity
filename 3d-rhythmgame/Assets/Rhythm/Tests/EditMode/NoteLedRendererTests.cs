@@ -5,6 +5,7 @@ using Arte.Rhythm.Charts;
 using Arte.Rhythm.Gameplay;
 using Arte.Rhythm.Hardware;
 using Arte.Rhythm.Net;
+using Arte.Rhythm.Led;
 using NUnit.Framework;
 
 namespace Arte.Rhythm.Tests

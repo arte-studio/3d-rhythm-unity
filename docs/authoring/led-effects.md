@@ -158,7 +158,7 @@ Play.exe -record out.mp4 -record-from 30 -record-length 20 -record-fps 30 -recor
 
 ## 5. 自分でシェーダーを書く（上級）
 
-テンプレートの `.shader`（`Assets/Rhythm/Runtime/Render/Shaders/Templates/`）を複製して書き換える．
+テンプレートの `.shader`（`Assets/Rhythm/Runtime/Shaders/Templates/`）を複製して書き換える．
 `#include "../ArteLed.cginc"` で次の値と道具が使える．返す色はリニア（マテリアルの Color はそのまま使える）．
 
 | 名前 | 中身 |

@@ -9,7 +9,7 @@
     動画は Viewer のシミュレーションなので，実際より暗く写る（5 章）．なお評価のコマの一覧（v6 まで）は大人の目の高さから撮っていた
   - `切り替わり（サビ1・サビ2・最後の前後）.png`: 大事な切り替わりの前後 3 拍
 - **Unity で見る**: Play シーンを再生して **F9** で演出を切り替える（下書き → 案A → 案B → 案C）
-- **Timeline**: `Assets/Rhythm/Effects/kodaisai-2025-ai/A`〜`C`．組み立てるコードは `Editor/EffectProposals.cs`
+- **Timeline**: `Assets/Rhythm/Effects/kodaisai-2025-ai/A`〜`C`．組み立てるコードは `Editor/Effects/EffectProposals.cs`
 
 ## 1. 作り方（調べたことと，取り入れたこと）
 
