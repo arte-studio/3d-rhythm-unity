@@ -26,10 +26,10 @@
 **/.pio/
 
 ; 学習用プロジェクトや，不要なプロジェクトを除外
-gamemusic/
-gamemusic_1017/
-gamemusic_1024/
-samplemusic/
+sandbox/gamemusic/
+sandbox/gamemusic_1017/
+sandbox/gamemusic_1024/
+sandbox/samplemusic/
 ; 3d-rhythmgame/
 sandbox/connect_note_sample/
 sandbox/game_sisaku
