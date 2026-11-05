@@ -30,6 +30,7 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 | 2026-10-26 | 寸法・配線・設営差分をデータ化（docs/hardware/README.md） | 設営ごとにモジュール数や外すストリップが違う．コードに散っていた定数を一か所にまとめ，シミュレーション・送信・譜面エディタで共有する |
 | 2026-10-26 | マイコンは ESP32-S3 に統一 | ユーザー確認 |
 | 2026-10-26 | 本番はノート PC をローカルで使う | 遠隔 PC だと UDP とタッチ入力がインターネット越しになり，遅延・揺れ・切断が判定とショーに直結する．デスクトップ（RTX 3060）は開発・Viewer・VR・プレビュー書き出し用 |
+| 2026-11-05 | 旧版のゲームを消し，置き場所を役割ごとに組み直す（R1〜R4） | 使っていない旧版のファイルが管理しているファイルの約 4 分の 3 を占めていた．素材（判定の音，モデル，旧譜面）と試作（sandbox）は残す．Runtime/Render を Led / Viewer / VR に分け，道具は tools/ へ．仕様は変えない |
 
 ## フェーズ
 
@@ -44,6 +45,7 @@ Authoring: Timeline ベースの譜面・演出エディタ，プレビュー動
 | P6 | Viewer（光の広がり，暗幕の部屋，内側からの視点，VR の準備） | 部屋（床・暗幕・テープ本体を LED の光で照らす），カメラ操作，別 PC へのミラー（Viewer.exe），VR の表示（Quest Link．下記） |
 | P7 | 演出の制作環境とプレビュー書き出し，美大生向けテンプレート | Timeline の LED 演出トラック，テンプレート 7 種と見本，プレビュー動画の書き出し，手引き（`docs/authoring/led-effects.md`） |
 | P8 | 既存演出の移行，仕様書の更新 | 曲の区切りとテンポ，Timeline を小節・拍で扱う仕組み，工大祭版の演出の下書き（`docs/effects/kodaisai-2025.md`），仕様書 v2（`docs/SPECIFICATION.md`．旧版は `docs/legacy/SPECIFICATION-v1.md`） |
+| R | 全体の整理（2026-11-05） | R1 旧版を消す・素材を移す，R2 置き場所の組み直し（Assets/Rhythm の中，tools/），R3 コードの整理（PlayChart・ChartRules・PlaySettings，長いファイルを partial に分ける，Quest のビルドを取り込む），R4 確かめる（テスト，tools/unity-check，ProjectCheck，Play・Viewer・Quest のビルド）．置き場所は SPECIFICATION.md の 4 |
 
 ## P0 の基準値について
 

@@ -72,15 +72,20 @@
 
 ## 4. ソフトウェア
 
+置き場所は 2026-11-05 のリファクタで組み直した（役割ごとのフォルダ．名前空間はフォルダと同じ `Arte.Rhythm.<フォルダ名>`）．
+
 | 層 | 場所 | 中身 |
 | --- | --- | --- |
-| Core | `Assets/Rhythm/Core` | Unity に依存しない C#．ハードの配置と配線，曲データとテンポ，判定，ノーツ用 LED，通信，Viewer の計算．`dotnet test tools/CoreTests` で確かめる |
-| Runtime | `Assets/Rhythm/Runtime` | Unity．曲の再生と時刻，判定のつなぎ，実機との通信，演出の描画，Viewer |
-| Editor | `Assets/Rhythm/Editor` | 譜面エディタ，テンポ表，Timeline の道具，プレビュー書き出し，シーンとビルドを作る道具 |
-| 道具 | `tools/LinkTool` | Unity なしで実機とつなぐコマンド（テスト表示，通信の計測，ミラー） |
+| Core | `Assets/Rhythm/Core` | Unity に依存しない C#．`dotnet test tools/CoreTests` で確かめる．`Chart`（曲データ・テンポ・遊ぶ譜面 `PlayChart`），`Gameplay`（判定・数え方），`Led`（ノーツ用 LED の計算），`Hardware`（配置と配線・設営），`Net`（通信 v2），`Timing`（曲時刻），`Viewer`（部屋の計算） |
+| Runtime | `Assets/Rhythm/Runtime` | Unity 上で動く部分．`Song`（曲の再生と時刻，Timeline の小節・区切りの目印），`Gameplay`（判定のつなぎ・遊び方の設定 `PlaySettings`・3，2，1，はい の音），`Led`（演出用キャンバス・ノーツ用 LED を描く・シミュレーション表示・Timeline の演出トラック），`Viewer`（部屋・視点），`VR`（VR の表示・ホーム画面・手で触れる・遅れの補正），`Net`（実機との通信），`Diagnostics`（撮影・計測），`Materials` と `Shaders` |
+| Editor | `Assets/Rhythm/Editor` | `Chart`（譜面エディタ・テンポ表），`Effects`（演出のテンプレート・下書き・AI 案・プレビュー書き出し），`Build`（シーンを作る・VR と Quest の設定とビルド・参照の確認 `ProjectCheck`），`Docs`（資料用の撮影） |
+| データ | `Assets/Rhythm/Songs`，`Effects`，`Data`，`Scenes`，`Sounds` | 曲（song.json・音声・映像），演出の Timeline，ハード構成と設営，シーン，効果音の素材 |
+| 道具 | `tools/` | Unity の外のコマンド．`CoreTests`（Core のテスト），`unity-check`（Unity を開かずにコンパイルを確かめる），`LinkTool`（実機とつなぐ），`BeatTool`（拍の解析と譜面の直し），`EffectEval`（演出の評価） |
 
 シーン: `Assets/Rhythm/Scenes/Play.unity`（本番），`Viewer.unity`（別 PC で見る）．`Tools/Arte Rhythm/Create … Scene` で作り直せる．
+ファイルを動かしたあとは `Tools/Arte Rhythm/Check Project`（`ProjectCheck`）で参照が切れていないかを確かめる．
 旧版のゲーム（`Assets/Script`，`Assets/Scenes/SampleScene.unity` など）は 2026-11-05 に消した（タグ `legacy-v1` と git の履歴に残っている）．旧版の素材のうち，判定の音（`Assets/Rhythm/Sounds`），LED テープと筒のモデル（`Assets/Legacy`），旧譜面と旧配置（`Assets/Rhythm/Data/Legacy`．旧版と同じ結果になるかのテスト用）は残してある．
+試作や資料（CRI Atom Craft のプロジェクトなど）は `sandbox/` にある．
 
 ## 5. 判定
 
