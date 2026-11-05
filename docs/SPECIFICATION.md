@@ -17,7 +17,7 @@
 | ノーツ | タッチノーツ（光ったモジュールに触れる）．譜面の形式にはつながるノーツ（connect）もあるが，今の譜面には無く判定もしない |
 | レーン | 0 始まり（画面では 1 始まり）．どのレーンがどのモジュールかは設営ごと（`setups/*.json` の `lanes`） |
 | 判定 | 5 章 |
-| 流れと人数 | 譜面は 3 本の流れ（ノーツの `flow` 0〜2）．どの流れも，次のノーツは同じむぎゅっとか隣のむぎゅっと（むぎゅっとは輪で，最後の次は最初）．遊ぶ人数（1〜3 人．`GameSession.players`，VR のホーム画面，F10，起動引数 `-players`）に合わせて流れを出す（2026-11-03 ユーザー決定）．同じ流れの中で 0.3 秒より近く続く隣どうしのノーツは，厳密に同時にそろえてある（`BeatTool~/snap_near_simultaneous.py`）．ノーツの時刻は一番近い曲の拍の頭に移してある（`BeatTool~/snap_to_beats.py`．2026-11-03 ユーザー決定）．1 人のときは，最初のノーツが正面（リングの中心から +z．VR では「リングの中心に戻る」で向く方）のむぎゅっとに来るよう，流れ全体を輪に沿って回す．テストプレイ（VR のホーム画面，F11）: 曲はそのまま流し，正面のむぎゅっとに小節の頭ごと（4 拍おき）にノーツを出し続ける．3，2，1，はい のリズムを確かめる用（2026-11-04 ユーザー決定．リプレイの名前の終わりは `-test`） |
+| 流れと人数 | 譜面は 3 本の流れ（ノーツの `flow` 0〜2）．どの流れも，次のノーツは同じむぎゅっとか隣のむぎゅっと（むぎゅっとは輪で，最後の次は最初）．遊ぶ人数（1〜3 人．`GameSession.players`，VR のホーム画面，F10，起動引数 `-players`）に合わせて流れを出す（2026-11-03 ユーザー決定）．同じ流れの中で 0.3 秒より近く続く隣どうしのノーツは，厳密に同時にそろえてある（`tools/BeatTool/snap_near_simultaneous.py`）．ノーツの時刻は一番近い曲の拍の頭に移してある（`tools/BeatTool/snap_to_beats.py`．2026-11-03 ユーザー決定）．1 人のときは，最初のノーツが正面（リングの中心から +z．VR では「リングの中心に戻る」で向く方）のむぎゅっとに来るよう，流れ全体を輪に沿って回す．テストプレイ（VR のホーム画面，F11）: 曲はそのまま流し，正面のむぎゅっとに小節の頭ごと（4 拍おき）にノーツを出し続ける．3，2，1，はい のリズムを確かめる用（2026-11-04 ユーザー決定．リプレイの名前の終わりは `-test`） |
 | 遊ぶ人 | 子ども．リングの内側に立つ |
 
 ## 2. 全体の構成
@@ -74,10 +74,10 @@
 
 | 層 | 場所 | 中身 |
 | --- | --- | --- |
-| Core | `Assets/Rhythm/Core` | Unity に依存しない C#．ハードの配置と配線，曲データとテンポ，判定，ノーツ用 LED，通信，Viewer の計算．`dotnet test 3d-rhythmgame/CoreTests~` で確かめる |
+| Core | `Assets/Rhythm/Core` | Unity に依存しない C#．ハードの配置と配線，曲データとテンポ，判定，ノーツ用 LED，通信，Viewer の計算．`dotnet test tools/CoreTests` で確かめる |
 | Runtime | `Assets/Rhythm/Runtime` | Unity．曲の再生と時刻，判定のつなぎ，実機との通信，演出の描画，Viewer |
 | Editor | `Assets/Rhythm/Editor` | 譜面エディタ，テンポ表，Timeline の道具，プレビュー書き出し，シーンとビルドを作る道具 |
-| 道具 | `3d-rhythmgame/LinkTool~` | Unity なしで実機とつなぐコマンド（テスト表示，通信の計測，ミラー） |
+| 道具 | `tools/LinkTool` | Unity なしで実機とつなぐコマンド（テスト表示，通信の計測，ミラー） |
 
 シーン: `Assets/Rhythm/Scenes/Play.unity`（本番），`Viewer.unity`（別 PC で見る）．`Tools/Arte Rhythm/Create … Scene` で作り直せる．
 旧版のゲーム（`Assets/Script`，`Assets/Scenes/SampleScene.unity` など）は 2026-11-05 に消した（タグ `legacy-v1` と git の履歴に残っている）．旧版の素材のうち，判定の音（`Assets/Rhythm/Sounds`），LED テープと筒のモデル（`Assets/Legacy`），旧譜面と旧配置（`Assets/Rhythm/Data/Legacy`．旧版と同じ結果になるかのテスト用）は残してある．
@@ -157,7 +157,7 @@ d = タッチ時刻 − ノーツ時刻（秒）．2026-11-03 にユーザーの
 - **眩しさ**: 全体を一度に光らせるフラッシュは使わない．明るい場面には 2 拍くらいかけて入る（2026-11-03 ユーザー決定）．
 - **工大祭版**: 初期の演出仕様書から下書きを並べた（`docs/effects/kodaisai-2025.md`）．旧版の演出動画は参考．
 - **AI の演出案**: Claude が作った案 A（星座）・B（夜明け）・C（鼓動）．Play 中に F9 で切り替えて比べる（`docs/effects/ai-proposals.md`）．
-- **演出の評価**: `EffectEval~`（点滅の安全，音と光の同期，盛り上がり，区切り．光の譜面とコマの一覧）．
+- **演出の評価**: `tools/EffectEval`（点滅の安全，音と光の同期，盛り上がり，区切り．光の譜面とコマの一覧）．
 - 作り方の手引き（美大生向け）は `docs/authoring/led-effects.md`．
 
 ## 9. 通信（プロトコル v2）
@@ -188,11 +188,11 @@ d = タッチ時刻 − ノーツ時刻（秒）．2026-11-03 にユーザーの
 | --- | --- | --- |
 | 譜面エディタ | ノーツ，テンポ，区切り，メトロノーム，叩いてテンポを合わせる | `docs/authoring/chart-editor.md` |
 | テンポ表 | 途中でテンポや拍子が変わる曲 | `docs/authoring/music-data.md` |
-| 拍の解析（BeatTool~） | 新しい曲の拍・小節の頭・区切りの候補を出し，聴き比べ用のクリック音を作る | `docs/authoring/beat-finding.md` |
+| 拍の解析（tools/BeatTool） | 新しい曲の拍・小節の頭・区切りの候補を出し，聴き比べ用のクリック音を作る | `docs/authoring/beat-finding.md` |
 | Timeline と演出テンプレート | LED 演出を並べる | `docs/authoring/led-effects.md` |
 | プレビュー書き出し | 演出をリングの内側から見た動画（曲の音つき） | `docs/authoring/led-effects.md` |
 | 接続モニタ（F2） | 実機の接続・通信・テスト表示・色の曲線 | `docs/architecture-v2.md` の P4 |
-| LinkTool~ | Unity なしで実機とつなぐ | `docs/architecture-v2.md` の P4 |
+| tools/LinkTool | Unity なしで実機とつなぐ | `docs/architecture-v2.md` の P4 |
 
 ## 12. 設営
 

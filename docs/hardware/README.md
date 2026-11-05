@@ -42,7 +42,7 @@
 Unity を起動せずに実行できる．
 
 ```
-dotnet test 3d-rhythmgame/CoreTests~
+dotnet test tools/CoreTests
 ```
 
 Unity の Test Runner（EditMode）からも同じテストが走る．

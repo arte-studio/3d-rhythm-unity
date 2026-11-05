@@ -6,7 +6,7 @@
 隣のレーンのむぎゅっとはテープでつながっているので，案内の光の粒が前のノーツから次のノーツへ流れる（NoteLedRenderer）．
 
 使い方（3d-rhythmgame で）:
-    py BeatTool~/remap_lanes.py Assets/Rhythm/Songs/kodaisai-2025/song.json --from 0-5,6-10,11-14 --to 0-3,4-7,8-10 [--dry-run]
+    py ../tools/BeatTool/remap_lanes.py Assets/Rhythm/Songs/kodaisai-2025/song.json --from 0-5,6-10,11-14 --to 0-3,4-7,8-10 [--dry-run]
 """
 import argparse, io, re
 

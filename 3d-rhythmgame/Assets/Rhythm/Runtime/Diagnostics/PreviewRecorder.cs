@@ -20,7 +20,7 @@ namespace Arte.Rhythm.Diagnostics
     /// - ビルド: Play.exe -record out.mp4 [-record-from 秒] [-record-length 秒] [-record-fps 30] [-record-size 1920x1080]
     ///          [-view child|adult|outside|top] [-floor ...] [-ffmpeg ffmpeg.exe のパス] [-effects 演出の名前] [-record-canvas]
     /// -record-canvas を付けると，LED に送る絵（キャンバス．列 × LED，画面で見える値）も 1 フレームずつ
-    /// 「出力の名前.canvas.rgba」（RGBA 8bit を下の行から）と「.canvas.json」（大きさと時刻）に書く．演出の評価に使う（EffectEval~）．
+    /// 「出力の名前.canvas.rgba」（RGBA 8bit を下の行から）と「.canvas.json」（大きさと時刻）に書く．演出の評価に使う（tools/EffectEval）．
     /// </summary>
     public sealed class PreviewRecorder : MonoBehaviour
     {

@@ -1,4 +1,4 @@
-# 評価した案どうしの数値を並べる: py EffectEval~/compare.py baseline v6_A v6_B v6_C（Recordings/eval/<名前>_eval/metrics.json）
+# 評価した案どうしの数値を並べる: py ../tools/EffectEval/compare.py baseline v6_A v6_B v6_C（Recordings/eval/<名前>_eval/metrics.json）
 import json, sys
 names = sys.argv[1:]
 keys = ['flash_whole_per_s','flash_quarter_per_s','glare_max_jump','glare_count','mean_brightness','max_brightness','attack_count','attack_on_beat','attack_on_onset','strong_accent_hit','beat_concentration','xcorr_peak','local_xcorr_peak','energy_rho','boundary_change_ratio','section_contrast','mean_activity','spatial_variation','static_ratio']

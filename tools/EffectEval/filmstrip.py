@@ -1,5 +1,5 @@
 """切り替わりの前後を細かく並べた帯（フィルムストリップ）．動きやタイミングを静止画で確かめる．
-使い方: py EffectEval~/filmstrip.py out.png 名前1 名前2 ... --at 小節.拍 [--span 拍] [--frames 12]
+使い方: py ../tools/EffectEval/filmstrip.py out.png 名前1 名前2 ... --at 小節.拍 [--span 拍] [--frames 12]
 """
 import argparse, json, sys, os
 import numpy as np

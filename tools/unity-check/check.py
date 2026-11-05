@@ -10,7 +10,7 @@ Unity が作る csproj（3d-rhythmgame/Arte.Rhythm.*.csproj．git には入れ�
     python tools/unity-check/check.py --android  # Quest 単体向け（UNITY_ANDROID あり，UNITY_EDITOR なし．Editor のコードは除く）
 
 前提: 一度 Unity でプロジェクトを開いて csproj と Library/ScriptAssemblies ができていること．
-Core だけなら Unity 無しの dotnet test 3d-rhythmgame/CoreTests~ でも確かめられる（Unity の DLL を使わないことも確かめられる）．
+Core だけなら Unity 無しの dotnet test tools/CoreTests でも確かめられる（Unity の DLL を使わないことも確かめられる）．
 """
 import argparse
 import os

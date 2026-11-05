@@ -4,7 +4,7 @@ using Arte.Rhythm.Hardware;
 namespace Arte.Rhythm.Net
 {
     /// <summary>
-    /// 設営確認用の表示を LedFrame に書く．Unity の LedTestPattern と，コマンドの LinkTool~ の両方から使う．
+    /// 設営確認用の表示を LedFrame に書く．Unity の LedTestPattern と，コマンドの tools/LinkTool の両方から使う．
     /// </summary>
     public static class TestPatterns
     {

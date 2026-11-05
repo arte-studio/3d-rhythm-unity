@@ -1,7 +1,7 @@
 """演出を組み立てるための曲の特徴（アクセント，音量の流れ，盛り上がり）を JSON に書き出す．
 
 使い方（3d-rhythmgame で）:
-    py EffectEval~/music_features.py Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav --song Assets/Rhythm/Songs/kodaisai-2025/song.json \
+    py ../tools/EffectEval/music_features.py Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav --song Assets/Rhythm/Songs/kodaisai-2025/song.json \
         --out Assets/Rhythm/Effects/kodaisai-2025-ai/music.json
 
 書き出すもの:

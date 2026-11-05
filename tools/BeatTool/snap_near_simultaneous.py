@@ -3,7 +3,7 @@
 0.3 秒以内に続くまとまりの中に隣どうしがあれば，まとまり全体を先の時刻にそろえる（同じむぎゅっとが重なる分は先のものだけ残す）．
 同じむぎゅっとに続けて来るだけのもの（叩き直し）はそのまま．
 使い方（3d-rhythmgame で）:
-    py BeatTool~/snap_near_simultaneous.py Assets/Rhythm/Songs/kodaisai-2025/song.json [--within 0.3] [--ring 15] [--dry-run]
+    py ../tools/BeatTool/snap_near_simultaneous.py Assets/Rhythm/Songs/kodaisai-2025/song.json [--within 0.3] [--ring 15] [--dry-run]
 """
 import argparse, io, re
 

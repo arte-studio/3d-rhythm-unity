@@ -101,3 +101,7 @@ ServerData
 # 譜面エディタのメトロノームが書く一時ファイル
 /3d-rhythmgame/Assets/ArteTemp/
 /3d-rhythmgame/Assets/ArteTemp.meta
+
+# Python の一時ファイル
+__pycache__/
+*.pyc

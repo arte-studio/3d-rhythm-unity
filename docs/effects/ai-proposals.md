@@ -26,10 +26,10 @@
 
 **アルゴリズムと AI の分担**:
 
-1. **曲の特徴（アルゴリズム）**: `EffectEval~/music_features.py` が，拍ごとの音量，強い立ち上がり（142 個），**際立ち**（同じ拍の位置のいつもの音に対する強さ．2・4 拍目のスネアのように毎小節鳴る音は 1 くらい）を出す．
+1. **曲の特徴（アルゴリズム）**: `tools/EffectEval/music_features.py` が，拍ごとの音量，強い立ち上がり（142 個），**際立ち**（同じ拍の位置のいつもの音に対する強さ．2・4 拍目のスネアのように毎小節鳴る音は 1 くらい）を出す．
 2. **演出を組み立てる（AI）**: `EffectProposals.cs` に，案ごとの構想と場面を Claude がコードとして書いた．アクセントは「際立ちが一定以上のものを，強い順に，間をあけて，拍で光らせていない場面だけ」選んでヒットを置く．
 3. **書き出す**: Play.exe でキャンバス（LED に送る絵）と画面を 1 フレームずつ書き出す（1 曲 40 秒）．
-4. **評価（アルゴリズム + AI）**: `EffectEval~/evaluate.py` が数値と図を出し，Claude が図を見て観点ごとに採点して直す．
+4. **評価（アルゴリズム + AI）**: `tools/EffectEval/evaluate.py` が数値と図を出し，Claude が図を見て観点ごとに採点して直す．
 
 新しく作った演出テンプレート: **Hit**（アクセントで 1 回光る．全体 / 下から / 上から / 左右に広がる / 波紋），**Aurora**（オーロラ），
 **Constellation**（星をつないで星座を描く），**Beam**（子どもの周りを回る光）．Starfield には明るさのばらつき（本物の星空のように）を足した．
@@ -157,10 +157,10 @@ Claude の採点（5 段階．観点ごと）:
 
 ```sh
 # 3d-rhythmgame で（Unity を閉じてから）
-py EffectEval~/music_features.py Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav --song Assets/Rhythm/Songs/kodaisai-2025/song.json --out Assets/Rhythm/Effects/kodaisai-2025-ai/music.json
-sh EffectEval~/cycle.sh v7         # 組み立て → ビルド → 3 案を録画して評価（5 分くらい）．数値の比べは compare.py
-py EffectEval~/filmstrip.py Recordings/eval/切り替わり.png v7_A v7_B v7_C --at 27.1 43.1 51.1 --span 3
-py EffectEval~/compare_video.py Recordings/eval/比較.mp4 "v7_A:案A" "v7_B:案B" "v7_C:案C" --audio Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav
+py ../tools/EffectEval/music_features.py Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav --song Assets/Rhythm/Songs/kodaisai-2025/song.json --out Assets/Rhythm/Effects/kodaisai-2025-ai/music.json
+sh ../tools/EffectEval/cycle.sh v7         # 組み立て → ビルド → 3 案を録画して評価（5 分くらい）．数値の比べは compare.py
+py ../tools/EffectEval/filmstrip.py Recordings/eval/切り替わり.png v7_A v7_B v7_C --at 27.1 43.1 51.1 --span 3
+py ../tools/EffectEval/compare_video.py Recordings/eval/比較.mp4 "v7_A:案A" "v7_B:案B" "v7_C:案C" --audio Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav
 ```
 
 （録画と評価は `Recordings/eval/` に書く．git には入れない）

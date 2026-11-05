@@ -4,7 +4,7 @@ namespace Arte.Rhythm.Net
 {
     /// <summary>
     /// 設営確認用の表示を DeviceLink.Frame に書く（演出の描画ができる P5 までの間はこれだけが LED を光らせる）．
-    /// 中身は Core の TestPatterns（コマンドの LinkTool~ と共通）．
+    /// 中身は Core の TestPatterns（コマンドの tools/LinkTool と共通）．
     ///
     /// - StripHeads: 各ストリップの配線上の先頭 LED（ファームの自己診断と同じ．ピン 0 赤，1 緑，2 青）
     /// - CanvasCheck: 下端を赤，上端を青にし，1 列ずつ白く走らせる．どのストリップでも赤が下ならジグザグの向き，

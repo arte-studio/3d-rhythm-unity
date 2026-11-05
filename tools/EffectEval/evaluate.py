@@ -2,7 +2,7 @@
 
 使い方（3d-rhythmgame で）:
     Builds/Play/Play.exe -record Recordings/eval/A.mp4 -record-length 89 -record-canvas -effects 演出の名前 ...
-    py EffectEval~/evaluate.py Recordings/eval/A --audio Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav --song Assets/Rhythm/Songs/kodaisai-2025/song.json
+    py ../tools/EffectEval/evaluate.py Recordings/eval/A --audio Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav --song Assets/Rhythm/Songs/kodaisai-2025/song.json
 
 出すもの（--out，既定は <名前>_eval/）:
     report.md     数値の評価（AI と人が読む）

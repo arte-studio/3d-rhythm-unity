@@ -8,7 +8,7 @@
 - どの流れかを flow（0〜2）に書く．遊ぶ人数（1〜3 人）に合わせて流れを選ぶ（GameSession.players）
 
 使い方（3d-rhythmgame で）:
-    py BeatTool~/remap_flows.py Assets/Rhythm/Songs/kodaisai-2025/song.json --groups 0-5,6-10,11-14 --ring 15 [--dry-run]
+    py ../tools/BeatTool/remap_flows.py Assets/Rhythm/Songs/kodaisai-2025/song.json --groups 0-5,6-10,11-14 --ring 15 [--dry-run]
 もう flow が書いてある譜面では，--groups の代わりに flow で流れを分ける（--by-flow）．
 """
 import argparse, io, re

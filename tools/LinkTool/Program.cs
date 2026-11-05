@@ -8,15 +8,15 @@ using Arte.Rhythm.Net;
 
 // 実機（ファーム v2）とつないで，テスト表示を送りながら状態を表示する．
 //
-//   dotnet run --project 3d-rhythmgame/LinkTool~ -- <表示> [秒数] [--setup 名前] [--assign MAC 番号] [--brightness 演出 ノーツ] [--fps 送信fps] [--leds 1パケットのLED数] [--raw] [--adaptive] [--srgb] [--mirror IP[:ポート]]
+//   dotnet run --project tools/LinkTool -- <表示> [秒数] [--setup 名前] [--assign MAC 番号] [--brightness 演出 ノーツ] [--fps 送信fps] [--leds 1パケットのLED数] [--raw] [--adaptive] [--srgb] [--mirror IP[:ポート]]
 //     表示: off | heads | canvas | notes | rainbow（既定 heads）
 //     秒数: 0 なら Ctrl+C まで（既定 0）
 //     --raw: 圧縮しない（毎回全ピンをそのまま送る．比較用）
 //     --adaptive: 混み具合を見て送る頻度を下げる（LinkOptions.AdaptiveRate）
 //     --srgb: 色を sRGB とみなして光量に直してから送る（設営データの outputCurve より優先）
 //     --mirror: 同じデータを Viewer（Viewer.exe，ポート既定 8899）にも送る．実機が無くても Viewer で見られる
-//   例: dotnet run --project 3d-rhythmgame/LinkTool~ -- canvas 30
-//       dotnet run --project 3d-rhythmgame/LinkTool~ -- heads 10 --assign 1C:DB:D4:5B:65:28 5
+//   例: dotnet run --project tools/LinkTool -- canvas 30
+//       dotnet run --project tools/LinkTool -- heads 10 --assign 1C:DB:D4:5B:65:28 5
 static class Program
 {
     static int Main(string[] args)

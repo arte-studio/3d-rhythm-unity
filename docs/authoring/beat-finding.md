@@ -9,7 +9,7 @@
 1. **解析する**（1 分）．`3d-rhythm-unity` で:
 
    ```sh
-   py 3d-rhythmgame/BeatTool~/beatgrid.py <音声ファイル> --out 3d-rhythmgame/Builds/beatgrid
+   py tools/BeatTool/beatgrid.py <音声ファイル> --out 3d-rhythmgame/Builds/beatgrid
    ```
 
    必要なものは Python と numpy，ffmpeg．`Builds/beatgrid` に次のファイルができる．

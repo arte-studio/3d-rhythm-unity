@@ -1,5 +1,5 @@
 """案どうしを比べる動画: LED の絵を一周ひらいたもの（横 = 一周 8.8m，縦 = 高さ 2m）を縦に並べ，曲の音を付ける．
-使い方: py EffectEval~/compare_video.py out.mp4 名前1:表示名1 名前2:表示名2 ... --audio Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav
+使い方: py ../tools/EffectEval/compare_video.py out.mp4 名前1:表示名1 名前2:表示名2 ... --audio Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav
 """
 import argparse, json, subprocess, sys, os
 import numpy as np

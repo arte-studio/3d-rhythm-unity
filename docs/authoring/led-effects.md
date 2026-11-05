@@ -114,7 +114,7 @@ BottomWave（下の波）は「高さを決める音」で，音量のほかに�
 
 **眩しさに気をつける**: 全体を一度に光らせる演出（白い BeatPulse，Hit の「全体」，暗い場面から明るい場面へのいきなりの切り替え）は，
 暗い部屋では眩しい（2026-11-03 に VR で確かめた）．拍は波紋（Ripple3D）・下から昇る光・回る光・周波数の波で見せ，
-明るい場面には 2 拍くらいかけて入る．評価の道具（`EffectEval~/evaluate.py`）の「眩しさ」で確かめられる．
+明るい場面には 2 拍くらいかけて入る．評価の道具（`tools/EffectEval/evaluate.py`）の「眩しさ」で確かめられる．
 
 AI（Claude）が作った演出案（`Assets/Rhythm/Effects/kodaisai-2025-ai`）も，使い方の見本になる（`docs/effects/ai-proposals.md`）．
 

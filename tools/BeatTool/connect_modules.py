@@ -1,7 +1,7 @@
 """設営データのむぎゅっとの置き場所を，つながるノーツ用テープ（0.5m）が次のむぎゅっとに届くように直す．
 テープが届いていない所（むぎゅっと k のテープの先が k+1 から 10cm 以上離れている）は，k+1 から後ろを，リングの中心を軸に
 （リングを回る順を崩さない向きに）回して近づける．高さと中心からの距離は変えない．そのあとテープを k の 4cm 先から k+1 の 4cm 手前まで引き直す．
-使い方（3d-rhythmgame で）: py BeatTool~/connect_modules.py（kodaisai-1101.json を書き換える）
+使い方（3d-rhythmgame で）: py ../tools/BeatTool/connect_modules.py（kodaisai-1101.json を書き換える）
 """
 import io, json, math, re
 p = 'Assets/Rhythm/Data/Hardware/setups/kodaisai-1101.json'

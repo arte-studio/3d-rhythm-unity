@@ -2,7 +2,7 @@
 むぎゅっとの案内は曲の拍で光るので，ノーツが拍の途中にあると数えた拍と叩く時刻がずれて分かりにくかった．
 同じ時刻・同じむぎゅっとに重なるものは先のものだけ残す．テンポが 1 つだけの曲を前提にする．
 使い方（3d-rhythmgame で）:
-    py BeatTool~/snap_to_beats.py Assets/Rhythm/Songs/kodaisai-2025/song.json [--dry-run]
+    py ../tools/BeatTool/snap_to_beats.py Assets/Rhythm/Songs/kodaisai-2025/song.json [--dry-run]
 """
 import argparse, io, json, re
 
