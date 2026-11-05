@@ -8,6 +8,8 @@
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
+# エディタの道具のフォルダ（シーン・VR・Quest のビルドを作るコード）は Unity の出力ではないので入れる
+!/3d-rhythmgame/Assets/Rhythm/Editor/Build/
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 *.log
