@@ -136,7 +136,7 @@ namespace Arte.Rhythm.VR
             Button(root, "床を変える", new Vector2(-245, -70), () => vr?.NextFloor());
             playersLabel = Button(root, "人数", new Vector2(245, -70), () =>
             {
-                if (session != null) session.NextPlayers();
+                PlaySettings.NextPlayers();
             });
             Button(root, "−10", new Vector2(-430, -170), () => VrLatency.Ms -= 10, 90);
             latencyLabel = Label(root, "", new Vector2(-245, -170), 22, FontStyle.Normal, new Vector2(270, 80));
@@ -150,7 +150,7 @@ namespace Arte.Rhythm.VR
             });
             countLabel = Button(root, "数え方", new Vector2(245, -250), () =>
             {
-                if (session != null) session.NextCountBeats();
+                PlaySettings.NextCountBeats();
             });
             var quit = Button(root, "ゲームを終了する", new Vector2(245, -170), Quit);
             quit.color = new Color(1f, 0.7f, 0.7f);
@@ -376,8 +376,8 @@ namespace Arte.Rhythm.VR
             effectsLabel.text = $"演出を切り替える（今: {SongVisualSync.CurrentEffects}）";
             viewLabel.text = vr != null && vr.ChildView ? "自分の目の高さにする" : "子どもの目の高さにする";
             startLabel.text = conductor != null && conductor.IsStarted ? "曲を最初から" : "曲を始める";
-            playersLabel.text = session != null ? $"人数: {session.players} 人（曲を始めると変わる）" : "人数";
-            countLabel.text = session != null ? $"数え方: {CountIn.Name(session.CountBeats)}" : "数え方";
+            playersLabel.text = $"人数: {PlaySettings.Players} 人（曲を始めると変わる）";
+            countLabel.text = $"数え方: {CountIn.Name(PlaySettings.CountBeats)}";
             latencyLabel.text = $"VR の遅れの補正 {VrLatency.Ms}ms\n（{VrLatency.Where}）" +
                 (testOffsets.Count > 0 ? $"\nテストプレイのずれ {Median(testOffsets):+0;-0}ms（{testOffsets.Count} 回）" : "");
 

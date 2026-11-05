@@ -155,11 +155,11 @@ namespace Arte.Rhythm.Tests
             foreach (var (t, lane) in new[] { (1.0, 0), (2.0, 0), (2.5, 0), (2.5, 1), (3.5, 0) })
                 data.Notes.Add(new SongNote { Time = t, Lane = lane, Type = "touch" });
             CollectionAssert.AreEquivalent(new[] { (1.0, 0), (2.5, 0), (2.5, 1) },
-                data.ToChart(3, CountIn.Hard).Notes.Select(n => (n.Time, n.Lane)), "2，1，はい: 2.0 は 0 番の 1.0 から 3 拍（1.5 秒）あかない．2.5 はちょうど 3 拍なので残る．3.5 は 2.5 から 2 拍");
+                PlayChart.Build(data, 3, CountIn.Hard).Notes.Select(n => (n.Time, n.Lane)), "2，1，はい: 2.0 は 0 番の 1.0 から 3 拍（1.5 秒）あかない．2.5 はちょうど 3 拍なので残る．3.5 は 2.5 から 2 拍");
             CollectionAssert.AreEquivalent(new[] { (1.0, 0), (3.5, 0) },
-                data.ToChart(3).Notes.Select(n => (n.Time, n.Lane)), "3，2，1，はい（既定）: 4 拍あかないものを外す");
-            data.Rules = new JudgeRules { SameLaneMinGapBeats = 0, SameFlowMinGapBeats = 0 };
-            Assert.AreEqual(5, data.ToChart(3).Notes.Count, "0 なら外さない");
+                PlayChart.Build(data, 3).Notes.Select(n => (n.Time, n.Lane)), "3，2，1，はい（既定）: 4 拍あかないものを外す");
+            data.ChartRules = new ChartRules { SameLaneMinGapBeats = 0, SameFlowMinGapBeats = 0 };
+            Assert.AreEqual(5, PlayChart.Build(data, 3).Notes.Count, "0 なら外さない");
             Assert.AreEqual(5, data.ToChart().Notes.Count, "譜面そのものには残る");
         }
 
@@ -170,9 +170,9 @@ namespace Arte.Rhythm.Tests
             foreach (var (t, lane, flow) in new[] { (1.0, 0, 0), (1.0, 1, 0), (2.0, 2, 0), (2.5, 3, 0), (2.5, 4, 0), (3.0, 9, 0), (2.0, 7, 1) })
                 data.Notes.Add(new SongNote { Time = t, Lane = lane, Type = "touch", Flow = flow });
             CollectionAssert.AreEquivalent(new[] { (1.0, 0), (1.0, 1), (2.5, 3), (2.5, 4), (2.0, 7) },
-                data.ToChart(3, CountIn.Hard).Notes.Select(n => (n.Time, n.Lane)), "2，1，はい: 2.0 と 3.0 は流れ 0 の前から 3 拍あかない．同時の 2 つは残る．流れ 1 は別");
+                PlayChart.Build(data, 3, CountIn.Hard).Notes.Select(n => (n.Time, n.Lane)), "2，1，はい: 2.0 と 3.0 は流れ 0 の前から 3 拍あかない．同時の 2 つは残る．流れ 1 は別");
             CollectionAssert.AreEquivalent(new[] { (1.0, 0), (1.0, 1), (3.0, 9), (2.0, 7) },
-                data.ToChart(3, CountIn.Normal).Notes.Select(n => (n.Time, n.Lane)), "3，2，1，はい: 2.5 は 3 拍しかあかない．3.0 はちょうど 4 拍");
+                PlayChart.Build(data, 3, CountIn.Normal).Notes.Select(n => (n.Time, n.Lane)), "3，2，1，はい: 2.5 は 3 拍しかあかない．3.0 はちょうど 4 拍");
         }
 
         [Test]
@@ -182,8 +182,8 @@ namespace Arte.Rhythm.Tests
             // 2026-11-04 ユーザー: 2 から始まるノーツは禁止．同じ流れの前のノーツから必ず 3 拍あく（同時は別）
             var song = SongJson.Load(File.ReadAllText(Path.Combine(TestData.SongsDir(), "kodaisai-2025", "song.json")));
             var tempo = song.TempoMap();
-            double minGap = song.EffectiveRules.SameFlowMinGapBeats ?? count + 1;   // song.json の rules で変えられる
-            foreach (var flow in song.ToChart(players, count).Notes.GroupBy(n => n.Flow))
+            double minGap = song.EffectiveChartRules.FlowGap(count);   // song.json の chartRules で変えられる
+            foreach (var flow in PlayChart.Build(song, players, count).Notes.GroupBy(n => n.Flow))
             {
                 var beats = flow.Select(n => tempo.BeatOf(n.Time)).ToList();
                 for (int i = 1; i < beats.Count; i++)
@@ -198,7 +198,7 @@ namespace Arte.Rhythm.Tests
         public void TestChartPutsANoteOnEveryBarHeadAtOneModule()
         {
             var data = new SongData { Tempo = { new TempoPoint { TimeSec = 1, Bpm = 120, BeatsPerBar = 4 } } }; // 1 小節 2 秒
-            var notes = data.TestChart(11, 10).Notes;
+            var notes = PlayChart.Test(data, 11, 10).Notes;
             CollectionAssert.AreEqual(new[] { 3.0, 5.0, 7.0, 9.0 }, notes.Select(n => n.Time), "2 小節目から，終わりの 1 秒前まで");
             Assert.That(notes.All(n => n.Lane == 11));
         }
@@ -219,12 +219,12 @@ namespace Arte.Rhythm.Tests
             // 2026-11-05 ユーザー: 通常プレイでは 3，2，はい になる．song.json の時刻が拍よりごくわずか後ろでも，1 は はい の 1 拍前
             var song = SongJson.Load(File.ReadAllText(Path.Combine(TestData.SongsDir(), "kodaisai-2025", "song.json")));
             var tempo = song.TempoMap();
-            var cues = CountdownCues.From(song.ToChart(players, count), tempo, count);
+            var cues = CountdownCues.From(PlayChart.Build(song, players, count), tempo, count);
             Assert.That(cues.All(c => c.Count <= count));
             foreach (var hit in cues.Where(c => c.Count == 0))
             {
                 // 数え始めが前の はい と重ならない（1 人のとき．2〜3 人では別の流れの はい と重なることはある）
-                Assert.That(players > 1 || (song.EffectiveRules.SameFlowMinGapBeats ?? count + 1) <= count || !cues.Any(c => c.Count == 0 && System.Math.Abs(c.Time - (hit.Time - count * 60 / 151.96)) < 2e-3), $"{hit.Time:F4} の数え始めが前の はい と重なる");
+                Assert.That(players > 1 || song.EffectiveChartRules.FlowGap(count) <= count || !cues.Any(c => c.Count == 0 && System.Math.Abs(c.Time - (hit.Time - count * 60 / 151.96)) < 2e-3), $"{hit.Time:F4} の数え始めが前の はい と重なる");
                 for (int k = 1; k <= count; k++)
                 {
                     double want = hit.Time - k * 60 / 151.96;
@@ -243,10 +243,10 @@ namespace Arte.Rhythm.Tests
             data.Notes.Add(new SongNote { Time = 7, Lane = 0, Type = "touch" });
             data.Notes.Add(new SongNote { Time = 1, Lane = 9, Type = "touch", Flow = 1 });
             int[] ring = { 0, 1, 2, 3, 4, 5, 6, 7 };
-            var one = data.ToChart(1, ring, 7).Notes;
+            var one = PlayChart.Build(data, 1, ring: ring, frontLane: 7).Notes;
             CollectionAssert.AreEqual(new[] { 7, 0, 6, 2 }, one.Select(n => n.Lane), "最初が正面（7）．隣どうしの動きはそのまま輪に沿って回る");
-            Assert.AreEqual(5, data.ToChart(2, ring, 7).Notes.Count, "2 人のときは回さない");
-            Assert.AreEqual(5, data.ToChart(2, ring, 7).Notes[0].Lane);
+            Assert.AreEqual(5, PlayChart.Build(data, 2, ring: ring, frontLane: 7).Notes.Count, "2 人のときは回さない");
+            Assert.AreEqual(5, PlayChart.Build(data, 2, ring: ring, frontLane: 7).Notes[0].Lane);
         }
     }
 }

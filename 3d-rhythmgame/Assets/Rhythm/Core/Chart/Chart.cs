@@ -22,7 +22,7 @@ namespace Arte.Rhythm.Charts
         public readonly NoteType Type;
         /// <summary>
         /// どの流れのノーツか（0〜2）．譜面は 3 本の流れ（それぞれ同じむぎゅっとか隣へ動いていく）でできていて，
-        /// 遊ぶ人数（1〜3 人）に合わせて流れを選ぶ（GameSession.players）．
+        /// 遊ぶ人数（1〜3 人）に合わせて流れを選ぶ（PlaySettings.Players．PlayChart.Build）．
         /// </summary>
         public readonly int Flow;
 
