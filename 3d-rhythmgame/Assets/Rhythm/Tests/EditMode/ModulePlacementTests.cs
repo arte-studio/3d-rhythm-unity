@@ -23,7 +23,7 @@ namespace Arte.Rhythm.Tests
             perf = new PerfLayout(config, setup);
             notes = new NoteLayout(config, setup);
             var objects = new List<LegacyPlacedObject>();
-            var root = JObject.Parse(File.ReadAllText(Path.Combine(TestData.LegacyResourcesDir(), "object_positions_kokasai.json")));
+            var root = JObject.Parse(File.ReadAllText(Path.Combine(TestData.LegacyDataDir(), "object_positions_kokasai.json")));
             foreach (var o in root["objects"])
             {
                 objects.Add(new LegacyPlacedObject

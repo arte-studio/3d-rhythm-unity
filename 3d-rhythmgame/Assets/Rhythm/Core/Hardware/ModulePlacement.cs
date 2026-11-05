@@ -18,7 +18,7 @@ namespace Arte.Rhythm.Hardware
         public float[] connectTo = { 0, 0, 0 };
     }
 
-    /// <summary>旧版の配置ファイル（Resources/object_positions_*.json）の 1 行．</summary>
+    /// <summary>旧版の配置ファイル（Data/Legacy/object_positions_*.json）の 1 行．</summary>
     public struct LegacyPlacedObject
     {
         public string prefabName;

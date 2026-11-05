@@ -1,7 +1,7 @@
 """曲の拍と小節の頭を音声から求め，聴き比べ用のクリック音とレポートを書き出す．
 
 使い方（3d-rhythm-unity で）:
-    py 3d-rhythmgame/BeatTool~/beatgrid.py 3d-rhythmgame/Assets/GameMusic.wav --out Builds/beatgrid
+    py 3d-rhythmgame/BeatTool~/beatgrid.py 3d-rhythmgame/Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav --out Builds/beatgrid
     （--bpm 151.96 でテンポを固定，--excerpt 12 48 で聴き比べの範囲，--candidates 4 で書き出す候補の数）
 
 出すもの（--out のフォルダ）:

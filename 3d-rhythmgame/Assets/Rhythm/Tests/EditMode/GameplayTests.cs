@@ -16,7 +16,7 @@ namespace Arte.Rhythm.Tests
     public class GameplayTests
     {
         static Chart LoadLegacy(string name) =>
-            LegacyChartJson.Parse(File.ReadAllText(Path.Combine(TestData.LegacyResourcesDir(), name)));
+            LegacyChartJson.Parse(File.ReadAllText(Path.Combine(TestData.LegacyDataDir(), name)));
 
         // ---- 旧版の判定（Assets/Script/GameManager.cs の TouchNotes_judge / HandleTouchInput / Update） ----
 

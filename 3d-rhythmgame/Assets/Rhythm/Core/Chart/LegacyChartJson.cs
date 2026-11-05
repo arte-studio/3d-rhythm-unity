@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 namespace Arte.Rhythm.Charts
 {
     /// <summary>
-    /// 旧版の譜面 JSON（Assets/Resources/*_NoteData_*.json）を読む．
+    /// 旧版の譜面 JSON（Assets/Rhythm/Data/Legacy/*_NoteData_*.json．変換済みで，旧版と同じ結果になるかのテストに使う）を読む．
     /// 形式: { "notes": [ { "time": 2.26, "lane": 3, "type": "touch" }, ... ] }
     /// 新しい譜面形式（P3）へ移行するまでと，移行ツールの入力に使う．
     ///

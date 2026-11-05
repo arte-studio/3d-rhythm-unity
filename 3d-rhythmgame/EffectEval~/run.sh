@@ -5,4 +5,4 @@ mkdir -p Recordings/eval
 args=""; [ -n "$fx" ] && args="-effects $fx"
 Builds/Play/Play.exe -screen-fullscreen 0 -screen-width 640 -screen-height 360 -record "Recordings/eval/$name.mp4" -record-from 0 -record-length 89 -record-fps 30 -record-size 1280x720 -record-canvas -view child $args -logFile "Recordings/eval/$name.log" > /dev/null 2>&1
 grep -E "Exception|無い" "Recordings/eval/$name.log" | head -3
-PYTHONIOENCODING=utf-8 py EffectEval~/evaluate.py "Recordings/eval/$name" --audio Assets/GameMusic.wav --song Assets/Rhythm/Songs/kodaisai-2025/song.json --title "$name ${fx:-}" > /dev/null
+PYTHONIOENCODING=utf-8 py EffectEval~/evaluate.py "Recordings/eval/$name" --audio Assets/Rhythm/Songs/kodaisai-2025/GameMusic.wav --song Assets/Rhythm/Songs/kodaisai-2025/song.json --title "$name ${fx:-}" > /dev/null

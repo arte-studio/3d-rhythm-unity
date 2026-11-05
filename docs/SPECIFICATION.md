@@ -80,7 +80,7 @@
 | 道具 | `3d-rhythmgame/LinkTool~` | Unity なしで実機とつなぐコマンド（テスト表示，通信の計測，ミラー） |
 
 シーン: `Assets/Rhythm/Scenes/Play.unity`（本番），`Viewer.unity`（別 PC で見る）．`Tools/Arte Rhythm/Create … Scene` で作り直せる．
-旧版のスクリプト（`Assets/Script`）とシーン（`Assets/Scenes/SampleScene.unity`）は参考として残してある（同じポートを使うので同じシーンに置かない）．
+旧版のゲーム（`Assets/Script`，`Assets/Scenes/SampleScene.unity` など）は 2026-11-05 に消した（タグ `legacy-v1` と git の履歴に残っている）．旧版の素材のうち，判定の音（`Assets/Rhythm/Sounds`），LED テープと筒のモデル（`Assets/Legacy`），旧譜面と旧配置（`Assets/Rhythm/Data/Legacy`．旧版と同じ結果になるかのテスト用）は残してある．
 
 ## 5. 判定
 
