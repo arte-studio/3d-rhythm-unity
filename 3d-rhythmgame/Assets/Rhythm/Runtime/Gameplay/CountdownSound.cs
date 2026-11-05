@@ -6,7 +6,8 @@ using UnityEngine;
 namespace Arte.Rhythm.Gameplay
 {
     /// <summary>
-    /// 3，2，1，はい の音（2026-11-04 ユーザー）．3，2，1 は低い「ポッ」，はい は高い「ピッ」．
+    /// 3，2，1，はい の音（2026-11-04 ユーザー）．3 → 2 → 1 → はい とだんだん高くなる（ド・ミ・ソ・高いド．
+    /// 2026-11-05 ユーザー: 音をそれぞれ変える．数え始めを聞き逃しても，高さで次が はい と分かる．2〜3 人で音が重なっても聞き分けやすい）．
     /// 曲と同じ DSP の時計で少し先を予約して鳴らすので，曲の拍とずれない（CountdownCues）．
     /// 音はここで作る（素材のファイルは要らない）．GameSession が無ければ足す．
     /// </summary>
@@ -17,14 +18,18 @@ namespace Arte.Rhythm.Gameplay
 
         [Tooltip("音量（0 で鳴らさない）")]
         [Range(0, 1)] public float volume = 0.6f;
-        [Tooltip("3，2，1 の音の高さ（Hz）")]
-        public float countHz = 660;
+        [Tooltip("3 の音の高さ（Hz）")]
+        public float count3Hz = 523.25f;
+        [Tooltip("2 の音の高さ（Hz）")]
+        public float count2Hz = 659.26f;
+        [Tooltip("1 の音の高さ（Hz）")]
+        public float count1Hz = 783.99f;
         [Tooltip("はい の音の高さ（Hz）")]
-        public float hitHz = 1320;
+        public float hitHz = 1046.5f;
         [Tooltip("何秒先まで予約するか")]
         public float lookAheadSec = 0.25f;
 
-        AudioClip countClip, hitClip;
+        AudioClip count3Clip, count2Clip, count1Clip, hitClip;
         readonly List<AudioSource> pool = new List<AudioSource>();
         int nextSource;
         List<CountdownCues.Cue> cues;
@@ -35,7 +40,9 @@ namespace Arte.Rhythm.Gameplay
 
         void Awake()
         {
-            countClip = Blip("3-2-1", countHz, 0.07f);
+            count3Clip = Blip("3", count3Hz, 0.07f);
+            count2Clip = Blip("2", count2Hz, 0.07f);
+            count1Clip = Blip("1", count1Hz, 0.07f);
             hitClip = Blip("はい", hitHz, 0.12f);
             for (int i = 0; i < 8; i++)
             {
@@ -92,7 +99,7 @@ namespace Arte.Rhythm.Gameplay
                 if (c.Time <= scheduledUntil || c.Time < now) continue;
                 var s = pool[nextSource];
                 nextSource = (nextSource + 1) % pool.Count;
-                s.clip = c.Count == 0 ? hitClip : countClip;
+                s.clip = c.Count == 0 ? hitClip : c.Count == 1 ? count1Clip : c.Count == 2 ? count2Clip : count3Clip;
                 s.volume = volume;
                 s.PlayScheduled(AudioClock.Now + (c.Time - now));
             }
