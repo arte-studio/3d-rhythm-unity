@@ -21,6 +21,15 @@ namespace Arte.Rhythm.Gameplay
             public override string ToString() => $"{Count}@{Time:F3}";
         }
 
+        /// <summary>
+        /// ノーツが拍の頭にあるとみなす幅（拍）．song.json の時刻は 0.1ms に丸めてあるので，拍の頭のノーツでも
+        /// 拍よりごくわずか後ろになることがある．狭すぎると次の拍のノーツとして数えて 1 と はい が重なる（2026-11-05 ユーザー: 3，2，はい になる）．
+        /// </summary>
+        public const double OnBeatTolerance = 0.01;
+
+        /// <summary>ノーツの拍の頭（ノーツが拍の途中ならその次の拍）．3，2，1 はこの 3，2，1 拍前．</summary>
+        public static int HeadBeat(double noteBeat) => (int)Math.Ceiling(noteBeat - OnBeatTolerance);
+
         public static List<Cue> From(Chart chart, TempoMap tempo, int beats = 3)
         {
             var map = tempo ?? new TempoMap(null);
@@ -28,7 +37,7 @@ namespace Arte.Rhythm.Gameplay
             foreach (var n in chart.Notes)
             {
                 if (n.Type != NoteType.Touch) continue;
-                int head = (int)Math.Ceiling(map.BeatOf(n.Time) - 1e-6);
+                int head = HeadBeat(map.BeatOf(n.Time));
                 for (int k = beats; k >= 1; k--) cues.Add(new Cue(map.TimeOf(head - k), k));
                 cues.Add(new Cue(n.Time, 0));
             }

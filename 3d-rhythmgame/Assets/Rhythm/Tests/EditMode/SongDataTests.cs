@@ -208,6 +208,21 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void KodaisaiCountdownAlwaysHasThreeTwoOneBeforeEachNote([Values(1, 2, 3)] int players)
+        {
+            // 2026-11-05 ユーザー: 通常プレイでは 3，2，はい になる．song.json の時刻が拍よりごくわずか後ろでも，1 は はい の 1 拍前
+            var song = SongJson.Load(File.ReadAllText(Path.Combine(TestData.SongsDir(), "kodaisai-2025", "song.json")));
+            var tempo = song.TempoMap();
+            var cues = CountdownCues.From(song.ToChart(players), tempo);
+            foreach (var hit in cues.Where(c => c.Count == 0))
+                for (int k = 1; k <= 3; k++)
+                {
+                    double want = hit.Time - k * 60 / 151.96;
+                    Assert.That(cues.Any(c => c.Count == k && System.Math.Abs(c.Time - want) < 2e-3), $"{hit.Time:F4} の {k} が {want:F4} に無い");
+                }
+        }
+
+        [Test]
         public void OnePlayerChartStartsAtTheFrontModule()
         {
             var data = new SongData();

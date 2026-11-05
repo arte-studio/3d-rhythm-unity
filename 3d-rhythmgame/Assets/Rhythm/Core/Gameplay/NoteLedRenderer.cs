@@ -346,7 +346,7 @@ namespace Arte.Rhythm.Gameplay
                 // 曲の拍の頭で数える（2026-11-03 ユーザー決定）．n = ノーツまでに残っている拍（最後の 1 拍が 1．
                 // ノーツが拍の途中にあるときは，その拍の頭からノーツまでが 1）．拍の頭ごとに 1 つ減る
                 double beatNow = BeatAt(songTime), beatNote = BeatAt(notes[i].Time);
-                int n = (int)Math.Ceiling(beatNote - 1e-6) - (int)Math.Floor(beatNow + 1e-6);
+                int n = CountdownCues.HeadBeat(beatNote) - (int)Math.Floor(beatNow + 1e-6);
                 int fullBeats = Math.Max(1, (int)Math.Round(style.approachBeats));
                 int muguBeats = gap < style.approachBeats * beat ? Math.Min(fullBeats, Math.Max(1, (int)Math.Round(style.approachShortBeats))) : fullBeats;
                 bool muguOn = n <= muguBeats;
