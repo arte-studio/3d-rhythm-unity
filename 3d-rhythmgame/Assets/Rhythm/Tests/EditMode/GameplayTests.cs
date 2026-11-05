@@ -275,6 +275,24 @@ namespace Arte.Rhythm.Tests
         }
 
         [Test]
+        public void Judge_SkipToDoesNotCountSkippedNotesAsMiss()
+        {
+            // 2026-11-06 ユーザー: 途中から再生すると，飛ばしたノーツが Miss に数えられていた
+            var chart = new Chart(new[] { new ChartNote(1, 0, NoteType.Touch), new ChartNote(2, 1, NoteType.Touch), new ChartNote(30, 0, NoteType.Touch) });
+            var judge = new TouchJudge(chart, new JudgeRules());
+            judge.SkipTo(20);
+            Assert.AreEqual(0, judge.MissCount, "飛ばしたノーツは Miss に数えない");
+            Assert.AreEqual(0, judge.Score);
+            Assert.AreEqual(2, judge.SkippedCount);
+            Assert.That(judge.ResultOf(0), Is.Not.Null, "飛ばしたノーツは判定済み（案内も出ない）");
+            Assert.That(judge.ResultOf(2), Is.Null, "先のノーツはそのまま");
+            var events = new List<JudgeEvent>();
+            judge.Advance(40, events);
+            Assert.AreEqual(1, judge.MissCount, "飛ばしたあとのノーツは今までどおり Miss になる");
+            Assert.AreEqual(1, events.Count);
+        }
+
+        [Test]
         public void Judge_ConnectNotesAreNotJudged()
         {
             var chart = new Chart(new[] { new ChartNote(1, 0, NoteType.Connect) });

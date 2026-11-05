@@ -90,10 +90,10 @@ namespace Arte.Rhythm.Gameplay
             Log = new TouchLog { ChartName = (conductor.song != null ? conductor.song.name : "") + (TestPlay ? "-test" : ""), Players = PlayingPlayers, FrontLane = notes != null && PlayingPlayers == 1 ? notes.FrontLane : -1 };
             while (pending.TryDequeue(out _)) { }
             lastAdvanced = double.NegativeInfinity;
-            // 途中から再生した場合，それより前のノーツは判定しない（Miss も出さない）
+            // 途中から再生した場合，それより前のノーツは判定しない（Miss にも数えない）
             if (fromSec > 0)
             {
-                Judge.Advance(fromSec, null);
+                Judge.SkipTo(fromSec);
                 lastAdvanced = fromSec;
             }
         }

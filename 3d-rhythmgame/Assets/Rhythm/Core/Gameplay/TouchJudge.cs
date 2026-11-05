@@ -114,6 +114,8 @@ namespace Arte.Rhythm.Gameplay
         public int GreatCount { get; private set; }
         public int GoodCount { get; private set; }
         public int MissCount { get; private set; }
+        /// <summary>途中から再生したときに飛ばしたノーツの数（Miss にもスコアにも入れない．SkipTo）．</summary>
+        public int SkippedCount { get; private set; }
 
         /// <summary>判定が確定していればその結果，未確定なら null．</summary>
         public JudgeResult? ResultOf(int noteIndex) => results[noteIndex];
@@ -131,7 +133,15 @@ namespace Arte.Rhythm.Gameplay
         /// 曲時刻を進め，タッチされないまま MissAfterSec を過ぎたノーツを Miss にする．
         /// 毎フレーム呼ぶ．Miss はノーツ番号順に output へ追加する．
         /// </summary>
-        public void Advance(double songTime, List<JudgeEvent> output)
+        public void Advance(double songTime, List<JudgeEvent> output) => Advance(songTime, output, false);
+
+        /// <summary>
+        /// 途中から再生するとき，その位置より前のノーツを飛ばす（2026-11-06 ユーザー: 飛ばしたノーツが Miss に数えられていた）．
+        /// 飛ばしたノーツは判定済み（ResultOf は Miss．案内も出ない）にするが，Miss の数・スコアには入れず，JudgeEvent も出さない．
+        /// </summary>
+        public void SkipTo(double songTime) => Advance(songTime, null, true);
+
+        void Advance(double songTime, List<JudgeEvent> output, bool skip)
         {
             if (songTime < now) throw new ArgumentException($"曲時刻が戻った: {songTime} < {now}（シーク時は作り直すこと）");
             now = songTime;
@@ -142,7 +152,12 @@ namespace Arte.Rhythm.Gameplay
                 {
                     int i = q.Peek();
                     q.Head++;
-                    Commit(i, JudgeResult.Miss, songTime, missScratch);
+                    if (skip)
+                    {
+                        results[i] = JudgeResult.Miss;
+                        SkippedCount++;
+                    }
+                    else Commit(i, JudgeResult.Miss, songTime, missScratch);
                 }
             }
             if (missScratch.Count > 1) missScratch.Sort((a, b) => a.NoteIndex.CompareTo(b.NoteIndex));
