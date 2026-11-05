@@ -6,7 +6,8 @@ using UnityEngine;
 namespace Arte.Rhythm.Gameplay
 {
     /// <summary>
-    /// 3，2，1，はい の音（2026-11-04 ユーザー）．3 → 2 → 1 → はい とだんだん高くなる（ド・ミ・ソ・高いド．
+    /// 3，2，1，はい の音（2026-11-04 ユーザー）．3 → 2 → 1 → はい とだんだん高くなる（曲の調のド・ミ・ソ・高いド．工大祭の曲はホ長調なので E4・G#4・B4・E5．
+    /// ハ長調の C・E・G・C では曲とぶつかって違和感があった．2026-11-05 ユーザー．
     /// 2026-11-05 ユーザー: 音をそれぞれ変える．数え始めを聞き逃しても，高さで次が はい と分かる．2〜3 人で音が重なっても聞き分けやすい）．
     /// 曲と同じ DSP の時計で少し先を予約して鳴らすので，曲の拍とずれない（CountdownCues）．
     /// 音はここで作る（素材のファイルは要らない）．GameSession が無ければ足す．
@@ -19,13 +20,13 @@ namespace Arte.Rhythm.Gameplay
         [Tooltip("音量（0 で鳴らさない）")]
         [Range(0, 1)] public float volume = 0.6f;
         [Tooltip("3 の音の高さ（Hz）")]
-        public float count3Hz = 523.25f;
+        public float count3Hz = 329.63f;
         [Tooltip("2 の音の高さ（Hz）")]
-        public float count2Hz = 659.26f;
+        public float count2Hz = 415.30f;
         [Tooltip("1 の音の高さ（Hz）")]
-        public float count1Hz = 783.99f;
+        public float count1Hz = 493.88f;
         [Tooltip("はい の音の高さ（Hz）")]
-        public float hitHz = 1046.5f;
+        public float hitHz = 659.26f;
         [Tooltip("何秒先まで予約するか")]
         public float lookAheadSec = 0.25f;
 

@@ -182,13 +182,14 @@ namespace Arte.Rhythm.Tests
             // 2026-11-04 ユーザー: 2 から始まるノーツは禁止．同じ流れの前のノーツから必ず 3 拍あく（同時は別）
             var song = SongJson.Load(File.ReadAllText(Path.Combine(TestData.SongsDir(), "kodaisai-2025", "song.json")));
             var tempo = song.TempoMap();
+            double minGap = song.EffectiveRules.SameFlowMinGapBeats ?? count + 1;   // song.json の rules で変えられる
             foreach (var flow in song.ToChart(players, count).Notes.GroupBy(n => n.Flow))
             {
                 var beats = flow.Select(n => tempo.BeatOf(n.Time)).ToList();
                 for (int i = 1; i < beats.Count; i++)
                 {
                     double gap = beats[i] - beats[i - 1];
-                    Assert.That(gap < 1e-3 || gap > count + 1 - 1e-3, $"流れ {flow.Key} の {i} 番目: 前から {gap:F2} 拍");
+                    Assert.That(gap < 1e-3 || gap > minGap - 1e-3, $"流れ {flow.Key} の {i} 番目: 前から {gap:F2} 拍");
                 }
             }
         }
@@ -223,7 +224,7 @@ namespace Arte.Rhythm.Tests
             foreach (var hit in cues.Where(c => c.Count == 0))
             {
                 // 数え始めが前の はい と重ならない（1 人のとき．2〜3 人では別の流れの はい と重なることはある）
-                Assert.That(players > 1 || !cues.Any(c => c.Count == 0 && System.Math.Abs(c.Time - (hit.Time - count * 60 / 151.96)) < 2e-3), $"{hit.Time:F4} の数え始めが前の はい と重なる");
+                Assert.That(players > 1 || (song.EffectiveRules.SameFlowMinGapBeats ?? count + 1) <= count || !cues.Any(c => c.Count == 0 && System.Math.Abs(c.Time - (hit.Time - count * 60 / 151.96)) < 2e-3), $"{hit.Time:F4} の数え始めが前の はい と重なる");
                 for (int k = 1; k <= count; k++)
                 {
                     double want = hit.Time - k * 60 / 151.96;
